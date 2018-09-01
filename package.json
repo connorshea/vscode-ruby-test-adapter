@@ -1,0 +1,72 @@
+{
+  "name": "vscode-example-test-adapter",
+  "displayName": "Example Test Explorer",
+  "description": "Run your Example tests in the Sidebar of Visual Studio Code",
+  "icon": "img/icon.png",
+  "author": "Holger Benl <hbenl@evandor.de>",
+  "publisher": "hbenl",
+  "version": "0.0.1",
+  "license": "MIT",
+  "homepage": "https://github.com/hbenl/vscode-example-test-adapter",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hbenl/vscode-example-test-adapter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hbenl/vscode-example-test-adapter/issues"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "test",
+    "testing"
+  ],
+  "main": "out/main.js",
+  "scripts": {
+    "postinstall": "node ./node_modules/vscode/bin/install",
+    "clean": "rimraf out *.vsix",
+    "build": "tsc",
+    "watch": "tsc -w",
+    "rebuild": "npm run clean && npm run build",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "tslib": "^1.9.3",
+    "vscode-test-adapter-api": "^1.0.1",
+    "vscode-test-adapter-util": "^0.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^3.0.3",
+    "vsce": "^1.47.0",
+    "vscode": "^1.1.21"
+  },
+  "engines": {
+    "vscode": "^1.23.0"
+  },
+  "extensionDependencies": [
+    "hbenl.vscode-test-explorer"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Example Test Explorer configuration",
+      "properties": {
+        "exampleExplorer.logpanel": {
+          "description": "write diagnotic logs to an output panel",
+          "type": "boolean",
+          "scope": "resource"
+        },
+        "exampleExplorer.logfile": {
+          "description": "write diagnostic logs to the given file",
+          "type": "string",
+          "scope": "resource"
+        }
+      }
+    }
+  }
+}

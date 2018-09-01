@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+	<defs>
+		<mask id="passed-mask">
+			<circle cx="8" cy="8" r="7" style="fill: white;"/>
+			<path d="M3.5,8 L6.5,11 L12.5,5" style="stroke: black; stroke-width: 2; fill: none;"/>
+		</mask>
+
+		<mask id="failed-mask">
+			<circle cx="8" cy="8" r="7" style="fill: white;"/>
+			<path d="M4.5,4.5 L11.5,11.5 M4.5,11.5 L11.5,4.5" style="stroke: black; stroke-width: 2px;"/>
+		</mask>
+
+		<mask id="running-mask">
+			<circle cx="8" cy="8" r="7" style="fill: white;"/>
+			<path d="M5,4 L13,8 L5,12 X" style="fill: black;"/>
+		</mask>
+
+		<mask id="circle">
+			<circle cx="64" cy="64" r="64" style="fill: white;"/>
+		</mask>
+	</defs>
+
+	<rect x="0" y="0" width="128" height="128" style="fill: #252525; mask: url(#circle);"/>
+
+	<g style="mask: url(#circle);">
+
+		<g transform="translate(16,8)">
+			<rect width="16" height="16" style="fill: #c04040; mask: url(#failed-mask);" transform="scale(1.8,1.8)"/>
+			<rect x="40" y="9" width="72" height="11" style="fill: #808080;" opacity="0.5"/>
+		</g>
+
+		<g transform="translate(16,48)">
+			<rect width="16" height="16" style="fill: #40a040; mask: url(#passed-mask);" transform="scale(1.8,1.8)"/>
+			<rect x="40" y="9" width="72" height="11" style="fill: #808080;" opacity="0.5"/>
+		</g>
+
+		<g transform="translate(16,88)">
+			<rect width="16" height="16" style="fill: #4070f0; mask: url(#running-mask);" transform="scale(1.8,1.8)"/>
+			<rect x="40" y="9" width="72" height="11" style="fill: #808080;" opacity="0.5"/>
+		</g>
+	</g>
+</svg>
