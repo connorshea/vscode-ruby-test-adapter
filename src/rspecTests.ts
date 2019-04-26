@@ -1,51 +1,57 @@
 import * as vscode from 'vscode';
 import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
+import * as childProcess from 'child_process';
 
-const rspecTestSuite: TestSuiteInfo = {
-  type: 'suite',
-  id: 'root',
-  label: 'Rspec',
-  children: [
-    {
-      type: 'suite',
-      id: 'nested',
-      label: 'Nested suite',
-      children: [
-        {
-          type: 'test',
-          id: 'test1',
-          label: 'Test #1'
-        },
-        {
-          type: 'test',
-          id: 'test2',
-          label: 'Test #2'
-        }
-      ]
-    },
-    {
-      type: 'test',
-      id: 'test3',
-      label: 'Test #3'
-    },
-    {
-      type: 'test',
-      id: 'test4',
-      label: 'Test #4'
+const rspecTests = async () => new Promise<string>((resolve, reject) => {
+  let cmd = `bundle exec rspec --format json --dry-run`;
+
+  const execArgs: childProcess.ExecOptions = {
+    cwd: vscode.workspace.rootPath,
+    maxBuffer: 400 * 1024
+  };
+
+  childProcess.exec(cmd, execArgs, (err, stdout) => {
+    if (err) {
+      return reject(err);
     }
-  ]
-};
+    resolve(stdout);
+  });
+});
 
-export function loadRspecTests(): Promise<TestSuiteInfo> {
-  return Promise.resolve<TestSuiteInfo>(rspecTestSuite);
+export async function loadRspecTests(): Promise<TestSuiteInfo> {
+  let output = await rspecTests();
+
+  output = output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
+
+  console.log(output);
+
+  let rspecMetadata = JSON.parse(output);
+
+  let testSuite: TestSuiteInfo = {
+    type: 'suite',
+    id: 'root',
+    label: 'Rspec',
+    children: []
+  };
+
+  console.log(rspecMetadata);
+
+  testSuite.children.push();
+
+  return Promise.resolve<TestSuiteInfo>(testSuite);
 }
 
 export async function runRspecTests(
   tests: string[],
   testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
 ): Promise<void> {
+  let thing: TestInfo = {
+    id: 'root',
+    label: 'Rspec',
+    type: 'test'
+  };
   for (const suiteOrTestId of tests) {
-    const node = findNode(rspecTestSuite, suiteOrTestId);
+    const node = findNode(thing, suiteOrTestId);
     if (node) {
       await runNode(node, testStatesEmitter);
     }

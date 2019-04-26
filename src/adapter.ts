@@ -3,10 +3,6 @@ import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStarte
 import { Log } from 'vscode-test-adapter-util';
 import { loadRspecTests, runRspecTests } from './rspecTests';
 
-/**
- * This class is intended as a starting point for implementing a "real" TestAdapter.
- * The file `README.md` contains further instructions.
- */
 export class RubyAdapter implements TestAdapter {
 
   private disposables: { dispose(): void }[] = [];
@@ -23,7 +19,6 @@ export class RubyAdapter implements TestAdapter {
     public readonly workspace: vscode.WorkspaceFolder,
     private readonly log: Log
   ) {
-
     this.log.info('Initializing Ruby adapter');
 
     this.disposables.push(this.testsEmitter);
