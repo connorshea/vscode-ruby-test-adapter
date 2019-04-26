@@ -23,8 +23,6 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
 
   output = output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
 
-  console.log(output);
-
   let rspecMetadata = JSON.parse(output);
 
   let testSuite: TestSuiteInfo = {
@@ -34,9 +32,37 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
     children: []
   };
 
-  console.log(rspecMetadata);
+  console.log(rspecMetadata.examples);
 
-  testSuite.children.push();
+  // TODO: Turn this into a proper structure for the TestSuiteInfo object.
+  let test_array = rspecMetadata.examples.map((test: { id: string; file_path: any; }) => {
+    let test_location = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]"));
+    let temp_test_location_array = test_location.split(':');
+    let test_location_array = temp_test_location_array.map((x: string) => {
+      return parseInt(x);
+    });
+
+    return {
+      file: test.file_path,
+      location: test_location_array
+    }
+  });
+
+  console.log(test_array);
+
+  rspecMetadata.examples.forEach((test: { id: string; full_description: string; file_path: string; line_number: number; }) => {
+    // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
+    let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
+    let testInfo: TestInfo = {
+      type: 'test',
+      id: test.id,
+      label: test.full_description,
+      file: file_path,
+      line: test.line_number
+    }
+    testSuite.children.push(testInfo);
+  });
+
 
   return Promise.resolve<TestSuiteInfo>(testSuite);
 }
