@@ -1,19 +1,19 @@
 {
-  "name": "vscode-example-test-adapter",
-  "displayName": "Example Test Explorer",
-  "description": "Run your Example tests in the Sidebar of Visual Studio Code",
+  "name": "vscode-ruby-test-adapter",
+  "displayName": "Ruby Test Explorer",
+  "description": "Run your Ruby tests in the Sidebar of Visual Studio Code",
   "icon": "img/icon.png",
   "author": "Holger Benl <hbenl@evandor.de>",
   "publisher": "hbenl",
   "version": "0.0.1",
   "license": "MIT",
-  "homepage": "https://github.com/hbenl/vscode-example-test-adapter",
+  "homepage": "https://github.com/connorshea/vscode-ruby-test-adapter",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hbenl/vscode-example-test-adapter.git"
+    "url": "https://github.com/connorshea/vscode-ruby-test-adapter.git"
   },
   "bugs": {
-    "url": "https://github.com/hbenl/vscode-example-test-adapter/issues"
+    "url": "https://github.com/connorshea/vscode-ruby-test-adapter/issues"
   },
   "categories": [
     "Other"
@@ -54,14 +54,14 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "Example Test Explorer configuration",
+      "title": "Ruby Test Explorer configuration",
       "properties": {
-        "exampleExplorer.logpanel": {
+        "rubyExplorer.logpanel": {
           "description": "write diagnotic logs to an output panel",
           "type": "boolean",
           "scope": "resource"
         },
-        "exampleExplorer.logfile": {
+        "rubyExplorer.logfile": {
           "description": "write diagnostic logs to the given file",
           "type": "string",
           "scope": "resource"

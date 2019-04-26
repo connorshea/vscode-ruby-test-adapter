@@ -4,7 +4,7 @@
     {
       "type": "extensionHost",
       "request": "launch",
-      "name": "Example adapter",
+      "name": "Ruby adapter",
       "runtimeExecutable": "${execPath}",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}"
