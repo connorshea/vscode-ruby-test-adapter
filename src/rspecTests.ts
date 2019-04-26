@@ -35,6 +35,12 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
   console.log(rspecMetadata.examples);
 
   // TODO: Turn this into a proper structure for the TestSuiteInfo object.
+  //
+  // p = proc do {|h, k| h[k] = Hash.new(&p) }
+  // hash = Hash.new(&p)
+  // items.each do |item|
+  //   nested = item.location.reduce(hash){|memo, curr| memo[curr]}
+  // end
   let test_array = rspecMetadata.examples.map((test: { id: string; file_path: any; }) => {
     let test_location = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]"));
     let temp_test_location_array = test_location.split(':');
