@@ -108,7 +108,7 @@ export async function getBaseTestSuite(
       
       // Get the last element in the location array.
       let test_number: number = test_location_array[test_location_array.length - 1];
-      let description: string = test.description.startsWith('example at ') ? `Test #${test_number}` : test.full_description;
+      let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
 
       let testInfo: TestInfo = {
         type: 'test',
