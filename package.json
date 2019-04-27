@@ -20,7 +20,10 @@
   ],
   "keywords": [
     "test",
-    "testing"
+    "testing",
+    "rspec",
+    "ruby",
+    "test explorer"
   ],
   "main": "out/main.js",
   "scripts": {
