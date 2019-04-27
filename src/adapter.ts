@@ -4,7 +4,6 @@ import { Log } from 'vscode-test-adapter-util';
 import { loadRspecTests, runRspecTests } from './rspecTests';
 
 export class RubyAdapter implements TestAdapter {
-
   private disposables: { dispose(): void }[] = [];
 
   private readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
@@ -24,36 +23,24 @@ export class RubyAdapter implements TestAdapter {
     this.disposables.push(this.testsEmitter);
     this.disposables.push(this.testStatesEmitter);
     this.disposables.push(this.autorunEmitter);
-
   }
 
   async load(): Promise<void> {
-
     this.log.info('Loading Ruby tests');
-
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-
     const loadedTests = await loadRspecTests();
-
     this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
-
   }
 
   async run(tests: string[]): Promise<void> {
-
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
-
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
-
-    // in a "real" TestAdapter this would start a test run in a child process
     await runRspecTests(tests, this.testStatesEmitter);
-
     this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-
   }
 
   cancel(): void {
-    // in a "real" TestAdapter this would kill the child process for the current test run (if there is any)
+    // TODO: Implement this.
     throw new Error("Method not implemented.");
   }
 

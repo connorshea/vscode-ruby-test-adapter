@@ -20,7 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const testHub = testExplorerExtension.exports;
 
-    // this will register an RubyTestAdapter for each WorkspaceFolder
+    // this will register a RubyTestAdapter for each WorkspaceFolder
     context.subscriptions.push(new TestAdapterRegistrar(
       testHub,
       workspaceFolder => new RubyAdapter(workspaceFolder, log),

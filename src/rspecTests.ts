@@ -29,13 +29,9 @@ const initRspecTests = async () => new Promise<string>((resolve, reject) => {
 
 export async function loadRspecTests(): Promise<TestSuiteInfo> {
   let output = await initRspecTests();
-
   output = getJsonFromRspecOutput(output);
-
   let rspecMetadata = JSON.parse(output);
-
-  console.log(rspecMetadata.examples);
-
+  
   let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
 
   rspecMetadata.examples.forEach((test: { id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }) => {
@@ -47,10 +43,6 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
   });
 
   let testSuite: TestSuiteInfo = await getBaseTestSuite(tests);
-
-  console.log('Array of tests with location.');
-  console.log(tests);
-
   
   (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
     // NOTE: This will only sort correctly if everything is nested at the same
@@ -174,7 +166,6 @@ export async function runRspecTests(
 
   for (const suiteOrTestId of tests) {
     const node = findNode(testSuite, suiteOrTestId);
-    console.log(JSON.stringify(node));
     if (node) {
       await runNode(node, testStatesEmitter);
     }
