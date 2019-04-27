@@ -30,20 +30,22 @@
     "watch": "tsc -w",
     "rebuild": "npm run clean && npm run build",
     "package": "vsce package",
-    "publish": "vsce publish"
+    "publish": "vsce publish",
+    "test": "npm run build && node ./node_modules/vscode/bin/test"
   },
   "dependencies": {
     "tslib": "^1.9.3",
-    "vscode-test-adapter-api": "^1.3.0",
-    "vscode-test-adapter-util": "^0.6.3"
+    "vscode-test-adapter-api": "^1.7.0",
+    "vscode-test-adapter-util": "^0.7.0"
   },
   "devDependencies": {
     "typescript": "^3.3.3",
     "vsce": "^1.57.0",
-    "vscode": "^1.1.29"
+    "vscode": "^1.1.33",
+    "@types/mocha": "^5.2"
   },
   "engines": {
-    "vscode": "^1.30.0"
+    "vscode": "^1.33.0"
   },
   "extensionDependencies": [
     "hbenl.vscode-test-explorer"
