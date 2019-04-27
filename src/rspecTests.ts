@@ -30,7 +30,7 @@ const initRspecTests = async () => new Promise<string>((resolve, reject) => {
 export async function loadRspecTests(): Promise<TestSuiteInfo> {
   let output = await initRspecTests();
 
-  output = output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
+  output = getJsonFromRspecOutput(output);
 
   let rspecMetadata = JSON.parse(output);
 
@@ -68,6 +68,10 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
   });
 
   return Promise.resolve<TestSuiteInfo>(testSuite);
+}
+
+function getJsonFromRspecOutput(output: string): string {
+  return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
 }
 
 export function getTestLocation(test: TestInfo): number {
@@ -178,10 +182,58 @@ async function runNode(
     testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
 
   } else if (node.type === 'test') {
+    if (node.file !== undefined && node.line !== undefined) {
+      testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+      
+      // Run the test at the given line, add one since the line is 0-indexed in
+      // VS Code and 1-indexed for Rspec.
+      let testOutput = await runTest(`${node.file}:${node.line + 1}`);
+      
+      console.log('testOutput');
+      console.log(testOutput);
 
-    testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+      testOutput = getJsonFromRspecOutput(testOutput);
+      let testMetadata = JSON.parse(testOutput);
+      let currentTest = testMetadata.examples[0];
 
-    testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'passed' });
+      if (currentTest.status === "passed") {
+        testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'passed' });
+      } else if (currentTest.status === "failed" && currentTest.pending_message === null) {
+        let errorMessage: string = currentTest.exception.message;
 
+        // Add backtrace to errorMessage if it exists.
+        if (currentTest.exception.backtrace) {
+          errorMessage += `\n\nBacktrace:\n`;
+          currentTest.exception.backtrace.forEach((line: string) => {
+            errorMessage += `${line}\n`;
+          })
+        }
+
+        testStatesEmitter.fire(<TestEvent>{
+          type: 'test',
+          test: node.id,
+          state: 'failed',
+          message: errorMessage
+        });
+      } else if (currentTest.status === "failed" && currentTest.pending_message !== null) {
+        // Handle pending test cases.
+        testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'skipped', message: currentTest.pending_message });
+      }
+    } else {
+      testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'errored' });
+    }
   }
 }
+
+let runTest = async (testLocation: string | undefined) => new Promise<string>((resolve, reject) => {
+  let cmd = `bundle exec rspec --format json ${testLocation}`;
+
+  const execArgs: childProcess.ExecOptions = {
+    cwd: vscode.workspace.rootPath,
+    maxBuffer: 400 * 1024
+  };
+
+  childProcess.exec(cmd, execArgs, (err, stdout) => {
+    resolve(stdout);
+  });
+});
