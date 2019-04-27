@@ -75,7 +75,7 @@ function getJsonFromRspecOutput(output: string): string {
 }
 
 export function getTestLocation(test: TestInfo): number {
-  return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''))
+  return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''));
 }
 
 export async function getBaseTestSuite(
@@ -139,6 +139,32 @@ export async function getBaseTestSuite(
   return testSuite;
 }
 
+let runSingleTest = async (testLocation: string | undefined) => new Promise<string>((resolve, reject) => {
+  let cmd = `bundle exec rspec --format json ${testLocation}`;
+
+  const execArgs: childProcess.ExecOptions = {
+    cwd: vscode.workspace.rootPath,
+    maxBuffer: 400 * 1024
+  };
+
+  childProcess.exec(cmd, execArgs, (err, stdout) => {
+    resolve(stdout);
+  });
+});
+
+let runFullTestSuite = async () => new Promise<string>((resolve, reject) => {
+  let cmd = `bundle exec rspec --format json`;
+
+  const execArgs: childProcess.ExecOptions = {
+    cwd: vscode.workspace.rootPath,
+    maxBuffer: 400 * 1024
+  };
+
+  childProcess.exec(cmd, execArgs, (err, stdout) => {
+    resolve(stdout);
+  });
+});
+
 export async function runRspecTests(
   tests: string[],
   testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
@@ -171,7 +197,20 @@ async function runNode(
   testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
 ): Promise<void> {
 
-  if (node.type === 'suite') {
+  if (node.type === 'suite' && node.id === 'root') {
+    testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+    
+    let testOutput = await runFullTestSuite();
+    testOutput = getJsonFromRspecOutput(testOutput);
+    let testMetadata = JSON.parse(testOutput);
+    let tests = testMetadata.examples;
+
+    tests.forEach((test: { id: string | TestInfo; }) => {
+      handleStatus(test, testStatesEmitter);
+    });
+
+    testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+  } else if (node.type === 'suite') {
 
     testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
 
@@ -187,50 +226,38 @@ async function runNode(
       
       // Run the test at the given line, add one since the line is 0-indexed in
       // VS Code and 1-indexed for Rspec.
-      let testOutput = await runTest(`${node.file}:${node.line + 1}`);
+      let testOutput = await runSingleTest(`${node.file}:${node.line + 1}`);
 
       testOutput = getJsonFromRspecOutput(testOutput);
       let testMetadata = JSON.parse(testOutput);
       let currentTest = testMetadata.examples[0];
 
-      if (currentTest.status === "passed") {
-        testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'passed' });
-      } else if (currentTest.status === "failed" && currentTest.pending_message === null) {
-        let errorMessage: string = currentTest.exception.message;
-
-        // Add backtrace to errorMessage if it exists.
-        if (currentTest.exception.backtrace) {
-          errorMessage += `\n\nBacktrace:\n`;
-          currentTest.exception.backtrace.forEach((line: string) => {
-            errorMessage += `${line}\n`;
-          })
-        }
-
-        testStatesEmitter.fire(<TestEvent>{
-          type: 'test',
-          test: node.id,
-          state: 'failed',
-          message: errorMessage
-        });
-      } else if (currentTest.status === "failed" && currentTest.pending_message !== null) {
-        // Handle pending test cases.
-        testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'skipped', message: currentTest.pending_message });
-      }
-    } else {
-      testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'errored' });
-    }
+      handleStatus(currentTest, testStatesEmitter);
   }
 }
 
-let runTest = async (testLocation: string | undefined) => new Promise<string>((resolve, reject) => {
-  let cmd = `bundle exec rspec --format json ${testLocation}`;
+function handleStatus(test: any, testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>): void {
+  if (test.status === "passed") {
+    testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
+  } else if (test.status === "failed" && test.pending_message === null) {
+    let errorMessage: string = test.exception.message;
 
-  const execArgs: childProcess.ExecOptions = {
-    cwd: vscode.workspace.rootPath,
-    maxBuffer: 400 * 1024
-  };
+    // Add backtrace to errorMessage if it exists.
+    if (test.exception.backtrace) {
+      errorMessage += `\n\nBacktrace:\n`;
+      test.exception.backtrace.forEach((line: string) => {
+        errorMessage += `${line}\n`;
+      });
+    }
 
-  childProcess.exec(cmd, execArgs, (err, stdout) => {
-    resolve(stdout);
-  });
-});
+    testStatesEmitter.fire(<TestEvent>{
+      type: 'test',
+      test: test.id,
+      state: 'failed',
+      message: errorMessage
+    });
+  } else if (test.status === "failed" && test.pending_message !== null) {
+    // Handle pending test cases.
+    testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'skipped', message: test.pending_message });
+  }
+};
