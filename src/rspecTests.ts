@@ -116,7 +116,8 @@ function getTestLocation(test: TestInfo): number {
  * @return The Rspec command
  */
 function getRspecCommand(): string {
-  return vscode.workspace.getConfiguration('rubyTestExplorer').get('specCommand') || 'bundle exec rspec';
+  let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
+  return command || 'bundle exec rspec';
 }
 
 /**
