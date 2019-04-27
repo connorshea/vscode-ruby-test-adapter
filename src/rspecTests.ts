@@ -25,37 +25,7 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
 
   let rspecMetadata = JSON.parse(output);
 
-  let testSuite: TestSuiteInfo = {
-    type: 'suite',
-    id: 'root',
-    label: 'Rspec',
-    children: []
-  };
-
   console.log(rspecMetadata.examples);
-
-  // TODO: Turn this into a proper structure for the TestSuiteInfo object.
-  //
-  // p = proc do {|h, k| h[k] = Hash.new(&p) }
-  // hash = Hash.new(&p)
-  // items.each do |item|
-  //   nested = item.location.reduce(hash){|memo, curr| memo[curr]}
-  // end
-  let testsWithPathAndLocation = rspecMetadata.examples.map((test: { id: string; file_path: any; }) => {
-    let test_location = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]"));
-    let temp_test_location_array = test_location.split(':');
-    let test_location_array = temp_test_location_array.map((x: string) => {
-      return parseInt(x);
-    });
-
-    return {
-      id: test.id,
-      file: test.file_path,
-      location: test_location_array
-    }
-  });
-
-  console.log(testsWithPathAndLocation);
 
   let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
 
@@ -67,8 +37,52 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
     tests.push(test);
   });
 
+  let testSuite: TestSuiteInfo = await getBaseTestSuite(tests);
+
+
+  // TODO: Turn this into a proper structure for the TestSuiteInfo object.
+  //
+  // p = proc do {|h, k| h[k] = Hash.new(&p) }
+  // hash = Hash.new(&p)
+  // items.each do |item|
+  //   nested = item.location.reduce(hash){|memo, curr| memo[curr]}
+  // end
+
   console.log('Array of tests with location.');
   console.log(tests);
+
+  testSuite.children.forEach((suite: TestSuiteInfo | TestInfo) => {
+    // NOTE: This will only sort correctly if everything is nested at the same
+    // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
+    // introduced, the location is generated as e.g. 1231, which won't
+    // sort properly relative to everything else.
+    (suite as TestSuiteInfo).children.sort((a: TestInfo | TestSuiteInfo, b: TestInfo | TestSuiteInfo) => {
+      if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
+        let aLocation: number = getTestLocation(a as TestInfo);
+        let bLocation: number = getTestLocation(b as TestInfo);
+        return aLocation - bLocation;
+      } else {
+        return;
+      }
+    })
+  });
+
+  return Promise.resolve<TestSuiteInfo>(testSuite);
+}
+
+export function getTestLocation(test: TestInfo): number {
+  return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''))
+}
+
+export async function getBaseTestSuite(
+  tests: any[]
+): Promise<TestSuiteInfo> {
+  let testSuite: TestSuiteInfo = {
+    type: 'suite',
+    id: 'root',
+    label: 'Rspec',
+    children: []
+  };
 
   let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
 
@@ -118,19 +132,7 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
     testSuite.children.push(currentFileTestSuite);
   });
 
-
-  testSuite.children.filter(x => x.type === 'suite').forEach((suite: TestSuiteInfo) => {
-
-    // NOTE: This will only work if everything is nested at the same level,
-    // e.g. 111, 112, 121, etc. Once a fourth level of indentation is
-    // introduced, the location is generated as e.g. 1231, which won't
-    // sort properly.
-    suite.children.sort((a: { location: number }, b: { location: number }) => {
-      return a.location - b.location;
-    })
-  ));
-
-  return Promise.resolve<TestSuiteInfo>(testSuite);
+  return testSuite;
 }
 
 export async function runRspecTests(
