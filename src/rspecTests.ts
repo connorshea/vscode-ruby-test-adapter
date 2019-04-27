@@ -188,9 +188,6 @@ async function runNode(
       // Run the test at the given line, add one since the line is 0-indexed in
       // VS Code and 1-indexed for Rspec.
       let testOutput = await runTest(`${node.file}:${node.line + 1}`);
-      
-      console.log('testOutput');
-      console.log(testOutput);
 
       testOutput = getJsonFromRspecOutput(testOutput);
       let testMetadata = JSON.parse(testOutput);
