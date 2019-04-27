@@ -51,18 +51,19 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
   console.log('Array of tests with location.');
   console.log(tests);
 
-  testSuite.children.forEach((suite: TestSuiteInfo | TestInfo) => {
+  
+  (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
     // NOTE: This will only sort correctly if everything is nested at the same
     // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
     // introduced, the location is generated as e.g. 1231, which won't
     // sort properly relative to everything else.
-    (suite as TestSuiteInfo).children.sort((a: TestInfo | TestSuiteInfo, b: TestInfo | TestSuiteInfo) => {
+    (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
       if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
         let aLocation: number = getTestLocation(a as TestInfo);
         let bLocation: number = getTestLocation(b as TestInfo);
         return aLocation - bLocation;
       } else {
-        return;
+        return 0;
       }
     })
   });
@@ -233,6 +234,7 @@ async function runNode(
       let currentTest = testMetadata.examples[0];
 
       handleStatus(currentTest, testStatesEmitter);
+    }
   }
 }
 
