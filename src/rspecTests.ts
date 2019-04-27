@@ -39,15 +39,6 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
 
   let testSuite: TestSuiteInfo = await getBaseTestSuite(tests);
 
-
-  // TODO: Turn this into a proper structure for the TestSuiteInfo object.
-  //
-  // p = proc do {|h, k| h[k] = Hash.new(&p) }
-  // hash = Hash.new(&p)
-  // items.each do |item|
-  //   nested = item.location.reduce(hash){|memo, curr| memo[curr]}
-  // end
-
   console.log('Array of tests with location.');
   console.log(tests);
 
@@ -96,16 +87,16 @@ export async function getBaseTestSuite(
       test.type = 'test';
       test.label = '';
     });
-    
+
     let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
       // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
       let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
-      
+
       let temp_test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
       let test_location_array: Array<number> = temp_test_location_array.map((x: string) => {
         return parseInt(x);
       });
-      
+
       // Get the last element in the location array.
       let test_number: number = test_location_array[test_location_array.length - 1];
       let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
