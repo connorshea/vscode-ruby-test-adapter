@@ -56,13 +56,19 @@
       "type": "object",
       "title": "Ruby Test Explorer configuration",
       "properties": {
-        "rubyExplorer.logpanel": {
-          "description": "write diagnotic logs to an output panel",
+        "rubyTestExplorer.logpanel": {
+          "description": "Write diagnotic logs to an output panel",
           "type": "boolean",
           "scope": "resource"
         },
-        "rubyExplorer.logfile": {
-          "description": "write diagnostic logs to the given file",
+        "rubyTestExplorer.logfile": {
+          "description": "Write diagnostic logs to the given file",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.rspecCommand": {
+          "markdownDescription": "Define the command to run Rspec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.",
+          "default": "bundle exec rspec",
           "type": "string",
           "scope": "resource"
         }

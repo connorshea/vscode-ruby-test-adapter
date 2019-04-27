@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 
+/**
+ * Representation of the Rspec test suite as a TestSuiteInfo object.
+ * 
+ * @return The Rspec test suite as a TestSuiteInfo object.
+ */
 const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
   try {
     let rspecTests = loadRspecTests();
@@ -11,8 +16,13 @@ const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
   }
 });
 
+/**
+ * Perform a dry-run of the test suite to get information about every test.
+ * 
+ * @return The raw output from the Rspec JSON formatter.
+ */
 const initRspecTests = async () => new Promise<string>((resolve, reject) => {
-  let cmd = `bundle exec rspec --format json --dry-run`;
+  let cmd = `${getRspecCommand()} --format json --dry-run`;
 
   const execArgs: childProcess.ExecOptions = {
     cwd: vscode.workspace.rootPath,
@@ -27,6 +37,12 @@ const initRspecTests = async () => new Promise<string>((resolve, reject) => {
   });
 });
 
+/**
+ * Takes the output from initRspecTests() and parses the resulting
+ * JSON into a TestSuiteInfo object.
+ * 
+ * @return The full Rspec test suite.
+ */
 export async function loadRspecTests(): Promise<TestSuiteInfo> {
   let output = await initRspecTests();
   output = getJsonFromRspecOutput(output);
@@ -44,6 +60,7 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
 
   let testSuite: TestSuiteInfo = await getBaseTestSuite(tests);
   
+  // Sort the children of each test suite based on their location in the test tree.
   (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
     // NOTE: This will only sort correctly if everything is nested at the same
     // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
@@ -63,14 +80,52 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
   return Promise.resolve<TestSuiteInfo>(testSuite);
 }
 
+/**
+ * Pull JSON out of the Rspec output.
+ * 
+ * Rspec frequently returns bad data even when it's told to format the output
+ * as JSON, e.g. due to code coverage messages and other injections from gems.
+ * This tries to get the JSON by stripping everything before the first opening
+ * brace and after the last closing brace. It's probably not perfect, but it's
+ * worked for everything I've tried so far.
+ * 
+ * @param output The output returned by running an Rspec command
+ * @return A string representation of the JSON found in the Rspec output.
+ */
 function getJsonFromRspecOutput(output: string): string {
   return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
 }
 
-export function getTestLocation(test: TestInfo): number {
+/**
+ * Get the location of the test in the testing tree.
+ * 
+ * Test ids are in the form of `/spec/model/game_spec.rb[1:1:1]`, and this
+ * function turns that into `111`. The number is used to order the tests
+ * in the explorer.
+ * 
+ * @param test The test we want to get the location of.
+ * @return A number representing the location of the test in the test tree.
+ */
+function getTestLocation(test: TestInfo): number {
   return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''));
 }
 
+/**
+ * Get the user-configured Rspec command, if there is one.
+ *
+ * @return The Rspec command
+ */
+function getRspecCommand(): string {
+  return vscode.workspace.getConfiguration('rubyTestExplorer').get('specCommand') || 'bundle exec rspec';
+}
+
+/**
+ * Create the base test suite with a root node and child nodes representing each
+ * test file discovered by Rspec.
+ * 
+ * @param tests Test objects returned by Rspec's JSON formatter.
+ * @return The test suite root with its direct children.
+ */
 export async function getBaseTestSuite(
   tests: any[]
 ): Promise<TestSuiteInfo> {
@@ -132,8 +187,14 @@ export async function getBaseTestSuite(
   return testSuite;
 }
 
+/**
+ * Runs a single test.
+ * 
+ * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
+ * @return The raw output from running the test.
+ */
 let runSingleTest = async (testLocation: string | undefined) => new Promise<string>((resolve, reject) => {
-  let cmd = `bundle exec rspec --format json ${testLocation}`;
+  let cmd = `${getRspecCommand()} --format json ${testLocation !== undefined ? testLocation : ''}`;
 
   const execArgs: childProcess.ExecOptions = {
     cwd: vscode.workspace.rootPath,
@@ -145,8 +206,13 @@ let runSingleTest = async (testLocation: string | undefined) => new Promise<stri
   });
 });
 
+/**
+ * Runs the full test suite for the current workspace.
+ * 
+ * @return The raw output from running the test suite.
+ */
 let runFullTestSuite = async () => new Promise<string>((resolve, reject) => {
-  let cmd = `bundle exec rspec --format json`;
+  let cmd = `${getRspecCommand()} --format json`;
 
   const execArgs: childProcess.ExecOptions = {
     cwd: vscode.workspace.rootPath,
@@ -158,6 +224,12 @@ let runFullTestSuite = async () => new Promise<string>((resolve, reject) => {
   });
 });
 
+/**
+ * Runs the test suite by iterating through each test and running it.
+ * 
+ * @param tests 
+ * @param testStatesEmitter 
+ */
 export async function runRspecTests(
   tests: string[],
   testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
@@ -172,6 +244,11 @@ export async function runRspecTests(
   }
 }
 
+/**
+ * 
+ * @param searchNode The test or test suite to search in.
+ * @param id The id of the test or test suite.
+ */
 function findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteInfo | TestInfo | undefined {
   if (searchNode.id === id) {
     return searchNode;
@@ -184,11 +261,18 @@ function findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteIn
   return undefined;
 }
 
+/**
+ * 
+ * @param node A test or test suite.
+ * @param testStatesEmitter An emitter for the test suite's state.
+ */
 async function runNode(
   node: TestSuiteInfo | TestInfo,
   testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
 ): Promise<void> {
 
+  // Special case handling for the root suite, since it can be run
+  // with runFullTestSuite()
   if (node.type === 'suite' && node.id === 'root') {
     testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
     
@@ -229,6 +313,12 @@ async function runNode(
   }
 }
 
+/**
+ * Handles test state based on the output returned by Rspec's JSON formatter.
+ * 
+ * @param test The test that we want to handle.
+ * @param testStatesEmitter An emitter for the test suite's state.
+ */
 function handleStatus(test: any, testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>): void {
   if (test.status === "passed") {
     testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });

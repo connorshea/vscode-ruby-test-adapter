@@ -8,8 +8,8 @@ export async function activate(context: vscode.ExtensionContext) {
   const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
 
   // create a simple logger that can be configured with the configuration variables
-  // `rubyExplorer.logpanel` and `rubyExplorer.logfile`
-  const log = new Log('rubyExplorer', workspaceFolder, 'Ruby Explorer Log');
+  // `rubyTestExplorer.logpanel` and `rubyTestExplorer.logfile`
+  const log = new Log('rubyTestExplorer', workspaceFolder, 'Ruby Test Explorer Log');
   context.subscriptions.push(log);
 
   // get the Test Explorer extension
