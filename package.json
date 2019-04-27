@@ -2,7 +2,7 @@
   "name": "vscode-ruby-test-adapter",
   "displayName": "Ruby Test Explorer",
   "description": "Run your Ruby tests in the Sidebar of Visual Studio Code",
-  "icon": "img/icon.png",
+  "icon": "img/ruby-test-explorer.png",
   "author": "Connor Shea <connor.james.shea@gmail.com>",
   "publisher": "connorshea",
   "version": "0.0.1",
