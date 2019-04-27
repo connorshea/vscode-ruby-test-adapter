@@ -2,7 +2,16 @@ import * as vscode from 'vscode';
 import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 
-const rspecTests = async () => new Promise<string>((resolve, reject) => {
+const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
+  try {
+    let rspecTests = loadRspecTests();
+    return resolve(rspecTests);
+  } catch(err) {
+    return reject(err);
+  }
+});
+
+const initRspecTests = async () => new Promise<string>((resolve, reject) => {
   let cmd = `bundle exec rspec --format json --dry-run`;
 
   const execArgs: childProcess.ExecOptions = {
@@ -19,7 +28,7 @@ const rspecTests = async () => new Promise<string>((resolve, reject) => {
 });
 
 export async function loadRspecTests(): Promise<TestSuiteInfo> {
-  let output = await rspecTests();
+  let output = await initRspecTests();
 
   output = output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
 
@@ -130,14 +139,11 @@ export async function runRspecTests(
   tests: string[],
   testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
 ): Promise<void> {
-  // TODO: Fix this.
-  let thing: TestInfo = {
-    id: 'root',
-    label: 'Rspec',
-    type: 'test'
-  };
+  let testSuite: TestSuiteInfo = await rspecTests();
+
   for (const suiteOrTestId of tests) {
-    const node = findNode(thing, suiteOrTestId);
+    const node = findNode(testSuite, suiteOrTestId);
+    console.log(JSON.stringify(node));
     if (node) {
       await runNode(node, testStatesEmitter);
     }
@@ -171,7 +177,7 @@ async function runNode(
 
     testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
 
-  } else { // node.type === 'test'
+  } else if (node.type === 'test') {
 
     testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
 
