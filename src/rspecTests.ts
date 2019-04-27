@@ -41,7 +41,7 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
   // items.each do |item|
   //   nested = item.location.reduce(hash){|memo, curr| memo[curr]}
   // end
-  let test_array = rspecMetadata.examples.map((test: { id: string; file_path: any; }) => {
+  let testsWithPathAndLocation = rspecMetadata.examples.map((test: { id: string; file_path: any; }) => {
     let test_location = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]"));
     let temp_test_location_array = test_location.split(':');
     let test_location_array = temp_test_location_array.map((x: string) => {
@@ -49,13 +49,13 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
     });
 
     return {
+      id: test.id,
       file: test.file_path,
       location: test_location_array
     }
   });
 
-  console.log('Original array of tests.');
-  console.log(test_array);
+  console.log(testsWithPathAndLocation);
 
   let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
 
@@ -82,10 +82,8 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
       test.type = 'test';
       test.label = '';
     });
-
-    console.log(JSON.stringify(current_file_tests_info));
     
-    let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: { file_path: string; id: string; description: string; full_description: string; line_number: number; }) => {
+    let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
       // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
       let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
       
@@ -120,13 +118,17 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
     testSuite.children.push(currentFileTestSuite);
   });
 
-  // NOTE: This will only work if everything is nested at the same level,
-  // e.g. 111, 112, 121, etc. Once a fourth level of indentation is
-  // introduced, the location is generated as e.g. 1231, which won't
-  // sort properly.
-  tests.sort((a: { location: number }, b: { location: number }) => {
-    return a.location - b.location;
-  })
+
+  testSuite.children.filter(x => x.type === 'suite').forEach((suite: TestSuiteInfo) => {
+
+    // NOTE: This will only work if everything is nested at the same level,
+    // e.g. 111, 112, 121, etc. Once a fourth level of indentation is
+    // introduced, the location is generated as e.g. 1231, which won't
+    // sort properly.
+    suite.children.sort((a: { location: number }, b: { location: number }) => {
+      return a.location - b.location;
+    })
+  ));
 
   return Promise.resolve<TestSuiteInfo>(testSuite);
 }
