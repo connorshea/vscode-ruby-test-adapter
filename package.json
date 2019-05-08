@@ -23,7 +23,8 @@
     "testing",
     "rspec",
     "ruby",
-    "test explorer"
+    "test explorer",
+    "test adapter"
   ],
   "main": "out/main.js",
   "scripts": {
