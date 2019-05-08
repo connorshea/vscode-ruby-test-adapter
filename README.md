@@ -14,6 +14,18 @@ The extension requires that you have Ruby installed along with the `rspec-core` 
 
 By default, you need to have `rspec` installed via Bundler with a `Gemfile` and `bundle install`, otherwise `bundle exec rspec` won't work. If you want to run your Rspec tests with a command other than `bundle exec rspec`, you can configure the command with the `rubyTestExplorer.rspecCommand` setting.
 
+## Features
+
+Currently supported:
+
+- Running individual tests.
+- Running the full test suite.
+- Viewing test output for failed tests (click the test in the test explorer sidebar to open the Output view).
+- Displaying test statuses. Success, failure, and pending (called 'skipped' in the extension).
+- File locations for each test.
+- Configurable Rspec command.
+- Some test hierarchy information, unfortunately Rspec makes this a bit of a pain to figure out so the hierarchy is pretty minimal for now.
+
 ## Configuration
 
 The following configuration options are available:
@@ -35,3 +47,26 @@ The extension is still in the early stages of development. I intend to improve i
 - Implement the cancel command ([#6](https://github.com/connorshea/vscode-ruby-test-adapter/issues/6))
 - Organize tests based on their type ([#7](https://github.com/connorshea/vscode-ruby-test-adapter/issues/7))
 - Add unit tests ([#9](https://github.com/connorshea/vscode-ruby-test-adapter/issues/9))
+
+## Contributing
+
+You'll need VS Code, Node (any version >= 8 should probably work), and Ruby installed.
+
+- Clone the repository: `git clone https://github.com/connorshea/vscode-ruby-test-adapter`
+- Run `npm install` to install dependencies.
+- Open the directory in VS Code.
+- Run `npm run watch` or start the `watch` Task in VS Code to get the TypeScript compiler running.
+- Go to the Debug section in the sidebar and run "Ruby adapter". This will start a separate VS Code instance for testing the extension in. It gets updated code whenever "Reload Window" is run in the Command Palette.
+  - You'll need a Ruby project if you want to actually use the extension to run tests, I generally use my project [VideoGameList](https://github.com/connorshea/VideoGameList) for testing, but any Ruby project with Rspec tests will work.
+
+This extension is based on [the example test adapter](https://github.com/hbenl/vscode-example-test-adapter), it may be useful to check that repository for more information. Test adapters for other languages may also be useful references.
+
+### Publishing a new version
+
+See [the VS Code extension docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for more info.
+
+Before publishing, make sure to update the `CHANGELOG.md` file. You also need to be logged in to `vsce`.
+
+`vsce publish VERSION`, e.g. `vsce publish 1.0.0` will automatically handle creating the git commit and git tag, updating the `package.json`, and publishing the new version to the Visual Studio Marketplace. You'll need to manually run `git push` and `git push --tags` after publishing.
+
+Alternatively, you can bump the extension version with `vsce publish major`, `vsce publish minor`, or `vsce publish patch`.
