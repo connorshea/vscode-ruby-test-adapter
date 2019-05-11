@@ -133,7 +133,7 @@ function getRspecCommand(): string {
 export async function getBaseTestSuite(
   tests: any[]
 ): Promise<TestSuiteInfo> {
-  let testSuite: TestSuiteInfo = {
+  let rootTestSuite: TestSuiteInfo = {
     type: 'suite',
     id: 'root',
     label: 'RSpec',
@@ -142,6 +142,49 @@ export async function getBaseTestSuite(
 
   let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
 
+  uniqueFiles = uniqueFiles.map((splitFile) => {
+    // TODO: Make './spec/' configurable.
+    return splitFile.replace("./spec/", "");
+  });
+  
+  let splitFilesArray: Array<Array<string>> = [];
+
+  uniqueFiles.forEach((file) => {
+    splitFilesArray.push(file.split('/'));
+  });
+
+  let subdirectories: Array<string> = [];
+
+  splitFilesArray.forEach((splitFile) => {
+    subdirectories.push(splitFile[0]);
+  });
+
+  // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
+  let uniqueSubdirectories = [...new Set(subdirectories)];
+
+  uniqueSubdirectories.forEach((directory) => {
+    let directoryTestSuite: TestSuiteInfo = {
+      type: 'suite',
+      id: directory,
+      label: directory,
+      children: []
+    };
+
+    rootTestSuite.children.push(directoryTestSuite);
+  });
+
+  // TODO: Make this a nested loop to create the files in a given directory, and then
+  // create the parent directory in the outer loop with all of the files as its children.
+  // 
+  // uniqueSubdirectories.forEach((dir) => {
+  //   uniqueFiles.forEach(current_file: string) => {
+  //      if (current_file is in dir) {
+  //        doStuff();
+  //      }
+  //   }
+  //
+  //  testSuiteCreationThingHere();
+  // });
   uniqueFiles.forEach((current_file: string) => {
     let current_file_tests = tests.filter(test => {
       return test.file_path === current_file
@@ -171,7 +214,7 @@ export async function getBaseTestSuite(
         id: test.id,
         label: description,
         file: file_path,
-        // Line numbers are 0-indexed... for some reason.
+        // Line numbers are 0-indexed
         line: test.line_number - 1
       }
 
@@ -181,14 +224,15 @@ export async function getBaseTestSuite(
     let currentFileTestSuite: TestSuiteInfo = {
       type: 'suite',
       id: current_file,
-      label: current_file,
+      label: current_file.replace('./spec/', ''),
       children: current_file_test_info_array
     }
 
-    testSuite.children.push(currentFileTestSuite);
+    // TODO: Push the current file's test suite into the test suite for the directory it belongs to.
+    rootTestSuite.children.push(currentFileTestSuite);
   });
 
-  return testSuite;
+  return rootTestSuite;
 }
 
 /**
