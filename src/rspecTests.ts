@@ -123,12 +123,27 @@ function getRspecCommand(): string {
   return command || 'bundle exec rspec';
 }
 
+function sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
+  testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
+    let comparison = 0;
+    if (a.label > b.label) {
+      comparison = 1;
+    } else if (a.label < b.label) {
+      comparison = -1;
+    }
+    return comparison;
+  });
+
+  return testSuiteChildren;
+}
+
 /**
- * Create the base test suite with a root node and child nodes representing each
- * test file discovered by RSpec.
+ * Create the base test suite with a root node and one layer of child nodes
+ * representing the subdirectories of spec/, and then any files under the
+ * given subdirectory.
  * 
  * @param tests Test objects returned by RSpec's JSON formatter.
- * @return The test suite root with its direct children.
+ * @return The test suite root with its children.
  */
 export async function getBaseTestSuite(
   tests: any[]
@@ -141,96 +156,86 @@ export async function getBaseTestSuite(
   };
 
   let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
-
-  uniqueFiles = uniqueFiles.map((splitFile) => {
-    // TODO: Make './spec/' configurable.
-    return splitFile.replace("./spec/", "");
-  });
   
   let splitFilesArray: Array<Array<string>> = [];
 
   uniqueFiles.forEach((file) => {
+    file = file.replace("./spec/", "");
     splitFilesArray.push(file.split('/'));
   });
 
-  let subdirectories: Array<string> = [];
-
-  splitFilesArray.forEach((splitFile) => {
-    subdirectories.push(splitFile[0]);
-  });
-
   // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
-  let uniqueSubdirectories = [...new Set(subdirectories)];
+  let subdirectories: Array<string> = [];
+  splitFilesArray.forEach((splitFile) => subdirectories.push(splitFile[0]));
+  subdirectories = [...new Set(subdirectories)];
 
-  uniqueSubdirectories.forEach((directory) => {
+  // A nested loop to iterate through the direct subdirectories of spec/ and then
+  // organize the files under those subdirectories.
+  subdirectories.forEach((directory) => {
+    let filesInDirectory: Array<TestSuiteInfo> = [];
+
+    let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
+      return file.startsWith(`./spec/${directory}/`);
+    });
+
+    uniqueFilesInDirectory.forEach((current_file: string) => {
+      let current_file_tests = tests.filter(test => test.file_path === current_file);
+
+      let current_file_tests_info = current_file_tests as unknown as Array<TestInfo>;
+      current_file_tests_info.forEach((test: TestInfo) => {
+        test.type = 'test';
+        test.label = '';
+      });
+
+      let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
+        // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
+        let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
+
+        let temp_test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
+        let test_location_array: Array<number> = temp_test_location_array.map((x: string) => {
+          return parseInt(x);
+        });
+
+        // Get the last element in the location array.
+        let test_number: number = test_location_array[test_location_array.length - 1];
+        let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
+
+        let testInfo: TestInfo = {
+          type: 'test',
+          id: test.id,
+          label: description,
+          file: file_path,
+          // Line numbers are 0-indexed
+          line: test.line_number - 1
+        }
+
+        return testInfo;
+      });
+
+      let currentFileTestSuite: TestSuiteInfo = {
+        type: 'suite',
+        id: current_file,
+        label: current_file.replace(`./spec/${directory}/`, ''),
+        children: current_file_test_info_array
+      }
+
+      filesInDirectory.push(currentFileTestSuite);
+    });
+
+    // Capitalize the first letter of the suite name, e.g. models becomes Models.
+    let suiteName: string = `${directory.charAt(0).toUpperCase()}${directory.slice(1)}`;
     let directoryTestSuite: TestSuiteInfo = {
       type: 'suite',
       id: directory,
-      label: directory,
-      children: []
+      label: suiteName,
+      children: filesInDirectory
     };
 
     rootTestSuite.children.push(directoryTestSuite);
   });
 
-  // TODO: Make this a nested loop to create the files in a given directory, and then
-  // create the parent directory in the outer loop with all of the files as its children.
-  // 
-  // uniqueSubdirectories.forEach((dir) => {
-  //   uniqueFiles.forEach(current_file: string) => {
-  //      if (current_file is in dir) {
-  //        doStuff();
-  //      }
-  //   }
-  //
-  //  testSuiteCreationThingHere();
-  // });
-  uniqueFiles.forEach((current_file: string) => {
-    let current_file_tests = tests.filter(test => {
-      return test.file_path === current_file
-    });
-
-    let current_file_tests_info = current_file_tests as unknown as Array<TestInfo>;
-    current_file_tests_info.forEach((test: TestInfo) => {
-      test.type = 'test';
-      test.label = '';
-    });
-
-    let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
-      // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
-      let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
-
-      let temp_test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-      let test_location_array: Array<number> = temp_test_location_array.map((x: string) => {
-        return parseInt(x);
-      });
-
-      // Get the last element in the location array.
-      let test_number: number = test_location_array[test_location_array.length - 1];
-      let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
-
-      let testInfo: TestInfo = {
-        type: 'test',
-        id: test.id,
-        label: description,
-        file: file_path,
-        // Line numbers are 0-indexed
-        line: test.line_number - 1
-      }
-
-      return testInfo;
-    });
-
-    let currentFileTestSuite: TestSuiteInfo = {
-      type: 'suite',
-      id: current_file,
-      label: current_file.replace('./spec/', ''),
-      children: current_file_test_info_array
-    }
-
-    // TODO: Push the current file's test suite into the test suite for the directory it belongs to.
-    rootTestSuite.children.push(currentFileTestSuite);
-  });
+  // Sort test suite types alphabetically.
+  rootTestSuite.children = sortTestSuiteChildren(rootTestSuite.children as Array<TestSuiteInfo>);
 
   return rootTestSuite;
 }
