@@ -10,7 +10,7 @@ If someone would like to contribute Minitest support, I'd be willing to merge it
 
 ## Setup
 
-The extension requires that you have Ruby installed along with the `rspec-core` gem (and any other dependencies required by your test suite). It's been tested with Ruby 2.6 and RSpec 3.8, but it should work with most recent versions of Ruby and all versions of RSpec 3.x.
+The extension requires that you have Ruby installed along with the `rspec-core` gem (and any other dependencies required by your test suite). It's been tested with Ruby 2.6 and Rspec 3.8, but it should work with most recent versions of Ruby and all versions of Rspec 3.x above 3.6.0 (versions before 3.6.0 do not currently work because they don't expose an `id` property for tests in the JSON formatter).
 
 By default, you need to have `rspec` installed via Bundler with a `Gemfile` and `bundle install`, otherwise `bundle exec rspec` won't work. If you want to run your Rspec tests with a command other than `bundle exec rspec`, you can configure the command with the `rubyTestExplorer.rspecCommand` setting.
 
