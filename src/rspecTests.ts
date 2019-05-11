@@ -124,7 +124,7 @@ function getRspecCommand(): string {
 }
 
 function sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
-  testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
+  testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
     let comparison = 0;
     if (a.label > b.label) {
       comparison = 1;
