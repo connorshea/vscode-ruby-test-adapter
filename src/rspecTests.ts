@@ -3,9 +3,9 @@ import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, Tes
 import * as childProcess from 'child_process';
 
 /**
- * Representation of the Rspec test suite as a TestSuiteInfo object.
+ * Representation of the RSpec test suite as a TestSuiteInfo object.
  * 
- * @return The Rspec test suite as a TestSuiteInfo object.
+ * @return The RSpec test suite as a TestSuiteInfo object.
  */
 const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
   try {
@@ -19,7 +19,7 @@ const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
 /**
  * Perform a dry-run of the test suite to get information about every test.
  * 
- * @return The raw output from the Rspec JSON formatter.
+ * @return The raw output from the RSpec JSON formatter.
  */
 const initRspecTests = async () => new Promise<string>((resolve, reject) => {
   let cmd = `${getRspecCommand()} --format json --dry-run`;
@@ -31,17 +31,20 @@ const initRspecTests = async () => new Promise<string>((resolve, reject) => {
 
   childProcess.exec(cmd, execArgs, (err, stdout) => {
     if (err) {
-      return reject(err);
+      // Show an error message.
+      vscode.window.showWarningMessage("Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.");
+      vscode.window.showErrorMessage(err.message);
+      throw err;
     }
     resolve(stdout);
   });
 });
 
 /**
- * Takes the output from initRspecTests() and parses the resulting
+ * Takes the output from initRSpecTests() and parses the resulting
  * JSON into a TestSuiteInfo object.
  * 
- * @return The full Rspec test suite.
+ * @return The full RSpec test suite.
  */
 export async function loadRspecTests(): Promise<TestSuiteInfo> {
   let output = await initRspecTests();
@@ -81,16 +84,16 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
 }
 
 /**
- * Pull JSON out of the Rspec output.
+ * Pull JSON out of the RSpec output.
  * 
- * Rspec frequently returns bad data even when it's told to format the output
+ * RSpec frequently returns bad data even when it's told to format the output
  * as JSON, e.g. due to code coverage messages and other injections from gems.
  * This tries to get the JSON by stripping everything before the first opening
  * brace and after the last closing brace. It's probably not perfect, but it's
  * worked for everything I've tried so far.
  * 
- * @param output The output returned by running an Rspec command
- * @return A string representation of the JSON found in the Rspec output.
+ * @param output The output returned by running an RSpec command
+ * @return A string representation of the JSON found in the RSpec output.
  */
 function getJsonFromRspecOutput(output: string): string {
   return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
@@ -111,9 +114,9 @@ function getTestLocation(test: TestInfo): number {
 }
 
 /**
- * Get the user-configured Rspec command, if there is one.
+ * Get the user-configured RSpec command, if there is one.
  *
- * @return The Rspec command
+ * @return The RSpec command
  */
 function getRspecCommand(): string {
   let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
@@ -122,9 +125,9 @@ function getRspecCommand(): string {
 
 /**
  * Create the base test suite with a root node and child nodes representing each
- * test file discovered by Rspec.
+ * test file discovered by RSpec.
  * 
- * @param tests Test objects returned by Rspec's JSON formatter.
+ * @param tests Test objects returned by RSpec's JSON formatter.
  * @return The test suite root with its direct children.
  */
 export async function getBaseTestSuite(
@@ -133,7 +136,7 @@ export async function getBaseTestSuite(
   let testSuite: TestSuiteInfo = {
     type: 'suite',
     id: 'root',
-    label: 'Rspec',
+    label: 'RSpec',
     children: []
   };
 
@@ -302,7 +305,7 @@ async function runNode(
       testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
       
       // Run the test at the given line, add one since the line is 0-indexed in
-      // VS Code and 1-indexed for Rspec.
+      // VS Code and 1-indexed for RSpec.
       let testOutput = await runSingleTest(`${node.file}:${node.line + 1}`);
 
       testOutput = getJsonFromRspecOutput(testOutput);
@@ -315,7 +318,7 @@ async function runNode(
 }
 
 /**
- * Handles test state based on the output returned by Rspec's JSON formatter.
+ * Handles test state based on the output returned by RSpec's JSON formatter.
  * 
  * @param test The test that we want to handle.
  * @param testStatesEmitter An emitter for the test suite's state.
