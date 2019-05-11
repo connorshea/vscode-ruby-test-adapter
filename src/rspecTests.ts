@@ -3,9 +3,9 @@ import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, Tes
 import * as childProcess from 'child_process';
 
 /**
- * Representation of the Rspec test suite as a TestSuiteInfo object.
+ * Representation of the RSpec test suite as a TestSuiteInfo object.
  * 
- * @return The Rspec test suite as a TestSuiteInfo object.
+ * @return The RSpec test suite as a TestSuiteInfo object.
  */
 const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
   try {
@@ -19,7 +19,7 @@ const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
 /**
  * Perform a dry-run of the test suite to get information about every test.
  * 
- * @return The raw output from the Rspec JSON formatter.
+ * @return The raw output from the RSpec JSON formatter.
  */
 const initRspecTests = async () => new Promise<string>((resolve, reject) => {
   let cmd = `${getRspecCommand()} --format json --dry-run`;
@@ -31,17 +31,20 @@ const initRspecTests = async () => new Promise<string>((resolve, reject) => {
 
   childProcess.exec(cmd, execArgs, (err, stdout) => {
     if (err) {
-      return reject(err);
+      // Show an error message.
+      vscode.window.showWarningMessage("Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.");
+      vscode.window.showErrorMessage(err.message);
+      throw err;
     }
     resolve(stdout);
   });
 });
 
 /**
- * Takes the output from initRspecTests() and parses the resulting
+ * Takes the output from initRSpecTests() and parses the resulting
  * JSON into a TestSuiteInfo object.
  * 
- * @return The full Rspec test suite.
+ * @return The full RSpec test suite.
  */
 export async function loadRspecTests(): Promise<TestSuiteInfo> {
   let output = await initRspecTests();
@@ -81,16 +84,16 @@ export async function loadRspecTests(): Promise<TestSuiteInfo> {
 }
 
 /**
- * Pull JSON out of the Rspec output.
+ * Pull JSON out of the RSpec output.
  * 
- * Rspec frequently returns bad data even when it's told to format the output
+ * RSpec frequently returns bad data even when it's told to format the output
  * as JSON, e.g. due to code coverage messages and other injections from gems.
  * This tries to get the JSON by stripping everything before the first opening
  * brace and after the last closing brace. It's probably not perfect, but it's
  * worked for everything I've tried so far.
  * 
- * @param output The output returned by running an Rspec command
- * @return A string representation of the JSON found in the Rspec output.
+ * @param output The output returned by running an RSpec command
+ * @return A string representation of the JSON found in the RSpec output.
  */
 function getJsonFromRspecOutput(output: string): string {
   return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
@@ -111,81 +114,130 @@ function getTestLocation(test: TestInfo): number {
 }
 
 /**
- * Get the user-configured Rspec command, if there is one.
+ * Get the user-configured RSpec command, if there is one.
  *
- * @return The Rspec command
+ * @return The RSpec command
  */
 function getRspecCommand(): string {
   let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
   return command || 'bundle exec rspec';
 }
 
+function sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
+  testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
+    let comparison = 0;
+    if (a.label > b.label) {
+      comparison = 1;
+    } else if (a.label < b.label) {
+      comparison = -1;
+    }
+    return comparison;
+  });
+
+  return testSuiteChildren;
+}
+
 /**
- * Create the base test suite with a root node and child nodes representing each
- * test file discovered by Rspec.
+ * Create the base test suite with a root node and one layer of child nodes
+ * representing the subdirectories of spec/, and then any files under the
+ * given subdirectory.
  * 
- * @param tests Test objects returned by Rspec's JSON formatter.
- * @return The test suite root with its direct children.
+ * @param tests Test objects returned by RSpec's JSON formatter.
+ * @return The test suite root with its children.
  */
 export async function getBaseTestSuite(
   tests: any[]
 ): Promise<TestSuiteInfo> {
-  let testSuite: TestSuiteInfo = {
+  let rootTestSuite: TestSuiteInfo = {
     type: 'suite',
     id: 'root',
-    label: 'Rspec',
+    label: 'RSpec',
     children: []
   };
 
   let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
+  
+  let splitFilesArray: Array<Array<string>> = [];
 
-  uniqueFiles.forEach((current_file: string) => {
-    let current_file_tests = tests.filter(test => {
-      return test.file_path === current_file
-    });
-
-    let current_file_tests_info = current_file_tests as unknown as Array<TestInfo>;
-    current_file_tests_info.forEach((test: TestInfo) => {
-      test.type = 'test';
-      test.label = '';
-    });
-
-    let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
-      // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
-      let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
-
-      let temp_test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-      let test_location_array: Array<number> = temp_test_location_array.map((x: string) => {
-        return parseInt(x);
-      });
-
-      // Get the last element in the location array.
-      let test_number: number = test_location_array[test_location_array.length - 1];
-      let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
-
-      let testInfo: TestInfo = {
-        type: 'test',
-        id: test.id,
-        label: description,
-        file: file_path,
-        // Line numbers are 0-indexed... for some reason.
-        line: test.line_number - 1
-      }
-
-      return testInfo;
-    });
-
-    let currentFileTestSuite: TestSuiteInfo = {
-      type: 'suite',
-      id: current_file,
-      label: current_file,
-      children: current_file_test_info_array
-    }
-
-    testSuite.children.push(currentFileTestSuite);
+  uniqueFiles.forEach((file) => {
+    file = file.replace("./spec/", "");
+    splitFilesArray.push(file.split('/'));
   });
 
-  return testSuite;
+  // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
+  let subdirectories: Array<string> = [];
+  splitFilesArray.forEach((splitFile) => subdirectories.push(splitFile[0]));
+  subdirectories = [...new Set(subdirectories)];
+
+  // A nested loop to iterate through the direct subdirectories of spec/ and then
+  // organize the files under those subdirectories.
+  subdirectories.forEach((directory) => {
+    let filesInDirectory: Array<TestSuiteInfo> = [];
+
+    let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
+      return file.startsWith(`./spec/${directory}/`);
+    });
+
+    uniqueFilesInDirectory.forEach((current_file: string) => {
+      let current_file_tests = tests.filter(test => test.file_path === current_file);
+
+      let current_file_tests_info = current_file_tests as unknown as Array<TestInfo>;
+      current_file_tests_info.forEach((test: TestInfo) => {
+        test.type = 'test';
+        test.label = '';
+      });
+
+      let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
+        // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
+        let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
+
+        let temp_test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
+        let test_location_array: Array<number> = temp_test_location_array.map((x: string) => {
+          return parseInt(x);
+        });
+
+        // Get the last element in the location array.
+        let test_number: number = test_location_array[test_location_array.length - 1];
+        let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
+
+        let testInfo: TestInfo = {
+          type: 'test',
+          id: test.id,
+          label: description,
+          file: file_path,
+          // Line numbers are 0-indexed
+          line: test.line_number - 1
+        }
+
+        return testInfo;
+      });
+
+      let currentFileTestSuite: TestSuiteInfo = {
+        type: 'suite',
+        id: current_file,
+        label: current_file.replace(`./spec/${directory}/`, ''),
+        children: current_file_test_info_array
+      }
+
+      filesInDirectory.push(currentFileTestSuite);
+    });
+
+    // Capitalize the first letter of the suite name, e.g. models becomes Models.
+    let suiteName: string = `${directory.charAt(0).toUpperCase()}${directory.slice(1)}`;
+    let directoryTestSuite: TestSuiteInfo = {
+      type: 'suite',
+      id: directory,
+      label: suiteName,
+      children: filesInDirectory
+    };
+
+    rootTestSuite.children.push(directoryTestSuite);
+  });
+
+  // Sort test suite types alphabetically.
+  rootTestSuite.children = sortTestSuiteChildren(rootTestSuite.children as Array<TestSuiteInfo>);
+
+  return rootTestSuite;
 }
 
 /**
@@ -302,7 +354,7 @@ async function runNode(
       testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
       
       // Run the test at the given line, add one since the line is 0-indexed in
-      // VS Code and 1-indexed for Rspec.
+      // VS Code and 1-indexed for RSpec.
       let testOutput = await runSingleTest(`${node.file}:${node.line + 1}`);
 
       testOutput = getJsonFromRspecOutput(testOutput);
@@ -315,7 +367,7 @@ async function runNode(
 }
 
 /**
- * Handles test state based on the output returned by Rspec's JSON formatter.
+ * Handles test state based on the output returned by RSpec's JSON formatter.
  * 
  * @param test The test that we want to handle.
  * @param testStatesEmitter An emitter for the test suite's state.
