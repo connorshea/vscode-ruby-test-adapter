@@ -137,6 +137,77 @@ function sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<T
   return testSuiteChildren;
 }
 
+// Get the tests in a given file.
+function getTestSuiteForFile(
+{ tests, currentFile, directory }: {
+tests: Array<{
+  id: string;
+  full_description: string;
+  description: string;
+  file_path: string;
+  line_number: number;
+  location: number;
+}>; currentFile: string; directory?: string;
+}): TestSuiteInfo {
+  let currentFileTests = tests.filter(test => {
+    return test.file_path === currentFile
+  });
+
+  let currentFileTestsInfo = currentFileTests as unknown as Array<TestInfo>;
+  currentFileTestsInfo.forEach((test: TestInfo) => {
+    test.type = 'test';
+    test.label = '';
+  });
+
+  let currentFileTestInfoArray: Array<TestInfo> = currentFileTests.map((test) => {
+    // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
+    // but with the latter's first character stripped.
+    let filePath: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
+
+    // RSpec provides test ids like "file_name.rb[1:2:3]".
+    // This uses the digits at the end of the id to create
+    // an array of numbers representing the location of the
+    // test in the file.
+    let testLocationArray: Array<number> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').map((x) => {
+      return parseInt(x);
+    });
+
+    // Get the last element in the location array.
+    let testNumber: number = testLocationArray[testLocationArray.length - 1];
+    // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
+    // is appended to the test description to distinguish between separate tests.
+    let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${testNumber}` : test.full_description;
+
+    let testInfo: TestInfo = {
+      type: 'test',
+      id: test.id,
+      label: description,
+      file: filePath,
+      // Line numbers are 0-indexed
+      line: test.line_number - 1
+    }
+
+    return testInfo;
+  });
+
+  let currentFileLabel = '';
+
+  if (directory) {
+    currentFileLabel = currentFile.replace(`./spec/${directory}/`, '');
+  } else {
+    currentFileLabel = currentFile.replace(`./spec/`, '');
+  }
+
+  let currentFileTestSuite: TestSuiteInfo = {
+    type: 'suite',
+    id: currentFile,
+    label: currentFileLabel,
+    children: currentFileTestInfoArray
+  }
+
+  return currentFileTestSuite;
+}
+
 /**
  * Create the base test suite with a root node and one layer of child nodes
  * representing the subdirectories of spec/, and then any files under the
@@ -156,17 +227,22 @@ export async function getBaseTestSuite(
   };
 
   let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
-  
-  let splitFilesArray: Array<Array<string>> = [];
 
+  let splitFilesArray: Array<string[]> = [];
+
+  // Remove the spec/ directory from all the file path.
+  // TODO: Replace ./spec with a configurable spec location.
   uniqueFiles.forEach((file) => {
-    file = file.replace("./spec/", "");
-    splitFilesArray.push(file.split('/'));
+    splitFilesArray.push(file.replace("./spec/", "").split('/'));
   });
 
   // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
   let subdirectories: Array<string> = [];
-  splitFilesArray.forEach((splitFile) => subdirectories.push(splitFile[0]));
+  splitFilesArray.forEach((splitFile) => {
+    if (splitFile.length > 1) {
+      subdirectories.push(splitFile[0]);
+    }
+  });
   subdirectories = [...new Set(subdirectories)];
 
   // A nested loop to iterate through the direct subdirectories of spec/ and then
@@ -178,47 +254,9 @@ export async function getBaseTestSuite(
       return file.startsWith(`./spec/${directory}/`);
     });
 
-    uniqueFilesInDirectory.forEach((current_file: string) => {
-      let current_file_tests = tests.filter(test => test.file_path === current_file);
-
-      let current_file_tests_info = current_file_tests as unknown as Array<TestInfo>;
-      current_file_tests_info.forEach((test: TestInfo) => {
-        test.type = 'test';
-        test.label = '';
-      });
-
-      let current_file_test_info_array: Array<TestInfo> = current_file_tests_info.map((test: any) => {
-        // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb", but with the latter's first character stripped.
-        let file_path: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
-
-        let temp_test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-        let test_location_array: Array<number> = temp_test_location_array.map((x: string) => {
-          return parseInt(x);
-        });
-
-        // Get the last element in the location array.
-        let test_number: number = test_location_array[test_location_array.length - 1];
-        let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${test_number}` : test.full_description;
-
-        let testInfo: TestInfo = {
-          type: 'test',
-          id: test.id,
-          label: description,
-          file: file_path,
-          // Line numbers are 0-indexed
-          line: test.line_number - 1
-        }
-
-        return testInfo;
-      });
-
-      let currentFileTestSuite: TestSuiteInfo = {
-        type: 'suite',
-        id: current_file,
-        label: current_file.replace(`./spec/${directory}/`, ''),
-        children: current_file_test_info_array
-      }
-
+    // Get the sets of tests for each file in the current directory.
+    uniqueFilesInDirectory.forEach((currentFile: string) => {
+      let currentFileTestSuite = getTestSuiteForFile({ tests, currentFile, directory });
       filesInDirectory.push(currentFileTestSuite);
     });
 
@@ -236,6 +274,16 @@ export async function getBaseTestSuite(
 
   // Sort test suite types alphabetically.
   rootTestSuite.children = sortTestSuiteChildren(rootTestSuite.children as Array<TestSuiteInfo>);
+
+  // Get files that are direct descendants of the spec/ directory.
+  let topDirectoryFiles = uniqueFiles.filter((filePath) => {
+    return filePath.replace("./spec/", "").split('/').length === 1;
+  });
+
+  topDirectoryFiles.forEach((currentFile) => {
+    let currentFileTestSuite = getTestSuiteForFile({ tests, currentFile });
+    rootTestSuite.children.push(currentFileTestSuite);
+  });
 
   return rootTestSuite;
 }
