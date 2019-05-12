@@ -55,7 +55,11 @@
     "hbenl.vscode-test-explorer"
   ],
   "activationEvents": [
-    "*"
+		"onLanguage:ruby",
+    "onLanguage:erb",
+    "workspaceContains:**/Rakefile",
+    "workspaceContains:**/Gemfile",
+    "workspaceContains:**/*.rb"
   ],
   "contributes": {
     "configuration": {
