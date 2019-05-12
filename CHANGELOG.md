@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2019-05-11
+### Fixed
+- Only activate the extension when Ruby files are present. This prevents warning messages about initializing RSpec in projects that don't use Ruby.
+
 ## [0.3.0] - 2019-05-11
 ### Added
 - Add proper hierarchy information based on the subdirectory of the spec file.
@@ -32,7 +36,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.2.3...v0.3.0
 [0.2.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.2.1...v0.2.2
