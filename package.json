@@ -77,6 +77,12 @@
           "default": "bundle exec rspec",
           "type": "string",
           "scope": "resource"
+        },
+        "rubyTestExplorer.specDirectory": {
+          "markdownDescription": "The location of your spec directory relative to the root of the workspace.",
+          "default": "./spec/",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }

@@ -123,6 +123,16 @@ function getRspecCommand(): string {
   return command || 'bundle exec rspec';
 }
 
+/**
+ * Get the user-configured spec directory, if there is one.
+ *
+ * @return The spec directory
+ */
+function getSpecDirectory(): string {
+  let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string);
+  return directory || './spec/';
+}
+
 function sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
   testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
     let comparison = 0;
@@ -193,9 +203,9 @@ tests: Array<{
   let currentFileLabel = '';
 
   if (directory) {
-    currentFileLabel = currentFile.replace(`./spec/${directory}/`, '');
+    currentFileLabel = currentFile.replace(`${getSpecDirectory()}${directory}/`, '');
   } else {
-    currentFileLabel = currentFile.replace(`./spec/`, '');
+    currentFileLabel = currentFile.replace(`${getSpecDirectory()}`, '');
   }
 
   let currentFileTestSuite: TestSuiteInfo = {
@@ -231,9 +241,8 @@ export async function getBaseTestSuite(
   let splitFilesArray: Array<string[]> = [];
 
   // Remove the spec/ directory from all the file path.
-  // TODO: Replace ./spec with a configurable spec location.
   uniqueFiles.forEach((file) => {
-    splitFilesArray.push(file.replace("./spec/", "").split('/'));
+    splitFilesArray.push(file.replace(`${getSpecDirectory()}`, "").split('/'));
   });
 
   // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
@@ -251,7 +260,7 @@ export async function getBaseTestSuite(
     let filesInDirectory: Array<TestSuiteInfo> = [];
 
     let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-      return file.startsWith(`./spec/${directory}/`);
+      return file.startsWith(`${getSpecDirectory()}${directory}/`);
     });
 
     // Get the sets of tests for each file in the current directory.
@@ -275,7 +284,7 @@ export async function getBaseTestSuite(
 
   // Get files that are direct descendants of the spec/ directory.
   let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-    return filePath.replace("./spec/", "").split('/').length === 1;
+    return filePath.replace(`${getSpecDirectory()}`, "").split('/').length === 1;
   });
 
   topDirectoryFiles.forEach((currentFile) => {

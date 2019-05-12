@@ -35,6 +35,7 @@ Property                            | Description
 `rubyTestExplorer.logpanel`         | Whether to write diagnotic logs to an output panel
 `rubyTestExplorer.logfile`          | Write diagnostic logs to the given file
 `rubyTestExplorer.rspecCommand`     | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
+`rubyTestExplorer.specDirectory`    | Define the relative directory where the specs are located in a given workspace, for example `./spec/`.
 
 ## TODO
 
