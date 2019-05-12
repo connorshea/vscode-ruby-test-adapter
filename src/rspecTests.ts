@@ -260,12 +260,10 @@ export async function getBaseTestSuite(
       filesInDirectory.push(currentFileTestSuite);
     });
 
-    // Capitalize the first letter of the suite name, e.g. models becomes Models.
-    let suiteName: string = `${directory.charAt(0).toUpperCase()}${directory.slice(1)}`;
     let directoryTestSuite: TestSuiteInfo = {
       type: 'suite',
       id: directory,
-      label: suiteName,
+      label: directory,
       children: filesInDirectory
     };
 
