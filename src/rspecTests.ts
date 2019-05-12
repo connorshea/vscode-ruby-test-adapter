@@ -196,6 +196,8 @@ tests: Array<{
     currentFileLabel = currentFile.replace(`${getSpecDirectory()}`, '');
   }
 
+  let pascalCurrentFileLabel = snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
+
   let currentFileTestInfoArray: Array<TestInfo> = currentFileTests.map((test) => {
     // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
     // but with the latter's first character stripped.
@@ -214,6 +216,17 @@ tests: Array<{
     // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
     // is appended to the test description to distinguish between separate tests.
     let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${testNumber}` : test.full_description;
+
+    // If the current file label doesn't have a slash in it and it starts with the PascalCase'd
+    // file name, remove the from the start of the description. This turns, e.g.
+    // `ExternalAccount Validations blah blah blah' into 'Validations blah blah blah'.
+    if (!pascalCurrentFileLabel.includes('/') && description.startsWith(pascalCurrentFileLabel)) {
+      // Optional check for a space following the PascalCase file name. In some
+      // cases, e.g. 'FileName#method_name` there's no space after the file name.
+      let regexString = `${pascalCurrentFileLabel}[ ]?`;
+      let regex = new RegExp(regexString, "g");
+      description = description.replace(regex, '');
+    }
 
     let testInfo: TestInfo = {
       type: 'test',
