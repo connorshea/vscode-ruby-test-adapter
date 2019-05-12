@@ -46,7 +46,6 @@ The extension is still in the early stages of development. I intend to improve i
 - Create a custom RSpec formatter ([#4](https://github.com/connorshea/vscode-ruby-test-adapter/issues/4))
 - Implement a test definitions watcher ([#5](https://github.com/connorshea/vscode-ruby-test-adapter/issues/5))
 - Implement the cancel command ([#6](https://github.com/connorshea/vscode-ruby-test-adapter/issues/6))
-- Organize tests based on their type ([#7](https://github.com/connorshea/vscode-ruby-test-adapter/issues/7))
 - Add unit tests ([#9](https://github.com/connorshea/vscode-ruby-test-adapter/issues/9))
 
 ## Contributing
