@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Add proper hierarchy information based on the subdirectory of the spec file.
 - Add a warning message if the extension fails to initialize RSpec.
+- Add configuration setting for the `spec` directory.
 
 ## [0.2.3] - 2019-05-08
 ### Changed
