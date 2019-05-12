@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Fixed
+- Fix randomized ordering of tests in the explorer by having RSpec order by defined when getting the tests initially.
 
 ## [0.3.1] - 2019-05-11
 ### Fixed

@@ -22,7 +22,7 @@ const rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
  * @return The raw output from the RSpec JSON formatter.
  */
 const initRspecTests = async () => new Promise<string>((resolve, reject) => {
-  let cmd = `${getRspecCommand()} --format json --dry-run`;
+  let cmd = `${getRspecCommand()} --format json --order defined --dry-run`;
 
   const execArgs: childProcess.ExecOptions = {
     cwd: vscode.workspace.rootPath,
