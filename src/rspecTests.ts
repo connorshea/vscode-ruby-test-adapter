@@ -133,6 +133,25 @@ function getSpecDirectory(): string {
   return directory || './spec/';
 }
 
+/**
+ * Convert a string from snake_case to PascalCase.
+ * Note that the function will return the input string unchanged if it
+ * includes a '/'.
+ * 
+ * @param string The string to convert to PascalCase.
+ * @return The converted string.
+ */
+function snakeToPascalCase(string: string): string {
+  if (string.includes('/')) { return string }
+  return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
+}
+
+/**
+ * Sorts an array of TestSuiteInfo objects by label.
+ * 
+ * @param testSuiteChildren An array of TestSuiteInfo objects, generally the children of another TestSuiteInfo object.
+ * @return The input array, sorted by label.
+ */
 function sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
   testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
     let comparison = 0;
@@ -169,6 +188,14 @@ tests: Array<{
     test.label = '';
   });
 
+  let currentFileLabel = '';
+
+  if (directory) {
+    currentFileLabel = currentFile.replace(`${getSpecDirectory()}${directory}/`, '');
+  } else {
+    currentFileLabel = currentFile.replace(`${getSpecDirectory()}`, '');
+  }
+
   let currentFileTestInfoArray: Array<TestInfo> = currentFileTests.map((test) => {
     // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
     // but with the latter's first character stripped.
@@ -199,14 +226,6 @@ tests: Array<{
 
     return testInfo;
   });
-
-  let currentFileLabel = '';
-
-  if (directory) {
-    currentFileLabel = currentFile.replace(`${getSpecDirectory()}${directory}/`, '');
-  } else {
-    currentFileLabel = currentFile.replace(`${getSpecDirectory()}`, '');
-  }
 
   let currentFileTestSuite: TestSuiteInfo = {
     type: 'suite',
