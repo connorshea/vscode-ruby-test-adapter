@@ -4,7 +4,6 @@ import { Log, TestAdapterRegistrar } from 'vscode-test-adapter-util';
 import { RubyAdapter } from './adapter';
 
 export async function activate(context: vscode.ExtensionContext) {
-
   const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
 
   // create a simple logger that can be configured with the configuration variables
@@ -14,10 +13,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // get the Test Explorer extension
   const testExplorerExtension = vscode.extensions.getExtension<TestHub>(testExplorerExtensionId);
-  if (log.enabled) log.info(`Test Explorer ${testExplorerExtension ? '' : 'not '}found`);
+  if (log.enabled) {
+    log.info(`Test Explorer ${testExplorerExtension ? '' : 'not '}found`);
+  }
 
   if (testExplorerExtension) {
-
     const testHub = testExplorerExtension.exports;
 
     // this will register a RubyTestAdapter for each WorkspaceFolder
