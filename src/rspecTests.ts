@@ -368,13 +368,14 @@ export class RspecTests {
     );
 
     testRun.stdout!.on('data', (data) => {
+      data = data.toString();
       console.log(`stdout: ${data}`);
-      if (data.toString().startsWith('PASSED:')) {
-        data = data.toString().replace('PASSED: ', '');
+      if (data.startsWith('PASSED:')) {
+        data = data.replace('PASSED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
       }
-      if (data.toString().includes('START_OF_RSPEC_JSON')) {
-        resolve(data.toString());
+      if (data.includes('START_OF_RSPEC_JSON')) {
+        resolve(data);
       }
     });
   });
