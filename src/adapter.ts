@@ -29,7 +29,7 @@ export class RubyAdapter implements TestAdapter {
   async load(): Promise<void> {
     this.log.info('Loading Ruby tests');
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-    let rspecTestsInstance = new RspecTests(this.context);
+    let rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter);
     const loadedTests = await rspecTestsInstance.loadRspecTests();
     this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
   }
@@ -37,8 +37,8 @@ export class RubyAdapter implements TestAdapter {
   async run(tests: string[]): Promise<void> {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
-    let rspecTestsInstance = new RspecTests(this.context);
-    await rspecTestsInstance.runRspecTests(tests, this.testStatesEmitter);
+    let rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter);
+    await rspecTestsInstance.runRspecTests(tests);
     this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 

@@ -4,9 +4,16 @@ import * as childProcess from 'child_process';
 
 export class RspecTests {
   private context: vscode.ExtensionContext;
+  private testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
 
-  constructor(context: vscode.ExtensionContext) {
+  /**
+   * 
+   * @param context Extension context provided by vscode.
+   * @param testStatesEmitter An emitter for the test suite's state.
+   */
+  constructor(context: vscode.ExtensionContext, testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>) {
     this.context = context;
+    this.testStatesEmitter = testStatesEmitter;
   }
 
   /**
@@ -350,15 +357,25 @@ export class RspecTests {
    * @return The raw output from running the test.
    */
   runSingleTest = async (testLocation: string | undefined) => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation !== undefined ? testLocation : ''}`;
-
-    const execArgs: childProcess.ExecOptions = {
+    const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
-      maxBuffer: 400 * 1024
+      shell: true
     };
 
-    childProcess.exec(cmd, execArgs, (err, stdout) => {
-      resolve(stdout);
+    let testRun = childProcess.spawn(
+      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation !== undefined ? testLocation : ''}`,
+      spawnArgs
+    );
+
+    testRun.stdout!.on('data', (data) => {
+      console.log(`stdout: ${data}`);
+      if (data.toString().startsWith('PASSED:')) {
+        data = data.toString().replace('PASSED: ', '');
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
+      }
+      if (data.toString().includes('START_OF_RSPEC_JSON')) {
+        resolve(data.toString());
+      }
     });
   });
 
@@ -376,6 +393,7 @@ export class RspecTests {
     };
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
+      console.log(stdout);
       resolve(stdout);
     });
   });
@@ -383,19 +401,17 @@ export class RspecTests {
   /**
    * Runs the test suite by iterating through each test and running it.
    * 
-   * @param tests 
-   * @param testStatesEmitter 
+   * @param tests  
    */
   runRspecTests = async (
-    tests: string[],
-    testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
+    tests: string[]
   ): Promise<void> => {
     let testSuite: TestSuiteInfo = await this.rspecTests();
 
     for (const suiteOrTestId of tests) {
       const node = this.findNode(testSuite, suiteOrTestId);
       if (node) {
-        await this.runNode(node, testStatesEmitter);
+        await this.runNode(node);
       }
     }
   }
@@ -420,17 +436,15 @@ export class RspecTests {
   /**
    * 
    * @param node A test or test suite.
-   * @param testStatesEmitter An emitter for the test suite's state.
    */
   private async runNode(
-    node: TestSuiteInfo | TestInfo,
-    testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>
+    node: TestSuiteInfo | TestInfo
   ): Promise<void> {
 
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     if (node.type === 'suite' && node.id === 'root') {
-      testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
       
       let testOutput = await this.runFullTestSuite();
       testOutput = this.getJsonFromRspecOutput(testOutput);
@@ -438,23 +452,23 @@ export class RspecTests {
       let tests = testMetadata.examples;
 
       tests.forEach((test: { id: string | TestInfo; }) => {
-        this.handleStatus(test, testStatesEmitter);
+        this.handleStatus(test);
       });
 
-      testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
     } else if (node.type === 'suite') {
 
-      testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
 
       for (const child of node.children) {
-        await this.runNode(child, testStatesEmitter);
+        await this.runNode(child);
       }
 
-      testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
 
     } else if (node.type === 'test') {
       if (node.file !== undefined && node.line !== undefined) {
-        testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
         
         // Run the test at the given line, add one since the line is 0-indexed in
         // VS Code and 1-indexed for RSpec.
@@ -464,7 +478,7 @@ export class RspecTests {
         let testMetadata = JSON.parse(testOutput);
         let currentTest = testMetadata.examples[0];
 
-        this.handleStatus(currentTest, testStatesEmitter);
+        this.handleStatus(currentTest);
       }
     }
   }
@@ -473,11 +487,10 @@ export class RspecTests {
    * Handles test state based on the output returned by RSpec's JSON formatter.
    * 
    * @param test The test that we want to handle.
-   * @param testStatesEmitter An emitter for the test suite's state.
    */
-  private handleStatus(test: any, testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>): void {
+  private handleStatus(test: any): void {
     if (test.status === "passed") {
-      testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
+      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
     } else if (test.status === "failed" && test.pending_message === null) {
       let errorMessage: string = test.exception.message;
 
@@ -489,7 +502,7 @@ export class RspecTests {
         });
       }
 
-      testStatesEmitter.fire(<TestEvent>{
+      this.testStatesEmitter.fire(<TestEvent>{
         type: 'test',
         test: test.id,
         state: 'failed',
@@ -497,7 +510,7 @@ export class RspecTests {
       });
     } else if (test.status === "failed" && test.pending_message !== null) {
       // Handle pending test cases.
-      testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'skipped', message: test.pending_message });
+      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'skipped', message: test.pending_message });
     }
   };
 }
