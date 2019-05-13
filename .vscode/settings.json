@@ -4,5 +4,12 @@
     "node_modules": true,
     "out": true
   },
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "[ruby]": {
+    "editor.formatOnSave": false
+  },
+  "ruby.format": false,
+  "ruby.lint": {
+      "rubocop": false
+  }
 }
