@@ -1,9 +1,19 @@
-require "rspec/core"
-require "rspec/core/formatters/base_formatter"
+# frozen_string_literal: true
+
+require 'rspec/core'
+require 'rspec/core/formatters/base_formatter'
 require 'json'
 
 class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
-  RSpec::Core::Formatters.register self, :message, :dump_summary, :stop, :seed, :close
+  RSpec::Core::Formatters.register self,
+    :message,
+    :dump_summary,
+    :stop,
+    :seed,
+    :close,
+    :example_passed,
+    :example_failed,
+    :example_pending
 
   attr_reader :output_hash
 
@@ -51,8 +61,22 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
   end
 
   def close(_notification)
-    output.write @output_hash.to_json
+    output.write "START_OF_RSPEC_JSON#{@output_hash.to_json}END_OF_RSPEC_JSON\n"
   end
+
+  def example_passed(notification)
+    output.write "PASSED: #{notification.example.id}\n"
+  end
+
+  def example_pending(notification)
+    output.write "PENDING: #{notification.example.id}\n"
+  end
+
+  def example_failed(notification)
+    output.write "FAILED: #{notification.example.id}\n"
+  end
+
+  private
 
   # block
   # description_args
@@ -71,8 +95,6 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
   # shared_group_inclusion_backtrace
   # last_run_status
 
-  private
-
   def format_example(example)
     {
       id: example.id,
@@ -82,11 +104,9 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
       file_path: example.metadata[:file_path],
       line_number: example.metadata[:line_number],
       example_group_description_args: example.metadata[:example_group][:description_args],
-      # example_group: example.metadata[:example_group][:parent_example_group],
       type: example.metadata[:type],
       description_args: example.metadata[:description_args],
-      pending_message: example.execution_result.pending_message,
-      block: example.metadata[:block]
+      pending_message: example.execution_result.pending_message
     }
   end
 end
