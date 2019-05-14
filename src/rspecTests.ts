@@ -154,7 +154,7 @@ export class RspecTests {
    * @return The spec directory
    */
   private getCustomFormatterLocation(): string {
-    return this.context.asAbsolutePath('./src/custom_formatter.rb');
+    return this.context.asAbsolutePath('./custom_formatter.rb');
   }
 
   /**
@@ -279,7 +279,7 @@ export class RspecTests {
    * representing the subdirectories of spec/, and then any files under the
    * given subdirectory.
    * 
-   * @param tests Test objects returned by RSpec's JSON formatter.
+   * @param tests Test objects returned by our custom RSpec formatter.
    * @return The test suite root with its children.
    */
   public async getBaseTestSuite(
@@ -500,7 +500,7 @@ export class RspecTests {
   }
 
   /**
-   * Handles test state based on the output returned by RSpec's JSON formatter.
+   * Handles test state based on the output returned by the custom RSpec formatter.
    * 
    * @param test The test that we want to handle.
    */
