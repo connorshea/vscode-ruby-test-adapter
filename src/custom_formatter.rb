@@ -68,12 +68,14 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
     output.write "PASSED: #{notification.example.id}\n"
   end
 
-  def example_pending(notification)
-    output.write "PENDING: #{notification.example.id}\n"
-  end
-
   def example_failed(notification)
     output.write "FAILED: #{notification.example.id}\n"
+    # This isn't exposed for simplicity, need to figure out how to handle this later.
+    # output.write "#{notification.exception.backtrace.to_json}\n"
+  end
+
+  def example_pending(notification)
+    output.write "PENDING: #{notification.example.id}\n"
   end
 
   private
