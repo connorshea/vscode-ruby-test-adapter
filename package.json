@@ -40,10 +40,12 @@
   "dependencies": {
     "tslib": "^1.9.3",
     "vscode-test-adapter-api": "^1.7.0",
-    "vscode-test-adapter-util": "^0.7.0"
+    "vscode-test-adapter-util": "^0.7.0",
+    "split2": "^3.1.1"
   },
   "devDependencies": {
     "@types/mocha": "^5.2",
+    "@types/split2": "^2.1.6",
     "typescript": "^3.4.5",
     "vsce": "^1.61.0",
     "vscode": "^1.1.34"

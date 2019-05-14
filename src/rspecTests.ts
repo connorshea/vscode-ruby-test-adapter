@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
+import * as split2 from 'split2';
 
 export class RspecTests {
   private context: vscode.ExtensionContext;
@@ -367,12 +368,15 @@ export class RspecTests {
       spawnArgs
     );
 
-    testRun.stdout!.on('data', (data) => {
+    testRun.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
-      console.log(`stdout: ${data}`);
+      console.log(`${data}`);
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
+      } else if (data.startsWith('FAILED:')) {
+        data = data.replace('FAILED: ', '');
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
       }
       if (data.includes('START_OF_RSPEC_JSON')) {
         resolve(data);
@@ -386,16 +390,26 @@ export class RspecTests {
    * @return The raw output from running the test suite.
    */
   runFullTestSuite = async () => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter`;
-
-    const execArgs: childProcess.ExecOptions = {
+    const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
-      maxBuffer: 400 * 1024
+      shell: true
     };
 
-    childProcess.exec(cmd, execArgs, (err, stdout) => {
-      console.log(stdout);
-      resolve(stdout);
+    let testRun = childProcess.spawn(
+      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter`,
+      spawnArgs
+    );
+
+    testRun.stdout!.pipe(split2()).on('data', (data) => {
+      data = data.toString();
+      console.log(`${data}`);
+      if (data.startsWith('PASSED:')) {
+        data = data.replace('PASSED: ', '');
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
+      }
+      if (data.includes('START_OF_RSPEC_JSON')) {
+        resolve(data);
+      }
     });
   });
 
