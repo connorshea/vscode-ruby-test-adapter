@@ -370,7 +370,6 @@ export class RspecTests {
 
     testRun.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
-      console.log(`${data}`);
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
@@ -402,10 +401,12 @@ export class RspecTests {
 
     testRun.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
-      console.log(`${data}`);
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
+      } else if (data.startsWith('FAILED:')) {
+        data = data.replace('FAILED: ', '');
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
       }
       if (data.includes('START_OF_RSPEC_JSON')) {
         resolve(data);
