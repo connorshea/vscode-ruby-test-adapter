@@ -1,4 +1,5 @@
 src/**
+test/**
 **/*.map
 package-lock.json
 tsconfig.json

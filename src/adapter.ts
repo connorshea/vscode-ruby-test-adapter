@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
-import { loadRspecTests, runRspecTests } from './rspecTests';
+import { RspecTests } from './rspecTests';
 
 export class RubyAdapter implements TestAdapter {
   private disposables: { dispose(): void }[] = [];
@@ -16,7 +16,8 @@ export class RubyAdapter implements TestAdapter {
 
   constructor(
     public readonly workspace: vscode.WorkspaceFolder,
-    private readonly log: Log
+    private readonly log: Log,
+    private readonly context: vscode.ExtensionContext
   ) {
     this.log.info('Initializing Ruby adapter');
 
@@ -28,14 +29,16 @@ export class RubyAdapter implements TestAdapter {
   async load(): Promise<void> {
     this.log.info('Loading Ruby tests');
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-    const loadedTests = await loadRspecTests();
+    let rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter);
+    const loadedTests = await rspecTestsInstance.loadRspecTests();
     this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
   }
 
   async run(tests: string[]): Promise<void> {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
-    await runRspecTests(tests, this.testStatesEmitter);
+    let rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter);
+    await rspecTestsInstance.runRspecTests(tests);
     this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 

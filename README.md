@@ -42,8 +42,6 @@ Property                            | Description
 The extension is still in the early stages of development. I intend to improve it over time, and would appreciate any help or suggestions that others can offer :)
 
 - Run tests in a given file at once, rather than one-at-a-time ([#2](https://github.com/connorshea/vscode-ruby-test-adapter/issues/2))
-- Update test statuses as the tests run ([#3](https://github.com/connorshea/vscode-ruby-test-adapter/issues/3))
-- Create a custom RSpec formatter ([#4](https://github.com/connorshea/vscode-ruby-test-adapter/issues/4))
 - Implement a test definitions watcher ([#5](https://github.com/connorshea/vscode-ruby-test-adapter/issues/5))
 - Implement the cancel command ([#6](https://github.com/connorshea/vscode-ruby-test-adapter/issues/6))
 - Add unit tests ([#9](https://github.com/connorshea/vscode-ruby-test-adapter/issues/9))
