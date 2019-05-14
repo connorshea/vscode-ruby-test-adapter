@@ -22,9 +22,11 @@ Currently supported:
 - Running the full test suite.
 - Viewing test output for failed tests (click the test in the test explorer sidebar to open the Output view).
 - Displaying test statuses. Success, failure, and pending (called 'skipped' in the extension).
+- Live test status updates as the test suite runs.
 - File locations for each test.
 - Configurable RSpec command.
-- Some test hierarchy information, unfortunately RSpec makes this a bit of a pain to figure out so the hierarchy is pretty minimal for now.
+- Configurable RSpec `spec/` directory.
+- Test hierarchy information.
 
 ## Configuration
 
