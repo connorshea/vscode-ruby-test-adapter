@@ -44,7 +44,9 @@ export class RubyAdapter implements TestAdapter {
   }
 
   cancel(): void {
-    this.rspecTestsInstance!.killChild();
+    if (this.rspecTestsInstance) {
+      this.rspecTestsInstance.killChild();
+    }
   }
 
   dispose(): void {
