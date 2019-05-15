@@ -6,6 +6,7 @@ import * as split2 from 'split2';
 export class RspecTests {
   private context: vscode.ExtensionContext;
   private testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
+  private currentChildProcess: childProcess.ChildProcess | undefined;
 
   /**
    * 
@@ -96,6 +97,16 @@ export class RspecTests {
     });
 
     return Promise.resolve<TestSuiteInfo>(testSuite);
+  }
+
+  /**
+   * Kills the current child process if one exists.
+   */
+  public killChild(iteration?: number): void {
+    if (this.currentChildProcess) {
+      this.currentChildProcess.kill();
+      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+    }
   }
 
   /**
@@ -190,7 +201,9 @@ export class RspecTests {
     return testSuiteChildren;
   }
 
-  // Get the tests in a given file.
+  /**
+   * Get the tests in a given file.
+   */
   public getTestSuiteForFile(
   { tests, currentFile, directory }: {
   tests: Array<{
@@ -352,23 +365,21 @@ export class RspecTests {
   }
 
   /**
-   * Runs a single test.
+   * Assigns the process to currentChildProcess and handles its output and what happens when it exits.
    * 
-   * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
-   * @return The raw output from running the test.
+   * @param process A process running the tests.
+   * @return A promise that resolves when the test run completes.
    */
-  runSingleTest = async (testLocation: string | undefined) => new Promise<string>((resolve, reject) => {
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.rootPath,
-      shell: true
-    };
+  handleChildProcess = async (process: childProcess.ChildProcess) => new Promise<string>((resolve, reject) => {
+    this.currentChildProcess = process;
 
-    let testRun = childProcess.spawn(
-      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation !== undefined ? testLocation : ''}`,
-      spawnArgs
-    );
+    this.currentChildProcess!.on('exit', () => {
+      this.currentChildProcess = undefined;
+      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+      resolve('{}');
+    });
 
-    testRun.stdout!.pipe(split2()).on('data', (data) => {
+    this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
@@ -384,34 +395,42 @@ export class RspecTests {
   });
 
   /**
-   * Runs the full test suite for the current workspace.
+   * Runs a single test.
    * 
-   * @return The raw output from running the test suite.
+   * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
+   * @return The raw output from running the test.
    */
-  runFullTestSuite = async () => new Promise<string>((resolve, reject) => {
+  runSingleTest = async (testLocation: string | undefined) => new Promise<string>(async (resolve, reject) => {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
       shell: true
     };
 
-    let testRun = childProcess.spawn(
+    let testProcess = childProcess.spawn(
+      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation !== undefined ? testLocation : ''}`,
+      spawnArgs
+    );
+
+    resolve(await this.handleChildProcess(testProcess));
+  });
+
+  /**
+   * Runs the full test suite for the current workspace.
+   * 
+   * @return The raw output from running the test suite.
+   */
+  runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
+    const spawnArgs: childProcess.SpawnOptions = {
+      cwd: vscode.workspace.rootPath,
+      shell: true
+    };
+
+    let testProcess = childProcess.spawn(
       `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter`,
       spawnArgs
     );
 
-    testRun.stdout!.pipe(split2()).on('data', (data) => {
-      data = data.toString();
-      if (data.startsWith('PASSED:')) {
-        data = data.replace('PASSED: ', '');
-        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
-      } else if (data.startsWith('FAILED:')) {
-        data = data.replace('FAILED: ', '');
-        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
-      }
-      if (data.includes('START_OF_RSPEC_JSON')) {
-        resolve(data);
-      }
-    });
+    resolve(await this.handleChildProcess(testProcess));
   });
 
   /**
@@ -465,11 +484,13 @@ export class RspecTests {
       let testOutput = await this.runFullTestSuite();
       testOutput = this.getJsonFromRspecOutput(testOutput);
       let testMetadata = JSON.parse(testOutput);
-      let tests = testMetadata.examples;
+      let tests: Array<any> = testMetadata.examples;
 
-      tests.forEach((test: { id: string | TestInfo; }) => {
-        this.handleStatus(test);
-      });
+      if (tests && tests.length > 0) {
+        tests.forEach((test: { id: string | TestInfo; }) => {
+          this.handleStatus(test);
+        });
+      }
 
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
     } else if (node.type === 'suite') {
