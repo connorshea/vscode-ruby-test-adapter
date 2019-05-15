@@ -102,7 +102,7 @@ export class RspecTests {
   /**
    * Kills the current child process if one exists.
    */
-  public killChild(iteration?: number): void {
+  public killChild(): void {
     if (this.currentChildProcess) {
       this.currentChildProcess.kill();
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
