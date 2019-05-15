@@ -20,6 +20,7 @@ Currently supported:
 
 - Running individual tests.
 - Running the full test suite.
+- Running tests for a specific file.
 - Viewing test output for failed tests (click the test in the test explorer sidebar to open the Output view).
 - Displaying test statuses. Success, failure, and pending (called 'skipped' in the extension).
 - Live test status updates as the test suite runs.
@@ -43,7 +44,6 @@ Property                            | Description
 
 The extension is still in the early stages of development. I intend to improve it over time, and would appreciate any help or suggestions that others can offer :)
 
-- Run tests in a given file at once, rather than one-at-a-time ([#2](https://github.com/connorshea/vscode-ruby-test-adapter/issues/2))
 - Implement a test definitions watcher ([#5](https://github.com/connorshea/vscode-ruby-test-adapter/issues/5))
 - Add unit tests ([#9](https://github.com/connorshea/vscode-ruby-test-adapter/issues/9))
 

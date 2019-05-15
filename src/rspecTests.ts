@@ -281,6 +281,7 @@ export class RspecTests {
       type: 'suite',
       id: currentFile,
       label: currentFileLabel,
+      file: currentFile,
       children: currentFileTestInfoArray
     }
 
@@ -400,14 +401,35 @@ export class RspecTests {
    * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
    * @return The raw output from running the test.
    */
-  runSingleTest = async (testLocation: string | undefined) => new Promise<string>(async (resolve, reject) => {
+  runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
       shell: true
     };
 
     let testProcess = childProcess.spawn(
-      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation !== undefined ? testLocation : ''}`,
+      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation}`,
+      spawnArgs
+    );
+
+    resolve(await this.handleChildProcess(testProcess));
+  });
+
+  /**
+   * Runs tests in a given file.
+   * 
+   * @param testFile The test file's file path, e.g. `/path/to/spec.rb`.
+   * @return The raw output from running the tests.
+   */
+  runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
+    const spawnArgs: childProcess.SpawnOptions = {
+      cwd: vscode.workspace.rootPath,
+      shell: true
+    };
+
+    // Run tests for a given file at once with a single command.
+    let testProcess = childProcess.spawn(
+      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testFile}`,
       spawnArgs
     );
 
@@ -472,10 +494,7 @@ export class RspecTests {
    * 
    * @param node A test or test suite.
    */
-  private async runNode(
-    node: TestSuiteInfo | TestInfo
-  ): Promise<void> {
-
+  private async runNode(node: TestSuiteInfo | TestInfo): Promise<void> {
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     if (node.type === 'suite' && node.id === 'root') {
@@ -493,6 +512,24 @@ export class RspecTests {
       }
 
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+    // If the suite is a file, run the tests as a file rather than as separate tests.
+    } else if (node.type === 'suite' && node.label.endsWith('.rb')) {
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
+
+      let testOutput = await this.runTestFile(`${node.file}`);
+
+      testOutput = this.getJsonFromRspecOutput(testOutput);
+      let testMetadata = JSON.parse(testOutput);
+      let tests: Array<any> = testMetadata.examples;
+
+      if (tests && tests.length > 0) {
+        tests.forEach((test: { id: string | TestInfo; }) => {
+          this.handleStatus(test);
+        });
+      }
+
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+
     } else if (node.type === 'suite') {
 
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
