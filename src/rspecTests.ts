@@ -40,9 +40,10 @@ export class RspecTests {
   initRspecTests = async () => new Promise<string>((resolve, reject) => {
     let cmd = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter --order defined --dry-run`;
 
+    // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
       cwd: vscode.workspace.rootPath,
-      maxBuffer: 400 * 1024
+      maxBuffer: 8192 * 8192
     };
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
