@@ -115,15 +115,16 @@ export class RspecTests {
    * 
    * RSpec frequently returns bad data even when it's told to format the output
    * as JSON, e.g. due to code coverage messages and other injections from gems.
-   * This tries to get the JSON by stripping everything before the first opening
-   * brace and after the last closing brace. It's probably not perfect, but it's
-   * worked for everything I've tried so far.
+   * This gets the JSON by searching for `START_OF_RSPEC_JSON` and an opening
+   * curly brace, as well as a closing curly brace and `END_OF_RSPEC_JSON`.
+   * These are output by the custom RSpec formatter as part of the final
+   * JSON output.
    * 
    * @param output The output returned by running an RSpec command
    * @return A string representation of the JSON found in the RSpec output.
    */
   private getJsonFromRspecOutput(output: string): string {
-    return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
+    return output.substring(output.indexOf("START_OF_RSPEC_JSON{"), output.lastIndexOf("}END_OF_RSPEC_JSON") + 1);
   }
 
   /**
