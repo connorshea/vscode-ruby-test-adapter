@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.4.3] - 2019-05-17
+### Fixed
+- Fix parsing initial JSON so it's less likely to fail when there are other curly braces in the RSpec output.
+- Fix 'max buffer' errors by raising the max buffer size to 64MB. Hopefully no one ever hits this.
+
 ## [0.4.2] - 2019-05-14
 ### Changed
 - Run tests in a given file at once, rather than one-at-a-time. This makes running tests for a file much faster than it was previously.
@@ -59,7 +64,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.3.3...v0.4.0
