@@ -124,7 +124,9 @@ export class RspecTests {
    * @return A string representation of the JSON found in the RSpec output.
    */
   private getJsonFromRspecOutput(output: string): string {
-    return output.substring(output.indexOf("START_OF_RSPEC_JSON{"), output.lastIndexOf("}END_OF_RSPEC_JSON") + 1);
+    output = output.substring(output.indexOf("START_OF_RSPEC_JSON{"), output.lastIndexOf("}END_OF_RSPEC_JSON") + 1);
+    // Get rid of the `START_OF_RSPEC_JSON` and `END_OF_RSPEC_JSON` to verify that the JSON is valid.
+    return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
   }
 
   /**
