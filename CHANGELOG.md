@@ -31,7 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [0.3.2] - 2019-05-12
 ### Fixed
-- Fix randomized ordering of tests in the explorer by having RSpec order by defined when getting the tests initially.
+- Fix randomized ordering of tests in the explorer by having RSpec order be defined when getting the tests initially.
 
 ## [0.3.1] - 2019-05-11
 ### Fixed
