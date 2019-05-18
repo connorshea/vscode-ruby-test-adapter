@@ -9,7 +9,6 @@ export class RspecTests {
   private currentChildProcess: childProcess.ChildProcess | undefined;
 
   /**
-   * 
    * @param context Extension context provided by vscode.
    * @param testStatesEmitter An emitter for the test suite's state.
    */
@@ -462,7 +461,7 @@ export class RspecTests {
   /**
    * Runs the test suite by iterating through each test and running it.
    * 
-   * @param tests  
+   * @param tests
    */
   runRspecTests = async (
     tests: string[]
@@ -478,6 +477,7 @@ export class RspecTests {
   }
 
   /**
+   * Recursively search for a node in the test suite list.
    * 
    * @param searchNode The test or test suite to search in.
    * @param id The id of the test or test suite.
@@ -495,6 +495,7 @@ export class RspecTests {
   }
 
   /**
+   * Recursively run a node or its children.
    * 
    * @param node A test or test suite.
    */
