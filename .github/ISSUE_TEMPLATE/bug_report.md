@@ -11,7 +11,6 @@ assignees: ''
 
 - `vscode-ruby-test-adapter` version:
 - Ruby version:
-- Ruby version manager (if any):
 - VS Code version:
 - Operating System:
 - RSpec version:
