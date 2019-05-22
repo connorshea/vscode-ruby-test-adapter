@@ -2,19 +2,27 @@ import * as vscode from 'vscode';
 import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 import * as split2 from 'split2';
+import { Log } from 'vscode-test-adapter-util';
 
 export class RspecTests {
   private context: vscode.ExtensionContext;
   private testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
   private currentChildProcess: childProcess.ChildProcess | undefined;
+  private log: Log;
 
   /**
    * @param context Extension context provided by vscode.
    * @param testStatesEmitter An emitter for the test suite's state.
+   * @param log The Test Adapter logger, for logging.
    */
-  constructor(context: vscode.ExtensionContext, testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>) {
+  constructor(
+    context: vscode.ExtensionContext,
+    testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>,
+    log: Log
+  ) {
     this.context = context;
     this.testStatesEmitter = testStatesEmitter;
+    this.log = log;
   }
 
   /**
@@ -24,9 +32,11 @@ export class RspecTests {
    */
   rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
     try {
+      this.log.info('Loading RSpec tests...');
       let rspecTests = this.loadRspecTests();
       return resolve(rspecTests);
     } catch(err) {
+      this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
       return reject(err);
     }
   });
@@ -39,6 +49,8 @@ export class RspecTests {
   initRspecTests = async () => new Promise<string>((resolve, reject) => {
     let cmd = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter --order defined --dry-run`;
 
+    this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
+
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
       cwd: vscode.workspace.rootPath,
@@ -47,6 +59,7 @@ export class RspecTests {
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
       if (err) {
+        this.log.error(`Error while finding RSpec test suite: ${err.message}`);
         // Show an error message.
         vscode.window.showWarningMessage("Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.");
         vscode.window.showErrorMessage(err.message);
@@ -64,7 +77,11 @@ export class RspecTests {
    */
   public async loadRspecTests(): Promise<TestSuiteInfo> {
     let output = await this.initRspecTests();
+    this.log.debug('Passing raw output from dry-run into getJsonFromRspecOutput.');
+    this.log.debug(`${output}`);
     output = this.getJsonFromRspecOutput(output);
+    this.log.debug('Parsing the below JSON:');
+    this.log.debug(`${output}`);
     let rspecMetadata = JSON.parse(output);
     
     let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
@@ -405,6 +422,7 @@ export class RspecTests {
    * @return The raw output from running the test.
    */
   runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
+    this.log.info(`Running single test: ${testLocation}`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
       shell: true
@@ -425,6 +443,7 @@ export class RspecTests {
    * @return The raw output from running the tests.
    */
   runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
+    this.log.info(`Running test file: ${testFile}`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
       shell: true
@@ -445,6 +464,7 @@ export class RspecTests {
    * @return The raw output from running the test suite.
    */
   runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
+    this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: vscode.workspace.rootPath,
       shell: true
@@ -568,6 +588,7 @@ export class RspecTests {
    * @param test The test that we want to handle.
    */
   private handleStatus(test: any): void {
+    this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     if (test.status === "passed") {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
     } else if (test.status === "failed" && test.pending_message === null) {

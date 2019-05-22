@@ -30,7 +30,7 @@ export class RubyAdapter implements TestAdapter {
   async load(): Promise<void> {
     this.log.info('Loading Ruby tests');
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-    this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter);
+    this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
     const loadedTests = await this.rspecTestsInstance.loadRspecTests();
     this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
   }
@@ -38,14 +38,19 @@ export class RubyAdapter implements TestAdapter {
   async run(tests: string[]): Promise<void> {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
-    this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter);
+    if (!this.rspecTestsInstance) {
+      this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
+    }
     await this.rspecTestsInstance.runRspecTests(tests);
     this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 
   cancel(): void {
     if (this.rspecTestsInstance) {
+      this.log.info('Killing currently-running tests.')
       this.rspecTestsInstance.killChild();
+    } else {
+      this.log.info('No tests running currently, no process to kill.')
     }
   }
 
