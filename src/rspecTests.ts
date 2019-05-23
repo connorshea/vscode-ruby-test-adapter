@@ -326,6 +326,7 @@ export class RspecTests {
       children: []
     };
 
+    // Create an array of all test files and then abuse Sets to make it unique.
     let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
 
     let splitFilesArray: Array<string[]> = [];
@@ -428,8 +429,11 @@ export class RspecTests {
       shell: true
     };
 
+    let testCommand = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation}`;
+    this.log.info(`Running command: ${testCommand}`);
+    
     let testProcess = childProcess.spawn(
-      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation}`,
+      testCommand,
       spawnArgs
     );
 
@@ -450,8 +454,11 @@ export class RspecTests {
     };
 
     // Run tests for a given file at once with a single command.
+    let testCommand = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testFile}`;
+    this.log.info(`Running command: ${testCommand}`);
+
     let testProcess = childProcess.spawn(
-      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testFile}`,
+      testCommand,
       spawnArgs
     );
 
@@ -470,8 +477,11 @@ export class RspecTests {
       shell: true
     };
 
+    let testCommand = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter`;
+    this.log.info(`Running command: ${testCommand}`);
+
     let testProcess = childProcess.spawn(
-      `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter`,
+      testCommand,
       spawnArgs
     );
 
