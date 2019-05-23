@@ -9,6 +9,7 @@ export class RspecTests {
   private testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
   private currentChildProcess: childProcess.ChildProcess | undefined;
   private log: Log;
+  private testSuite: TestSuiteInfo | undefined;
 
   /**
    * @param context Extension context provided by vscode.
@@ -32,8 +33,8 @@ export class RspecTests {
    */
   rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
     try {
-      this.log.info('Loading RSpec tests...');
-      let rspecTests = this.loadRspecTests();
+      // If test suite already exists, use testSuite. Otherwise, load them.
+      let rspecTests = this.testSuite ? this.testSuite : this.loadRspecTests();
       return resolve(rspecTests);
     } catch(err) {
       this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
@@ -112,6 +113,8 @@ export class RspecTests {
         }
       })
     });
+
+    this.testSuite = testSuite;
 
     return Promise.resolve<TestSuiteInfo>(testSuite);
   }
@@ -403,6 +406,7 @@ export class RspecTests {
 
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
+      this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
@@ -431,7 +435,7 @@ export class RspecTests {
 
     let testCommand = `${this.getRspecCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation}`;
     this.log.info(`Running command: ${testCommand}`);
-    
+
     let testProcess = childProcess.spawn(
       testCommand,
       spawnArgs

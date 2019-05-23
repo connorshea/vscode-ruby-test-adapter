@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- Add better logging throughout the extension.
+- Fix a bug that caused an RSpec 'dry-run' to be run before every test run. Test suites should run a bit faster now.
 
 ## [0.4.3] - 2019-05-17
 ### Fixed
