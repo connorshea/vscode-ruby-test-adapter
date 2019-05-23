@@ -4,8 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+## [0.4.4] - 2019-05-22
 ### Added
 - Add better logging throughout the extension.
+
+### Fixed
 - Fix a bug that caused an RSpec 'dry-run' to be run before every test run. Test suites should run a bit faster now.
 
 ## [0.4.3] - 2019-05-17
@@ -67,7 +71,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.0...v0.4.1
