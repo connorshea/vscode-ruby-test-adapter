@@ -40,6 +40,18 @@ Property                            | Description
 `rubyTestExplorer.rspecCommand`     | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
 `rubyTestExplorer.specDirectory`    | Define the relative directory where the specs are located in a given workspace, for example `./spec/`.
 
+## Troubleshooting
+
+If the extension doesn't work for you, here are a few things you can try:
+
+- Make sure you've run `bundle install` and that any gems specified in your `Gemfile.lock` have been installed (assuming you're using Bundler).
+- Make sure you're using a recent version of the `rspec-core` gem. If you're on a version prior to 3.6.0, the extension may not work.
+- Make sure that the RSpec command and `spec` directory are configured correctly. By default, tests are run with `bundle exec rspec` and the tests are assumed to be in the `./spec/` directory. You can configure these with `rubyTestExplorer.rspecCommand` and `rubyTestExplorer.specDirectory` respectively.
+- Enable the `rubyTestExplorer.logpanel` config setting and take a look at the output in Output > Ruby Test Explorer Log. This should show what the extension is doing and provide more context on what's happening behind the scenes. (You can alternatively use `rubyTestExplorer.logfile` to log to a specific file instead).
+- Check the VS Code Developer Tools (Command Palette > 'Developer: Toggle Developer Tools') for any JSON parsing errors, or anything else that looks like it might come from the extension. That could be a bug in the extension, or a problem with your setup.
+
+If all else fails or you suspect something is broken with the extension, please feel free to open an issue! :)
+
 ## TODO
 
 The extension is still in the early stages of development. I intend to improve it over time, and would appreciate any help or suggestions that others can offer :)
