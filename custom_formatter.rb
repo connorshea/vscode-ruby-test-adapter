@@ -105,7 +105,7 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
       status: example.execution_result.status.to_s,
       file_path: example.metadata[:file_path],
       line_number: example.metadata[:line_number],
-      example_group_description_args: example.metadata[:example_group][:description_args],
+      example_group_description_args: example.metadata[:example_group][:description_args].map(&:to_s),
       type: example.metadata[:type],
       description_args: example.metadata[:description_args],
       pending_message: example.execution_result.pending_message
