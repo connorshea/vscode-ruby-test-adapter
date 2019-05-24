@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.4.6] - 2019-05-24
+### Fixed
+- Fix `ActiveSupport#to_json` error when test is not wrapped with a string-based describe/context block. (Thanks @apolzon!)
+
 ## [0.4.5] - 2019-05-22
 ### Added
 - Add Troubleshooting section to extension README.
@@ -75,7 +79,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.2...v0.4.3
