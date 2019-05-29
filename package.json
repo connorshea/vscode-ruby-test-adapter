@@ -5,7 +5,7 @@
   "icon": "img/ruby-test-explorer.png",
   "author": "Connor Shea <connor.james.shea@gmail.com>",
   "publisher": "connorshea",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "license": "MIT",
   "homepage": "https://github.com/connorshea/vscode-ruby-test-adapter",
   "repository": {
@@ -22,6 +22,8 @@
     "test",
     "testing",
     "rspec",
+    "minitest",
+    "mini_test",
     "ruby",
     "test explorer",
     "test adapter"
@@ -62,7 +64,8 @@
     "onLanguage:erb",
     "workspaceContains:**/Rakefile",
     "workspaceContains:**/Gemfile",
-    "workspaceContains:**/*.rb"
+    "workspaceContains:**/*.rb",
+    "onCommand:commandId"
   ],
   "contributes": {
     "configuration": {
@@ -79,6 +82,13 @@
           "type": "string",
           "scope": "resource"
         },
+        "rubyTestExplorer.testingFramework": {
+          "description": "Framework used for testing (ex: rspec, minitest)",
+          "type": "string",
+          "default": "none",
+          "enum": ["none", "rspec", "minitest"],
+          "scope": "resource"
+        },
         "rubyTestExplorer.rspecCommand": {
           "markdownDescription": "Define the command to run Rspec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.",
           "default": "bundle exec rspec",
@@ -88,6 +98,18 @@
         "rubyTestExplorer.specDirectory": {
           "markdownDescription": "The location of your spec directory relative to the root of the workspace.",
           "default": "./spec/",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.rakeCommand": {
+          "markdownDescription": "Define how to run rake: `./bin/rake`, bundle exec rake` or `rake`.",
+          "default": "bundle exec rake",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.minitestDirectory": {
+          "markdownDescription": "The location of your test directory relative to the root of the workspace.",
+          "default": "./test/",
           "type": "string",
           "scope": "resource"
         }

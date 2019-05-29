@@ -5,11 +5,11 @@ import * as split2 from 'split2';
 import { Log } from 'vscode-test-adapter-util';
 
 export class RspecTests {
-  private context: vscode.ExtensionContext;
-  private testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
-  private currentChildProcess: childProcess.ChildProcess | undefined;
-  private log: Log;
-  private testSuite: TestSuiteInfo | undefined;
+  protected context: vscode.ExtensionContext;
+  protected testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
+  protected currentChildProcess: childProcess.ChildProcess | undefined;
+  protected log: Log;
+  protected testSuite: TestSuiteInfo | undefined;
 
   /**
    * @param context Extension context provided by vscode.
@@ -28,7 +28,7 @@ export class RspecTests {
 
   /**
    * Representation of the RSpec test suite as a TestSuiteInfo object.
-   * 
+   *
    * @return The RSpec test suite as a TestSuiteInfo object.
    */
   rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
@@ -44,7 +44,7 @@ export class RspecTests {
 
   /**
    * Perform a dry-run of the test suite to get information about every test.
-   * 
+   *
    * @return The raw output from the RSpec JSON formatter.
    */
   initRspecTests = async () => new Promise<string>((resolve, reject) => {
@@ -73,7 +73,7 @@ export class RspecTests {
   /**
    * Takes the output from initRSpecTests() and parses the resulting
    * JSON into a TestSuiteInfo object.
-   * 
+   *
    * @return The full RSpec test suite.
    */
   public async loadRspecTests(): Promise<TestSuiteInfo> {
@@ -84,7 +84,7 @@ export class RspecTests {
     this.log.debug('Parsing the below JSON:');
     this.log.debug(`${output}`);
     let rspecMetadata = JSON.parse(output);
-    
+
     let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
 
     rspecMetadata.examples.forEach((test: { id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }) => {
@@ -96,7 +96,7 @@ export class RspecTests {
     });
 
     let testSuite: TestSuiteInfo = await this.getBaseTestSuite(tests);
-    
+
     // Sort the children of each test suite based on their location in the test tree.
     (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
       // NOTE: This will only sort correctly if everything is nested at the same
@@ -131,18 +131,18 @@ export class RspecTests {
 
   /**
    * Pull JSON out of the RSpec output.
-   * 
+   *
    * RSpec frequently returns bad data even when it's told to format the output
    * as JSON, e.g. due to code coverage messages and other injections from gems.
    * This gets the JSON by searching for `START_OF_RSPEC_JSON` and an opening
    * curly brace, as well as a closing curly brace and `END_OF_RSPEC_JSON`.
    * These are output by the custom RSpec formatter as part of the final
    * JSON output.
-   * 
+   *
    * @param output The output returned by running an RSpec command
    * @return A string representation of the JSON found in the RSpec output.
    */
-  private getJsonFromRspecOutput(output: string): string {
+  protected getJsonFromRspecOutput(output: string): string {
     output = output.substring(output.indexOf("START_OF_RSPEC_JSON{"), output.lastIndexOf("}END_OF_RSPEC_JSON") + 1);
     // Get rid of the `START_OF_RSPEC_JSON` and `END_OF_RSPEC_JSON` to verify that the JSON is valid.
     return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
@@ -150,15 +150,15 @@ export class RspecTests {
 
   /**
    * Get the location of the test in the testing tree.
-   * 
+   *
    * Test ids are in the form of `/spec/model/game_spec.rb[1:1:1]`, and this
    * function turns that into `111`. The number is used to order the tests
    * in the explorer.
-   * 
+   *
    * @param test The test we want to get the location of.
    * @return A number representing the location of the test in the test tree.
    */
-  private getTestLocation(test: TestInfo): number {
+  protected getTestLocation(test: TestInfo): number {
     return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''));
   }
 
@@ -167,7 +167,7 @@ export class RspecTests {
    *
    * @return The RSpec command
    */
-  private getRspecCommand(): string {
+  protected getRspecCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
     return command || 'bundle exec rspec';
   }
@@ -177,7 +177,7 @@ export class RspecTests {
    *
    * @return The spec directory
    */
-  private getSpecDirectory(): string {
+  protected getSpecDirectory(): string {
     let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string);
     return directory || './spec/';
   }
@@ -187,7 +187,7 @@ export class RspecTests {
    *
    * @return The spec directory
    */
-  private getCustomFormatterLocation(): string {
+  protected getCustomFormatterLocation(): string {
     return this.context.asAbsolutePath('./custom_formatter.rb');
   }
 
@@ -195,22 +195,22 @@ export class RspecTests {
    * Convert a string from snake_case to PascalCase.
    * Note that the function will return the input string unchanged if it
    * includes a '/'.
-   * 
+   *
    * @param string The string to convert to PascalCase.
    * @return The converted string.
    */
-  private snakeToPascalCase(string: string): string {
+  protected snakeToPascalCase(string: string): string {
     if (string.includes('/')) { return string }
     return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
   }
 
   /**
    * Sorts an array of TestSuiteInfo objects by label.
-   * 
+   *
    * @param testSuiteChildren An array of TestSuiteInfo objects, generally the children of another TestSuiteInfo object.
    * @return The input array, sorted by label.
    */
-  private sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
+  protected sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
     testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
       let comparison = 0;
       if (a.label > b.label) {
@@ -315,7 +315,7 @@ export class RspecTests {
    * Create the base test suite with a root node and one layer of child nodes
    * representing the subdirectories of spec/, and then any files under the
    * given subdirectory.
-   * 
+   *
    * @param tests Test objects returned by our custom RSpec formatter.
    * @return The test suite root with its children.
    */
@@ -391,7 +391,7 @@ export class RspecTests {
 
   /**
    * Assigns the process to currentChildProcess and handles its output and what happens when it exits.
-   * 
+   *
    * @param process A process running the tests.
    * @return A promise that resolves when the test run completes.
    */
@@ -422,7 +422,7 @@ export class RspecTests {
 
   /**
    * Runs a single test.
-   * 
+   *
    * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
    * @return The raw output from running the test.
    */
@@ -446,7 +446,7 @@ export class RspecTests {
 
   /**
    * Runs tests in a given file.
-   * 
+   *
    * @param testFile The test file's file path, e.g. `/path/to/spec.rb`.
    * @return The raw output from running the tests.
    */
@@ -471,7 +471,7 @@ export class RspecTests {
 
   /**
    * Runs the full test suite for the current workspace.
-   * 
+   *
    * @return The raw output from running the test suite.
    */
   runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
@@ -494,7 +494,7 @@ export class RspecTests {
 
   /**
    * Runs the test suite by iterating through each test and running it.
-   * 
+   *
    * @param tests
    */
   runRspecTests = async (
@@ -512,11 +512,11 @@ export class RspecTests {
 
   /**
    * Recursively search for a node in the test suite list.
-   * 
+   *
    * @param searchNode The test or test suite to search in.
    * @param id The id of the test or test suite.
    */
-  private findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteInfo | TestInfo | undefined {
+  protected findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteInfo | TestInfo | undefined {
     if (searchNode.id === id) {
       return searchNode;
     } else if (searchNode.type === 'suite') {
@@ -530,15 +530,15 @@ export class RspecTests {
 
   /**
    * Recursively run a node or its children.
-   * 
+   *
    * @param node A test or test suite.
    */
-  private async runNode(node: TestSuiteInfo | TestInfo): Promise<void> {
+  protected async runNode(node: TestSuiteInfo | TestInfo): Promise<void> {
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     if (node.type === 'suite' && node.id === 'root') {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
-      
+
       let testOutput = await this.runFullTestSuite();
       testOutput = this.getJsonFromRspecOutput(testOutput);
       let testMetadata = JSON.parse(testOutput);
@@ -582,7 +582,7 @@ export class RspecTests {
     } else if (node.type === 'test') {
       if (node.file !== undefined && node.line !== undefined) {
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
-        
+
         // Run the test at the given line, add one since the line is 0-indexed in
         // VS Code and 1-indexed for RSpec.
         let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
@@ -598,10 +598,10 @@ export class RspecTests {
 
   /**
    * Handles test state based on the output returned by the custom RSpec formatter.
-   * 
+   *
    * @param test The test that we want to handle.
    */
-  private handleStatus(test: any): void {
+  protected handleStatus(test: any): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     if (test.status === "passed") {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
