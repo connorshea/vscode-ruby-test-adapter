@@ -36,7 +36,7 @@ export class RubyAdapter implements TestAdapter {
       const loadedTests = await this.rspecTestsInstance.loadRspecTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     }
-    if (this.getTestingFramework() == "rspec") {
+    else if (this.getTestingFramework() === "rspec") {
       this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
       const loadedTests = await this.rspecTestsInstance.loadRspecTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
