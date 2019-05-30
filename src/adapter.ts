@@ -31,7 +31,7 @@ export class RubyAdapter implements TestAdapter {
   async load(): Promise<void> {
     this.log.info('Loading Ruby tests');
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-    if(this.getTestingFramework() == "minitest") {
+    if (this.getTestingFramework() === "minitest") {
       this.rspecTestsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
       const loadedTests = await this.rspecTestsInstance.loadRspecTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
