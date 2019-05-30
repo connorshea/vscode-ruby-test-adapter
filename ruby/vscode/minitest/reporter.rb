@@ -14,7 +14,7 @@ module VSCode
         self.start_time = ::Minitest.clock_time
       end
 
-      def record result
+      def record(result)
         self.count += 1
         self.assertions += result.assertions
         results << result
