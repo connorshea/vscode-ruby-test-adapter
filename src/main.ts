@@ -19,7 +19,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   let testingFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testingFramework') as string) || 'none';
 
-  if (testExplorerExtension && testingFramework != "none") {
+  if (testExplorerExtension && testingFramework !== "none") {
     const testHub = testExplorerExtension.exports;
 
     // this will register a RubyTestAdapter for each WorkspaceFolder
