@@ -29,7 +29,8 @@ module VSCode
         self.failures   = aggregate[::Minitest::Assertion].size
         self.errors     = aggregate[::Minitest::UnexpectedError].size
         self.skips      = aggregate[::Minitest::Skip].size
-        io.puts "START_OF_MINITEST_JSON#{JSON.generate(vscode_data.as_json)}END_OF_MINITEST_JSON"
+        json = ENV.key?("PRETTY") ? JSON.pretty_generate(vscode_data.as_json) : JSON.generate(vscode_data.as_json)
+        io.puts "START_OF_MINITEST_JSON#{json}END_OF_MINITEST_JSON"
       end
 
       def passed?
@@ -56,14 +57,37 @@ module VSCode
           base[:status] = "failed"
           base[:pending_message] = nil
           e = r.failure.exception
+          backtrace = expand_backtrace(e.backtrace)
           base[:exception] = {
             class: e.class.name,
             message: e.message,
-            backtrace: Rails::BacktraceCleaner.new.clean(e.backtrace),
-            full_backtrace: e.backtrace
+            backtrace: clean_backtrace(backtrace),
+            full_backtrace: backtrace,
+            position: exception_position(backtrace, base[:full_path]) || base[:line_number]
           }
         end
         base
+      end
+
+      def expand_backtrace(backtrace)
+        backtrace.map do |line|
+          parts = line.split(":")
+          parts[0] = File.expand_path(parts[0], VSCode.project_root)
+          parts.join(":")
+        end
+      end
+
+      def clean_backtrace(backtrace)
+        backtrace.map do |line|
+          next unless line.starts_with?(VSCode.project_root.to_s)
+          line.gsub(VSCode.project_root.to_s + "/", "")
+        end.compact
+      end
+
+      def exception_position(backtrace, file)
+        line = backtrace.find { |frame| frame.starts_with?(file) }
+        return unless line
+        line.split(":")[1].to_i
       end
     end
   end

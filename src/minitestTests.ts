@@ -612,9 +612,12 @@ export class MinitestTests extends RspecTests {
       let errorMessageLine: number = test.line_number;
       let errorMessage: string = test.exception.message;
 
+      if (test.exception.position) {
+        errorMessageLine = test.exception.position;
+      }
+
       // Add backtrace to errorMessage if it exists.
       if (test.exception.backtrace) {
-        errorMessageLine = parseInt(test.exception.backtrace[0].split(":")[1]);
         errorMessage += `\n\nBacktrace:\n`;
         test.exception.backtrace.forEach((line: string) => {
           errorMessage += `${line}\n`;
