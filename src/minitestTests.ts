@@ -4,6 +4,8 @@ import * as childProcess from 'child_process';
 import { Tests } from './tests';
 
 export class MinitestTests extends Tests {
+  testFrameworkName = 'Minitest';
+
   /**
    * Representation of the Minitest test suite as a TestSuiteInfo object.
    *

@@ -4,6 +4,7 @@ import * as childProcess from 'child_process';
 import { Tests } from './tests';
 
 export class RspecTests extends Tests {
+  testFrameworkName = 'RSpec';
 
   /**
    * Representation of the RSpec test suite as a TestSuiteInfo object.

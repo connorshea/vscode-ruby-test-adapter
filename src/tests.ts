@@ -10,6 +10,7 @@ export abstract class Tests {
   protected currentChildProcess: childProcess.ChildProcess | undefined;
   protected log: Log;
   protected testSuite: TestSuiteInfo | undefined;
+  abstract testFrameworkName: string;
 
   /**
    * @param context Extension context provided by vscode.
@@ -254,7 +255,7 @@ export abstract class Tests {
    * representing the subdirectories of spec/, and then any files under the
    * given subdirectory.
    *
-   * @param tests Test objects returned by our custom RSpec formatter.
+   * @param tests Test objects returned by our custom RSpec formatter or Minitest Rake task.
    * @return The test suite root with its children.
    */
   public async getBaseTestSuite(
@@ -263,7 +264,7 @@ export abstract class Tests {
     let rootTestSuite: TestSuiteInfo = {
       type: 'suite',
       id: 'root',
-      label: 'RSpec',
+      label: this.testFrameworkName,
       children: []
     };
 
@@ -450,7 +451,7 @@ export abstract class Tests {
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
 
         // Run the test at the given line, add one since the line is 0-indexed in
-        // VS Code and 1-indexed for RSpec.
+        // VS Code and 1-indexed for RSpec/Minitest.
         let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
 
         testOutput = this.getJsonFromOutput(testOutput);
