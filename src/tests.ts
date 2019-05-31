@@ -4,7 +4,7 @@ import * as childProcess from 'child_process';
 import * as split2 from 'split2';
 import { Log } from 'vscode-test-adapter-util';
 
-export class Tests {
+export abstract class Tests {
   protected context: vscode.ExtensionContext;
   protected testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
   protected currentChildProcess: childProcess.ChildProcess | undefined;
@@ -25,6 +25,10 @@ export class Tests {
     this.testStatesEmitter = testStatesEmitter;
     this.log = log;
   }
+
+  abstract tests: () => Promise<TestSuiteInfo>;
+
+  abstract loadTests(): Promise<TestSuiteInfo>;
 
   /**
    * Kills the current child process if one exists.
@@ -335,7 +339,7 @@ export class Tests {
   runTests = async (
     tests: string[]
   ): Promise<void> => {
-    let testSuite: TestSuiteInfo = await this.rspecTests();
+    let testSuite: TestSuiteInfo = await this.tests();
 
     for (const suiteOrTestId of tests) {
       const node = this.findNode(testSuite, suiteOrTestId);
@@ -430,4 +434,34 @@ export class Tests {
       }
     }
   }
+
+  /**
+   * Runs a single test.
+   *
+   * @param testLocation A file path with a line number, e.g. `/path/to/test.rb:12`.
+   * @return The raw output from running the test.
+   */
+  abstract runSingleTest: (testLocation: string) => Promise<string>;
+
+  /**
+   * Runs tests in a given file.
+   *
+   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
+   * @return The raw output from running the tests.
+   */
+  abstract runTestFile: (testFile: string) => Promise<string>;
+
+  /**
+   * Runs the full test suite for the current workspace.
+   *
+   * @return The raw output from running the test suite.
+   */
+  abstract runFullTestSuite: () => Promise<string>;
+
+  /**
+   * Handles test state based on the output returned by the test command.
+   *
+   * @param test The test that we want to handle.
+   */
+  abstract handleStatus(test: any): void;
 }

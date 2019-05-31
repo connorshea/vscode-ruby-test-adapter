@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestInfo, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
+import { TestSuiteInfo, TestInfo, TestRunFinishedEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 import * as split2 from 'split2';
 import { Tests } from './tests';
@@ -10,10 +10,10 @@ export class MinitestTests extends Tests {
    *
    * @return The RSpec test suite as a TestSuiteInfo object.
    */
-  rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
+  tests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
     try {
       // If test suite already exists, use testSuite. Otherwise, load them.
-      let rspecTests = this.testSuite ? this.testSuite : this.loadRspecTests();
+      let rspecTests = this.testSuite ? this.testSuite : this.loadTests();
       return resolve(rspecTests);
     } catch (err) {
       this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
@@ -57,7 +57,7 @@ export class MinitestTests extends Tests {
    *
    * @return The full RSpec test suite.
    */
-  public async loadRspecTests(): Promise<TestSuiteInfo> {
+  public async loadTests(): Promise<TestSuiteInfo> {
     let output = await this.initRspecTests();
     this.log.debug('Passing raw output from dry-run into getJsonFromOutput.');
     this.log.debug(`${output}`);
@@ -86,8 +86,8 @@ export class MinitestTests extends Tests {
       // sort properly relative to everything else.
       (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
         if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
-          let aLocation: number = this.getTestLocation(a as TestInfo);
-          let bLocation: number = this.getTestLocation(b as TestInfo);
+          let aLocation: number = super.getTestLocation(a as TestInfo);
+          let bLocation: number = super.getTestLocation(b as TestInfo);
           return aLocation - bLocation;
         } else {
           return 0;
@@ -108,20 +108,6 @@ export class MinitestTests extends Tests {
       this.currentChildProcess.kill();
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
     }
-  }
-
-  /**
-   * Get the location of the test in the testing tree.
-   *
-   * Test ids are in the form of `/spec/model/game_spec.rb[1:1:1]`, and this
-   * function turns that into `111`. The number is used to order the tests
-   * in the explorer.
-   *
-   * @param test The test we want to get the location of.
-   * @return A number representing the location of the test in the test tree.
-   */
-  protected getTestLocation(test: TestInfo): number {
-    return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''));
   }
 
   /**
@@ -427,7 +413,7 @@ export class MinitestTests extends Tests {
   /**
    * Runs tests in a given file.
    *
-   * @param testFile The test file's file path, e.g. `/path/to/spec.rb`.
+   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
    * @return The raw output from running the tests.
    */
   runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
@@ -476,29 +462,11 @@ export class MinitestTests extends Tests {
   });
 
   /**
-   * Runs the test suite by iterating through each test and running it.
-   *
-   * @param tests
-   */
-  runTests = async (
-    tests: string[]
-  ): Promise<void> => {
-    let testSuite: TestSuiteInfo = await this.rspecTests();
-
-    for (const suiteOrTestId of tests) {
-      const node = this.findNode(testSuite, suiteOrTestId);
-      if (node) {
-        await this.runNode(node);
-      }
-    }
-  }
-
-  /**
-   * Handles test state based on the output returned by the custom RSpec formatter.
+   * Handles test state based on the output returned by the Minitest Rake task.
    *
    * @param test The test that we want to handle.
    */
-  protected handleStatus(test: any): void {
+  handleStatus(test: any): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     if (test.status === "passed") {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
