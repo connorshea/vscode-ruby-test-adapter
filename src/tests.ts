@@ -28,7 +28,56 @@ export abstract class Tests {
 
   abstract tests: () => Promise<TestSuiteInfo>;
 
-  abstract loadTests(): Promise<TestSuiteInfo>;
+  abstract initTests: () => Promise<string>;
+
+  /**
+   * Takes the output from initTests() and parses the resulting
+   * JSON into a TestSuiteInfo object.
+   *
+   * @return The full test suite.
+   */
+  public async loadTests(): Promise<TestSuiteInfo> {
+    let output = await this.initTests();
+    this.log.debug('Passing raw output from dry-run into getJsonFromOutput.');
+    this.log.debug(`${output}`);
+    output = this.getJsonFromOutput(output);
+    this.log.debug('Parsing the below JSON:');
+    this.log.debug(`${output}`);
+    let testMetadata = JSON.parse(output);
+
+    let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
+
+    testMetadata.examples.forEach((test: { id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }) => {
+      let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
+      let test_location_string: string = test_location_array.join('');
+      test.location = parseInt(test_location_string);
+
+      tests.push(test);
+    });
+
+    let testSuite: TestSuiteInfo = await this.getBaseTestSuite(tests);
+
+    // Sort the children of each test suite based on their location in the test tree.
+    (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
+      // NOTE: This will only sort correctly if everything is nested at the same
+      // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
+      // introduced, the location is generated as e.g. 1231, which won't
+      // sort properly relative to everything else.
+      (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
+        if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
+          let aLocation: number = this.getTestLocation(a as TestInfo);
+          let bLocation: number = this.getTestLocation(b as TestInfo);
+          return aLocation - bLocation;
+        } else {
+          return 0;
+        }
+      })
+    });
+
+    this.testSuite = testSuite;
+
+    return Promise.resolve<TestSuiteInfo>(testSuite);
+  }
 
   /**
    * Kills the current child process if one exists.

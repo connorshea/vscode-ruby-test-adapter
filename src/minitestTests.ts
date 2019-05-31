@@ -1,21 +1,21 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestInfo, TestEvent } from 'vscode-test-adapter-api';
+import { TestSuiteInfo, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 import { Tests } from './tests';
 
 export class MinitestTests extends Tests {
   /**
-   * Representation of the RSpec test suite as a TestSuiteInfo object.
+   * Representation of the Minitest test suite as a TestSuiteInfo object.
    *
-   * @return The RSpec test suite as a TestSuiteInfo object.
+   * @return The Minitest test suite as a TestSuiteInfo object.
    */
   tests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
     try {
       // If test suite already exists, use testSuite. Otherwise, load them.
-      let rspecTests = this.testSuite ? this.testSuite : this.loadTests();
-      return resolve(rspecTests);
+      let minitestTests = this.testSuite ? this.testSuite : this.loadTests();
+      return resolve(minitestTests);
     } catch (err) {
-      this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
+      this.log.error(`Error while attempting to load Minitest tests: ${err.message}`);
       return reject(err);
     }
   });
@@ -23,10 +23,10 @@ export class MinitestTests extends Tests {
   /**
    * Perform a dry-run of the test suite to get information about every test.
    *
-   * @return The raw output from the RSpec JSON formatter.
+   * @return The raw output from the Minitest JSON formatter.
    */
-  initRspecTests = async () => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getRspecCommand()} vscode:minitest:list`;
+  initTests = async () => new Promise<string>((resolve, reject) => {
+    let cmd = `${this.getTestCommand()} vscode:minitest:list`;
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
@@ -35,14 +35,14 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    this.log.info(`Running dry-run of Minitest test suite with the following command: ${cmd}`);
+    this.log.info(`Getting a list of Minitest tests in suite with the following command: ${cmd}`);
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
       if (err) {
-        this.log.error(`Error while finding RSpec test suite: ${err.message}`);
+        this.log.error(`Error while finding Minitest test suite: ${err.message}`);
         this.log.error(`Output: ${stdout}`);
         // Show an error message.
-        vscode.window.showWarningMessage("Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.");
+        vscode.window.showWarningMessage("Ruby Test Explorer failed to find a Minitest test suite. Make sure Minitest is installed and your configured Minitest command is correct.");
         vscode.window.showErrorMessage(err.message);
         throw err;
       }
@@ -51,60 +51,11 @@ export class MinitestTests extends Tests {
   });
 
   /**
-   * Takes the output from initRSpecTests() and parses the resulting
-   * JSON into a TestSuiteInfo object.
+   * Get the user-configured Minitest command, if there is one.
    *
-   * @return The full RSpec test suite.
+   * @return The Minitest command
    */
-  public async loadTests(): Promise<TestSuiteInfo> {
-    let output = await this.initRspecTests();
-    this.log.debug('Passing raw output from dry-run into getJsonFromOutput.');
-    this.log.debug(`${output}`);
-    output = super.getJsonFromOutput(output);
-    this.log.debug('Parsing the below JSON:');
-    this.log.debug(`${output}`);
-    let rspecMetadata = JSON.parse(output);
-
-    let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
-
-    rspecMetadata.examples.forEach((test: { id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }) => {
-      let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-      let test_location_string: string = test_location_array.join('');
-      test.location = parseInt(test_location_string);
-
-      tests.push(test);
-    });
-
-    let testSuite: TestSuiteInfo = await this.getBaseTestSuite(tests);
-
-    // Sort the children of each test suite based on their location in the test tree.
-    (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
-      // NOTE: This will only sort correctly if everything is nested at the same
-      // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
-      // introduced, the location is generated as e.g. 1231, which won't
-      // sort properly relative to everything else.
-      (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
-        if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
-          let aLocation: number = super.getTestLocation(a as TestInfo);
-          let bLocation: number = super.getTestLocation(b as TestInfo);
-          return aLocation - bLocation;
-        } else {
-          return 0;
-        }
-      })
-    });
-
-    this.testSuite = testSuite;
-
-    return Promise.resolve<TestSuiteInfo>(testSuite);
-  }
-
-  /**
-   * Get the user-configured RSpec command, if there is one.
-   *
-   * @return The RSpec command
-   */
-  protected getRspecCommand(): string {
+  protected getTestCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rakeCommand') as string) || 'bundle exec rake';
     return `${command} -R $EXT_DIR`;
 
@@ -144,117 +95,6 @@ export class MinitestTests extends Tests {
   }
 
   /**
-   * Convert a string from snake_case to PascalCase.
-   * Note that the function will return the input string unchanged if it
-   * includes a '/'.
-   *
-   * @param string The string to convert to PascalCase.
-   * @return The converted string.
-   */
-  protected snakeToPascalCase(string: string): string {
-    if (string.includes('/')) { return string }
-    return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
-  }
-
-  /**
-   * Sorts an array of TestSuiteInfo objects by label.
-   *
-   * @param testSuiteChildren An array of TestSuiteInfo objects, generally the children of another TestSuiteInfo object.
-   * @return The input array, sorted by label.
-   */
-  protected sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
-    testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
-      let comparison = 0;
-      if (a.label > b.label) {
-        comparison = 1;
-      } else if (a.label < b.label) {
-        comparison = -1;
-      }
-      return comparison;
-    });
-
-    return testSuiteChildren;
-  }
-
-  /**
-   * Create the base test suite with a root node and one layer of child nodes
-   * representing the subdirectories of spec/, and then any files under the
-   * given subdirectory.
-   *
-   * @param tests Test objects returned by our custom RSpec formatter.
-   * @return The test suite root with its children.
-   */
-  public async getBaseTestSuite(
-    tests: any[]
-  ): Promise<TestSuiteInfo> {
-    let rootTestSuite: TestSuiteInfo = {
-      type: 'suite',
-      id: 'root',
-      label: 'RSpec',
-      children: []
-    };
-
-    // Create an array of all test files and then abuse Sets to make it unique.
-    let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
-
-    let splitFilesArray: Array<string[]> = [];
-
-    // Remove the spec/ directory from all the file path.
-    uniqueFiles.forEach((file) => {
-      splitFilesArray.push(file.replace(`${this.getTestDirectory()}`, "").split('/'));
-    });
-
-    // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
-    let subdirectories: Array<string> = [];
-    splitFilesArray.forEach((splitFile) => {
-      if (splitFile.length > 1) {
-        subdirectories.push(splitFile[0]);
-      }
-    });
-    subdirectories = [...new Set(subdirectories)];
-
-    // A nested loop to iterate through the direct subdirectories of spec/ and then
-    // organize the files under those subdirectories.
-    subdirectories.forEach((directory) => {
-      let filesInDirectory: Array<TestSuiteInfo> = [];
-
-      let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        return file.startsWith(`${this.getTestDirectory()}${directory}/`);
-      });
-
-      // Get the sets of tests for each file in the current directory.
-      uniqueFilesInDirectory.forEach((currentFile: string) => {
-        let currentFileTestSuite = this.getTestSuiteForFile({ tests, currentFile, directory });
-        filesInDirectory.push(currentFileTestSuite);
-      });
-
-      let directoryTestSuite: TestSuiteInfo = {
-        type: 'suite',
-        id: directory,
-        label: directory,
-        children: filesInDirectory
-      };
-
-      rootTestSuite.children.push(directoryTestSuite);
-    });
-
-    // Sort test suite types alphabetically.
-    rootTestSuite.children = this.sortTestSuiteChildren(rootTestSuite.children as Array<TestSuiteInfo>);
-
-    // Get files that are direct descendants of the spec/ directory.
-    let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-      return filePath.replace(`${this.getTestDirectory()}`, "").split('/').length === 1;
-    });
-
-    topDirectoryFiles.forEach((currentFile) => {
-      let currentFileTestSuite = super.getTestSuiteForFile({ tests, currentFile });
-      rootTestSuite.children.push(currentFileTestSuite);
-    });
-
-    return rootTestSuite;
-  }
-
-  /**
    * Runs a single test.
    *
    * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
@@ -270,7 +110,7 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.getRspecCommand()} vscode:minitest:run ${relativeLocation}:${line}`;
+    let testCommand = `${this.getTestCommand()} vscode:minitest:run ${relativeLocation}:${line}`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -297,7 +137,7 @@ export class MinitestTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.getRspecCommand()} vscode:minitest:run ${relativeFile}`;
+    let testCommand = `${this.getTestCommand()} vscode:minitest:run ${relativeFile}`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -321,7 +161,7 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.getRspecCommand()} vscode:minitest:run`;
+    let testCommand = `${this.getTestCommand()} vscode:minitest:run`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
