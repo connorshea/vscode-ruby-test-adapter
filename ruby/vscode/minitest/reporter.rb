@@ -5,6 +5,7 @@ module VSCode
 
       def initialize(io = $stdout, options = {})
         super
+        io.sync = true if io.respond_to?(:"sync=")
         self.assertions = 0
         self.count      = 0
         self.results    = []
@@ -14,12 +15,21 @@ module VSCode
         self.start_time = ::Minitest.clock_time
       end
 
+      def prerecord(klass, meth)
+        data = VSCode::Minitest.tests.find_by(klass: klass.to_s, method: meth)
+        io.puts "\nRUNNING: #{data[:id]}\n"
+      end
+
       def record(result)
         self.count += 1
         self.assertions += result.assertions
         results << result
         data = vscode_result(result)
-        io.puts "\n#{data[:status].upcase}: #{data[:id]}\n"
+        if result.skipped?
+          io.puts "\nPENDING: #{data[:id]}\n"
+        else
+          io.puts "\n#{data[:status].upcase}: #{data[:id]}\n"
+        end
       end
 
       def report

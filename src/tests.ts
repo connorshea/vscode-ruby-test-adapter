@@ -352,6 +352,12 @@ export abstract class Tests {
       } else if (data.startsWith('FAILED:')) {
         data = data.replace('FAILED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
+      } else if (data.startsWith('RUNNING:')) {
+        data = data.replace('RUNNING: ', '');
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'running' });
+      } else if (data.startsWith('PENDING:')) {
+        data = data.replace('PENDING: ', '');
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'skipped' });
       }
       if (data.includes('START_OF_TEST_JSON')) {
         resolve(data);

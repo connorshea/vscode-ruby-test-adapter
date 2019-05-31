@@ -17,10 +17,11 @@ module VSCode
   module Minitest
     module_function
 
-    def list
+    def list(io = $stdout)
+      io.sync = true if io.respond_to?(:"sync=")
       data = { version: ::Minitest::VERSION, examples: tests.all }
       json = ENV.key?("PRETTY") ? JSON.pretty_generate(data.as_json) : JSON.generate(data.as_json)
-      puts "START_OF_TEST_JSON#{json}END_OF_TEST_JSON"
+      io.puts "START_OF_TEST_JSON#{json}END_OF_TEST_JSON"
     end
 
     def run(*args)
