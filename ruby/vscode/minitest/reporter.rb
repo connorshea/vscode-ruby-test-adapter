@@ -30,7 +30,7 @@ module VSCode
         self.errors     = aggregate[::Minitest::UnexpectedError].size
         self.skips      = aggregate[::Minitest::Skip].size
         json = ENV.key?("PRETTY") ? JSON.pretty_generate(vscode_data.as_json) : JSON.generate(vscode_data.as_json)
-        io.puts "START_OF_MINITEST_JSON#{json}END_OF_MINITEST_JSON"
+        io.puts "START_OF_TEST_JSON#{json}END_OF_TEST_JSON"
       end
 
       def passed?

@@ -1,103 +1,29 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestInfo, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
+import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 import * as split2 from 'split2';
-import { Tests } from './tests';
+import { Log } from 'vscode-test-adapter-util';
 
-export class MinitestTests extends Tests {
-  /**
-   * Representation of the RSpec test suite as a TestSuiteInfo object.
-   *
-   * @return The RSpec test suite as a TestSuiteInfo object.
-   */
-  rspecTests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
-    try {
-      // If test suite already exists, use testSuite. Otherwise, load them.
-      let rspecTests = this.testSuite ? this.testSuite : this.loadRspecTests();
-      return resolve(rspecTests);
-    } catch (err) {
-      this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
-      return reject(err);
-    }
-  });
+export class Tests {
+  protected context: vscode.ExtensionContext;
+  protected testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
+  protected currentChildProcess: childProcess.ChildProcess | undefined;
+  protected log: Log;
+  protected testSuite: TestSuiteInfo | undefined;
 
   /**
-   * Perform a dry-run of the test suite to get information about every test.
-   *
-   * @return The raw output from the RSpec JSON formatter.
+   * @param context Extension context provided by vscode.
+   * @param testStatesEmitter An emitter for the test suite's state.
+   * @param log The Test Adapter logger, for logging.
    */
-  initRspecTests = async () => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getRspecCommand()} vscode:minitest:list`;
-
-    // Allow a buffer of 64MB.
-    const execArgs: childProcess.ExecOptions = {
-      cwd: vscode.workspace.rootPath,
-      maxBuffer: 8192 * 8192,
-      env: this.getProcessEnv()
-    };
-
-    this.log.info(`Running dry-run of Minitest test suite with the following command: ${cmd}`);
-
-    childProcess.exec(cmd, execArgs, (err, stdout) => {
-      if (err) {
-        this.log.error(`Error while finding RSpec test suite: ${err.message}`);
-        this.log.error(`Output: ${stdout}`);
-        // Show an error message.
-        vscode.window.showWarningMessage("Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.");
-        vscode.window.showErrorMessage(err.message);
-        throw err;
-      }
-      resolve(stdout);
-    });
-  });
-
-  /**
-   * Takes the output from initRSpecTests() and parses the resulting
-   * JSON into a TestSuiteInfo object.
-   *
-   * @return The full RSpec test suite.
-   */
-  public async loadRspecTests(): Promise<TestSuiteInfo> {
-    let output = await this.initRspecTests();
-    this.log.debug('Passing raw output from dry-run into getJsonFromOutput.');
-    this.log.debug(`${output}`);
-    output = super.getJsonFromOutput(output);
-    this.log.debug('Parsing the below JSON:');
-    this.log.debug(`${output}`);
-    let rspecMetadata = JSON.parse(output);
-
-    let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
-
-    rspecMetadata.examples.forEach((test: { id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }) => {
-      let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-      let test_location_string: string = test_location_array.join('');
-      test.location = parseInt(test_location_string);
-
-      tests.push(test);
-    });
-
-    let testSuite: TestSuiteInfo = await this.getBaseTestSuite(tests);
-
-    // Sort the children of each test suite based on their location in the test tree.
-    (testSuite.children as Array<TestSuiteInfo>).forEach((suite: TestSuiteInfo) => {
-      // NOTE: This will only sort correctly if everything is nested at the same
-      // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
-      // introduced, the location is generated as e.g. 1231, which won't
-      // sort properly relative to everything else.
-      (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
-        if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
-          let aLocation: number = this.getTestLocation(a as TestInfo);
-          let bLocation: number = this.getTestLocation(b as TestInfo);
-          return aLocation - bLocation;
-        } else {
-          return 0;
-        }
-      })
-    });
-
-    this.testSuite = testSuite;
-
-    return Promise.resolve<TestSuiteInfo>(testSuite);
+  constructor(
+    context: vscode.ExtensionContext,
+    testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>,
+    log: Log
+  ) {
+    this.context = context;
+    this.testStatesEmitter = testStatesEmitter;
+    this.log = log;
   }
 
   /**
@@ -108,6 +34,25 @@ export class MinitestTests extends Tests {
       this.currentChildProcess.kill();
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
     }
+  }
+
+  /**
+   * Pull JSON out of the test framework output.
+   *
+   * RSpec and Minitest frequently return bad data even when they're told to
+   * format the output as JSON, e.g. due to code coverage messages and other
+   * injections from gems. This gets the JSON by searching for
+   * `START_OF_TEST_JSON` and an opening curly brace, as well as a closing
+   * curly brace and `END_OF_TEST_JSON`. These are output by the custom
+   * RSpec formatter or Minitest Rake task as part of the final JSON output.
+   *
+   * @param output The output returned by running a command.
+   * @return A string representation of the JSON found in the output.
+   */
+  protected getJsonFromOutput(output: string): string {
+    output = output.substring(output.indexOf('START_OF_TEST_JSON{'), output.lastIndexOf('}END_OF_TEST_JSON') + 1);
+    // Get rid of the `START_OF_TEST_JSON` and `END_OF_TEST_JSON` to verify that the JSON is valid.
+    return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
   }
 
   /**
@@ -130,9 +75,8 @@ export class MinitestTests extends Tests {
    * @return The RSpec command
    */
   protected getRspecCommand(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rakeCommand') as string) || 'bundle exec rake';
-    return `${command} -R $EXT_DIR`;
-
+    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
+    return command || 'bundle exec rspec';
   }
 
   /**
@@ -141,8 +85,8 @@ export class MinitestTests extends Tests {
    * @return The spec directory
    */
   protected getSpecDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string);
-    return directory || './test/';
+    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string);
+    return directory || './spec/';
   }
 
   /**
@@ -150,22 +94,8 @@ export class MinitestTests extends Tests {
    *
    * @return The spec directory
    */
-  protected getRubyScriptsLocation(): string {
-    return this.context.asAbsolutePath('./ruby');
-  }
-
-
-  /**
-   * Get the env vars to run the subprocess with.
-   *
-   * @return The env
-   */
-  protected getProcessEnv(): any {
-    return Object.assign({}, process.env, {
-      "RAILS_ENV": "test",
-      "EXT_DIR": this.getRubyScriptsLocation(),
-      "TESTS_DIR": this.getSpecDirectory()
-    });
+  protected getCustomFormatterLocation(): string {
+    return this.context.asAbsolutePath('./custom_formatter.rb');
   }
 
   /**
@@ -205,16 +135,16 @@ export class MinitestTests extends Tests {
    * Get the tests in a given file.
    */
   public getTestSuiteForFile(
-    { tests, currentFile, directory }: {
-      tests: Array<{
-        id: string;
-        full_description: string;
-        description: string;
-        file_path: string;
-        line_number: number;
-        location: number;
-      }>; currentFile: string; directory?: string;
-    }): TestSuiteInfo {
+  { tests, currentFile, directory }: {
+  tests: Array<{
+    id: string;
+    full_description: string;
+    description: string;
+    file_path: string;
+    line_number: number;
+    location: number;
+  }>; currentFile: string; directory?: string;
+  }): TestSuiteInfo {
     let currentFileTests = tests.filter(test => {
       return test.file_path === currentFile
     });
@@ -391,88 +321,10 @@ export class MinitestTests extends Tests {
         data = data.replace('FAILED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
       }
-      if (data.includes('START_OF_MINITEST_JSON')) {
+      if (data.includes('START_OF_RSPEC_JSON')) {
         resolve(data);
       }
     });
-  });
-
-  /**
-   * Runs a single test.
-   *
-   * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
-   * @return The raw output from running the test.
-   */
-  runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running single test: ${testLocation}`);
-    let line = testLocation.split(":")[1]
-    let relativeLocation = testLocation.split(":")[0].replace(`${vscode.workspace.rootPath}/`, "")
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.rootPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
-
-    let testCommand = `${this.getRspecCommand()} vscode:minitest:run ${relativeLocation}:${line}`;
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
-
-  /**
-   * Runs tests in a given file.
-   *
-   * @param testFile The test file's file path, e.g. `/path/to/spec.rb`.
-   * @return The raw output from running the tests.
-   */
-  runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running test file: ${testFile}`);
-    let relativeFile = testFile.replace(`${vscode.workspace.rootPath}/`, "").replace(`./`, "")
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.rootPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
-
-    // Run tests for a given file at once with a single command.
-    let testCommand = `${this.getRspecCommand()} vscode:minitest:run ${relativeFile}`;
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
-
-  /**
-   * Runs the full test suite for the current workspace.
-   *
-   * @return The raw output from running the test suite.
-   */
-  runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running full test suite.`);
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.rootPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
-
-    let testCommand = `${this.getRspecCommand()} vscode:minitest:run`;
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
   });
 
   /**
@@ -494,48 +346,88 @@ export class MinitestTests extends Tests {
   }
 
   /**
-   * Handles test state based on the output returned by the custom RSpec formatter.
+   * Recursively search for a node in the test suite list.
    *
-   * @param test The test that we want to handle.
+   * @param searchNode The test or test suite to search in.
+   * @param id The id of the test or test suite.
    */
-  protected handleStatus(test: any): void {
-    this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
-    if (test.status === "passed") {
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
-    } else if (test.status === "failed" && test.pending_message === null) {
-      let errorMessageShort: string = test.exception.message;
-      let errorMessageLine: number = test.line_number;
-      let errorMessage: string = test.exception.message;
-
-      if (test.exception.position) {
-        errorMessageLine = test.exception.position;
+  protected findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteInfo | TestInfo | undefined {
+    if (searchNode.id === id) {
+      return searchNode;
+    } else if (searchNode.type === 'suite') {
+      for (const child of searchNode.children) {
+        const found = this.findNode(child, id);
+        if (found) return found;
       }
-
-      // Add backtrace to errorMessage if it exists.
-      if (test.exception.backtrace) {
-        errorMessage += `\n\nBacktrace:\n`;
-        test.exception.backtrace.forEach((line: string) => {
-          errorMessage += `${line}\n`;
-        });
-        errorMessage += `\n\nFull Backtrace:\n`;
-        test.exception.full_backtrace.forEach((line: string) => {
-          errorMessage += `${line}\n`;
-        });
-      }
-
-      this.testStatesEmitter.fire(<TestEvent>{
-        type: 'test',
-        test: test.id,
-        state: 'failed',
-        message: errorMessage,
-        decorations: [{
-          message: errorMessageShort,
-          line: errorMessageLine - 1
-        }]
-      });
-    } else if (test.status === "failed" && test.pending_message !== null) {
-      // Handle pending test cases.
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'skipped', message: test.pending_message });
     }
-  };
+    return undefined;
+  }
+
+  /**
+   * Recursively run a node or its children.
+   *
+   * @param node A test or test suite.
+   */
+  protected async runNode(node: TestSuiteInfo | TestInfo): Promise<void> {
+    // Special case handling for the root suite, since it can be run
+    // with runFullTestSuite()
+    if (node.type === 'suite' && node.id === 'root') {
+      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+
+      let testOutput = await this.runFullTestSuite();
+      testOutput = this.getJsonFromOutput(testOutput);
+      let testMetadata = JSON.parse(testOutput);
+      let tests: Array<any> = testMetadata.examples;
+
+      if (tests && tests.length > 0) {
+        tests.forEach((test: { id: string | TestInfo; }) => {
+          this.handleStatus(test);
+        });
+      }
+
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+    // If the suite is a file, run the tests as a file rather than as separate tests.
+    } else if (node.type === 'suite' && node.label.endsWith('.rb')) {
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
+
+      let testOutput = await this.runTestFile(`${node.file}`);
+
+      testOutput = this.getJsonFromOutput(testOutput);
+      let testMetadata = JSON.parse(testOutput);
+      let tests: Array<any> = testMetadata.examples;
+
+      if (tests && tests.length > 0) {
+        tests.forEach((test: { id: string | TestInfo; }) => {
+          this.handleStatus(test);
+        });
+      }
+
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+
+    } else if (node.type === 'suite') {
+
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
+
+      for (const child of node.children) {
+        await this.runNode(child);
+      }
+
+      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
+
+    } else if (node.type === 'test') {
+      if (node.file !== undefined && node.line !== undefined) {
+        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
+
+        // Run the test at the given line, add one since the line is 0-indexed in
+        // VS Code and 1-indexed for RSpec.
+        let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
+
+        testOutput = this.getJsonFromOutput(testOutput);
+        let testMetadata = JSON.parse(testOutput);
+        let currentTest = testMetadata.examples[0];
+
+        this.handleStatus(currentTest);
+      }
+    }
+  }
 }

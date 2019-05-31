@@ -20,7 +20,7 @@ module VSCode
     def list
       data = { version: ::Minitest::VERSION, examples: tests.all }
       json = ENV.key?("PRETTY") ? JSON.pretty_generate(data.as_json) : JSON.generate(data.as_json)
-      puts "START_OF_MINITEST_JSON#{json}END_OF_MINITEST_JSON"
+      puts "START_OF_TEST_JSON#{json}END_OF_TEST_JSON"
     end
 
     def run(*args)

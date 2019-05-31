@@ -1,30 +1,10 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
+import { TestSuiteInfo, TestInfo, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
 import * as split2 from 'split2';
-import { Log } from 'vscode-test-adapter-util';
+import { Tests } from './tests';
 
-export class RspecTests {
-  protected context: vscode.ExtensionContext;
-  protected testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>;
-  protected currentChildProcess: childProcess.ChildProcess | undefined;
-  protected log: Log;
-  protected testSuite: TestSuiteInfo | undefined;
-
-  /**
-   * @param context Extension context provided by vscode.
-   * @param testStatesEmitter An emitter for the test suite's state.
-   * @param log The Test Adapter logger, for logging.
-   */
-  constructor(
-    context: vscode.ExtensionContext,
-    testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>,
-    log: Log
-  ) {
-    this.context = context;
-    this.testStatesEmitter = testStatesEmitter;
-    this.log = log;
-  }
+export class RspecTests extends Tests {
 
   /**
    * Representation of the RSpec test suite as a TestSuiteInfo object.
@@ -80,7 +60,7 @@ export class RspecTests {
     let output = await this.initRspecTests();
     this.log.debug('Passing raw output from dry-run into getJsonFromRspecOutput.');
     this.log.debug(`${output}`);
-    output = this.getJsonFromRspecOutput(output);
+    output = this.getJsonFromOutput(output);
     this.log.debug('Parsing the below JSON:');
     this.log.debug(`${output}`);
     let rspecMetadata = JSON.parse(output);
@@ -127,25 +107,6 @@ export class RspecTests {
       this.currentChildProcess.kill();
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
     }
-  }
-
-  /**
-   * Pull JSON out of the RSpec output.
-   *
-   * RSpec frequently returns bad data even when it's told to format the output
-   * as JSON, e.g. due to code coverage messages and other injections from gems.
-   * This gets the JSON by searching for `START_OF_RSPEC_JSON` and an opening
-   * curly brace, as well as a closing curly brace and `END_OF_RSPEC_JSON`.
-   * These are output by the custom RSpec formatter as part of the final
-   * JSON output.
-   *
-   * @param output The output returned by running an RSpec command
-   * @return A string representation of the JSON found in the RSpec output.
-   */
-  protected getJsonFromRspecOutput(output: string): string {
-    output = output.substring(output.indexOf("START_OF_RSPEC_JSON{"), output.lastIndexOf("}END_OF_RSPEC_JSON") + 1);
-    // Get rid of the `START_OF_RSPEC_JSON` and `END_OF_RSPEC_JSON` to verify that the JSON is valid.
-    return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
   }
 
   /**
@@ -506,92 +467,6 @@ export class RspecTests {
       const node = this.findNode(testSuite, suiteOrTestId);
       if (node) {
         await this.runNode(node);
-      }
-    }
-  }
-
-  /**
-   * Recursively search for a node in the test suite list.
-   *
-   * @param searchNode The test or test suite to search in.
-   * @param id The id of the test or test suite.
-   */
-  protected findNode(searchNode: TestSuiteInfo | TestInfo, id: string): TestSuiteInfo | TestInfo | undefined {
-    if (searchNode.id === id) {
-      return searchNode;
-    } else if (searchNode.type === 'suite') {
-      for (const child of searchNode.children) {
-        const found = this.findNode(child, id);
-        if (found) return found;
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * Recursively run a node or its children.
-   *
-   * @param node A test or test suite.
-   */
-  protected async runNode(node: TestSuiteInfo | TestInfo): Promise<void> {
-    // Special case handling for the root suite, since it can be run
-    // with runFullTestSuite()
-    if (node.type === 'suite' && node.id === 'root') {
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
-
-      let testOutput = await this.runFullTestSuite();
-      testOutput = this.getJsonFromRspecOutput(testOutput);
-      let testMetadata = JSON.parse(testOutput);
-      let tests: Array<any> = testMetadata.examples;
-
-      if (tests && tests.length > 0) {
-        tests.forEach((test: { id: string | TestInfo; }) => {
-          this.handleStatus(test);
-        });
-      }
-
-      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
-    // If the suite is a file, run the tests as a file rather than as separate tests.
-    } else if (node.type === 'suite' && node.label.endsWith('.rb')) {
-      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
-
-      let testOutput = await this.runTestFile(`${node.file}`);
-
-      testOutput = this.getJsonFromRspecOutput(testOutput);
-      let testMetadata = JSON.parse(testOutput);
-      let tests: Array<any> = testMetadata.examples;
-
-      if (tests && tests.length > 0) {
-        tests.forEach((test: { id: string | TestInfo; }) => {
-          this.handleStatus(test);
-        });
-      }
-
-      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
-
-    } else if (node.type === 'suite') {
-
-      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
-
-      for (const child of node.children) {
-        await this.runNode(child);
-      }
-
-      this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
-
-    } else if (node.type === 'test') {
-      if (node.file !== undefined && node.line !== undefined) {
-        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
-
-        // Run the test at the given line, add one since the line is 0-indexed in
-        // VS Code and 1-indexed for RSpec.
-        let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
-
-        testOutput = this.getJsonFromRspecOutput(testOutput);
-        let testMetadata = JSON.parse(testOutput);
-        let currentTest = testMetadata.examples[0];
-
-        this.handleStatus(currentTest);
       }
     }
   }

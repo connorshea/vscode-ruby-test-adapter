@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
+import { Tests } from './tests';
 import { RspecTests } from './rspecTests';
 import { MinitestTests } from './minitestTests';
 
@@ -10,7 +11,7 @@ export class RubyAdapter implements TestAdapter {
   private readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
   private readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
   private readonly autorunEmitter = new vscode.EventEmitter<void>();
-  private testsInstance: RspecTests | undefined;
+  private testsInstance: Tests | undefined;
 
   get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> { return this.testsEmitter.event; }
   get testStates(): vscode.Event<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent> { return this.testStatesEmitter.event; }
@@ -34,12 +35,12 @@ export class RubyAdapter implements TestAdapter {
     if (this.getTestingFramework() === "rspec") {
       this.log.info('Loading RSpec tests...');
       this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
-      const loadedTests = await this.testsInstance.loadRspecTests();
+      const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     } else if (this.getTestingFramework() === "minitest") {
       this.log.info('Loading Minitest tests...');
       this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
-      const loadedTests = await this.testsInstance.loadRspecTests();
+      const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     }
   }
