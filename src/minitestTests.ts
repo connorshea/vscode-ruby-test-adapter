@@ -499,7 +499,7 @@ export class MinitestTests extends RspecTests {
    *
    * @param tests
    */
-  runRspecTests = async (
+  runTests = async (
     tests: string[]
   ): Promise<void> => {
     let testSuite: TestSuiteInfo = await this.rspecTests();

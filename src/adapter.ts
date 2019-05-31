@@ -10,7 +10,7 @@ export class RubyAdapter implements TestAdapter {
   private readonly testsEmitter = new vscode.EventEmitter<TestLoadStartedEvent | TestLoadFinishedEvent>();
   private readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
   private readonly autorunEmitter = new vscode.EventEmitter<void>();
-  private rspecTestsInstance: RspecTests | undefined;
+  private testsInstance: RspecTests | undefined;
 
   get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> { return this.testsEmitter.event; }
   get testStates(): vscode.Event<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent> { return this.testStatesEmitter.event; }
@@ -29,16 +29,17 @@ export class RubyAdapter implements TestAdapter {
   }
 
   async load(): Promise<void> {
-    this.log.info('Loading Ruby tests');
+    this.log.info('Loading Ruby tests...');
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-    if (this.getTestingFramework() === "minitest") {
-      this.rspecTestsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
-      const loadedTests = await this.rspecTestsInstance.loadRspecTests();
+    if (this.getTestingFramework() === "rspec") {
+      this.log.info('Loading RSpec tests...');
+      this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
+      const loadedTests = await this.testsInstance.loadRspecTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
-    }
-    else if (this.getTestingFramework() === "rspec") {
-      this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
-      const loadedTests = await this.rspecTestsInstance.loadRspecTests();
+    } else if (this.getTestingFramework() === "minitest") {
+      this.log.info('Loading Minitest tests...');
+      this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
+      const loadedTests = await this.testsInstance.loadRspecTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     }
   }
@@ -46,17 +47,23 @@ export class RubyAdapter implements TestAdapter {
   async run(tests: string[]): Promise<void> {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
-    if (!this.rspecTestsInstance) {
-      this.rspecTestsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
+    if (!this.testsInstance) {
+      if (this.getTestingFramework() === "rspec") {
+        this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
+      } else if (this.getTestingFramework() === "minitest") {
+        this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
+      }
     }
-    await this.rspecTestsInstance.runRspecTests(tests);
+    if (this.testsInstance) {
+      await this.testsInstance.runTests(tests);
+    }
     this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 
   cancel(): void {
-    if (this.rspecTestsInstance) {
+    if (this.testsInstance) {
       this.log.info('Killing currently-running tests.')
-      this.rspecTestsInstance.killChild();
+      this.testsInstance.killChild();
     } else {
       this.log.info('No tests running currently, no process to kill.')
     }
