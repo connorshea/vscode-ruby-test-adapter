@@ -41,6 +41,13 @@ export abstract class Tests {
   }
 
   /**
+   * Get the user-configured test directory, if there is one.
+   *
+   * @return The test directory
+   */
+  abstract getTestDirectory(): string;
+
+  /**
    * Pull JSON out of the test framework output.
    *
    * RSpec and Minitest frequently return bad data even when they're told to
@@ -71,35 +78,6 @@ export abstract class Tests {
    */
   protected getTestLocation(test: TestInfo): number {
     return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''));
-  }
-
-  /**
-   * Get the user-configured RSpec command, if there is one.
-   *
-   * @return The RSpec command
-   */
-  protected getRspecCommand(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
-    return command || 'bundle exec rspec';
-  }
-
-  /**
-   * Get the user-configured spec directory, if there is one.
-   *
-   * @return The spec directory
-   */
-  protected getSpecDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string);
-    return directory || './spec/';
-  }
-
-  /**
-   * Get the absolute path of the custom_formatter.rb file.
-   *
-   * @return The spec directory
-   */
-  protected getCustomFormatterLocation(): string {
-    return this.context.asAbsolutePath('./custom_formatter.rb');
   }
 
   /**
@@ -162,9 +140,9 @@ export abstract class Tests {
     let currentFileLabel = '';
 
     if (directory) {
-      currentFileLabel = currentFile.replace(`${this.getSpecDirectory()}${directory}/`, '');
+      currentFileLabel = currentFile.replace(`${this.getTestDirectory()}${directory}/`, '');
     } else {
-      currentFileLabel = currentFile.replace(`${this.getSpecDirectory()}`, '');
+      currentFileLabel = currentFile.replace(`${this.getTestDirectory()}`, '');
     }
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
@@ -247,7 +225,7 @@ export abstract class Tests {
 
     // Remove the spec/ directory from all the file path.
     uniqueFiles.forEach((file) => {
-      splitFilesArray.push(file.replace(`${this.getSpecDirectory()}`, "").split('/'));
+      splitFilesArray.push(file.replace(`${this.getTestDirectory()}`, "").split('/'));
     });
 
     // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
@@ -265,7 +243,7 @@ export abstract class Tests {
       let filesInDirectory: Array<TestSuiteInfo> = [];
 
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        return file.startsWith(`${this.getSpecDirectory()}${directory}/`);
+        return file.startsWith(`${this.getTestDirectory()}${directory}/`);
       });
 
       // Get the sets of tests for each file in the current directory.
@@ -289,7 +267,7 @@ export abstract class Tests {
 
     // Get files that are direct descendants of the spec/ directory.
     let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-      return filePath.replace(`${this.getSpecDirectory()}`, "").split('/').length === 1;
+      return filePath.replace(`${this.getTestDirectory()}`, "").split('/').length === 1;
     });
 
     topDirectoryFiles.forEach((currentFile) => {
@@ -325,7 +303,7 @@ export abstract class Tests {
         data = data.replace('FAILED: ', '');
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
       }
-      if (data.includes('START_OF_RSPEC_JSON')) {
+      if (data.includes('START_OF_TEST_JSON')) {
         resolve(data);
       }
     });

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestInfo, TestRunFinishedEvent, TestEvent } from 'vscode-test-adapter-api';
+import { TestSuiteInfo, TestInfo, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
-import * as split2 from 'split2';
 import { Tests } from './tests';
 
 export class RspecTests extends Tests {
@@ -100,16 +99,6 @@ export class RspecTests extends Tests {
   }
 
   /**
-   * Kills the current child process if one exists.
-   */
-  public killChild(): void {
-    if (this.currentChildProcess) {
-      this.currentChildProcess.kill();
-      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-    }
-  }
-
-  /**
    * Get the user-configured RSpec command, if there is one.
    *
    * @return The RSpec command
@@ -120,11 +109,11 @@ export class RspecTests extends Tests {
   }
 
   /**
-   * Get the user-configured spec directory, if there is one.
+   * Get the user-configured test directory, if there is one.
    *
    * @return The spec directory
    */
-  protected getSpecDirectory(): string {
+  getTestDirectory(): string {
     let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string);
     return directory || './spec/';
   }
@@ -172,93 +161,6 @@ export class RspecTests extends Tests {
   }
 
   /**
-   * Get the tests in a given file.
-   */
-  public getTestSuiteForFile(
-  { tests, currentFile, directory }: {
-  tests: Array<{
-    id: string;
-    full_description: string;
-    description: string;
-    file_path: string;
-    line_number: number;
-    location: number;
-  }>; currentFile: string; directory?: string;
-  }): TestSuiteInfo {
-    let currentFileTests = tests.filter(test => {
-      return test.file_path === currentFile
-    });
-
-    let currentFileTestsInfo = currentFileTests as unknown as Array<TestInfo>;
-    currentFileTestsInfo.forEach((test: TestInfo) => {
-      test.type = 'test';
-      test.label = '';
-    });
-
-    let currentFileLabel = '';
-
-    if (directory) {
-      currentFileLabel = currentFile.replace(`${this.getSpecDirectory()}${directory}/`, '');
-    } else {
-      currentFileLabel = currentFile.replace(`${this.getSpecDirectory()}`, '');
-    }
-
-    let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
-
-    let currentFileTestInfoArray: Array<TestInfo> = currentFileTests.map((test) => {
-      // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
-      // but with the latter's first character stripped.
-      let filePath: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
-
-      // RSpec provides test ids like "file_name.rb[1:2:3]".
-      // This uses the digits at the end of the id to create
-      // an array of numbers representing the location of the
-      // test in the file.
-      let testLocationArray: Array<number> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').map((x) => {
-        return parseInt(x);
-      });
-
-      // Get the last element in the location array.
-      let testNumber: number = testLocationArray[testLocationArray.length - 1];
-      // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
-      // is appended to the test description to distinguish between separate tests.
-      let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${testNumber}` : test.full_description;
-
-      // If the current file label doesn't have a slash in it and it starts with the PascalCase'd
-      // file name, remove the from the start of the description. This turns, e.g.
-      // `ExternalAccount Validations blah blah blah' into 'Validations blah blah blah'.
-      if (!pascalCurrentFileLabel.includes('/') && description.startsWith(pascalCurrentFileLabel)) {
-        // Optional check for a space following the PascalCase file name. In some
-        // cases, e.g. 'FileName#method_name` there's no space after the file name.
-        let regexString = `${pascalCurrentFileLabel}[ ]?`;
-        let regex = new RegExp(regexString, "g");
-        description = description.replace(regex, '');
-      }
-
-      let testInfo: TestInfo = {
-        type: 'test',
-        id: test.id,
-        label: description,
-        file: filePath,
-        // Line numbers are 0-indexed
-        line: test.line_number - 1
-      }
-
-      return testInfo;
-    });
-
-    let currentFileTestSuite: TestSuiteInfo = {
-      type: 'suite',
-      id: currentFile,
-      label: currentFileLabel,
-      file: currentFile,
-      children: currentFileTestInfoArray
-    }
-
-    return currentFileTestSuite;
-  }
-
-  /**
    * Create the base test suite with a root node and one layer of child nodes
    * representing the subdirectories of spec/, and then any files under the
    * given subdirectory.
@@ -283,7 +185,7 @@ export class RspecTests extends Tests {
 
     // Remove the spec/ directory from all the file path.
     uniqueFiles.forEach((file) => {
-      splitFilesArray.push(file.replace(`${this.getSpecDirectory()}`, "").split('/'));
+      splitFilesArray.push(file.replace(`${this.getTestDirectory()}`, "").split('/'));
     });
 
     // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
@@ -301,12 +203,12 @@ export class RspecTests extends Tests {
       let filesInDirectory: Array<TestSuiteInfo> = [];
 
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        return file.startsWith(`${this.getSpecDirectory()}${directory}/`);
+        return file.startsWith(`${this.getTestDirectory()}${directory}/`);
       });
 
       // Get the sets of tests for each file in the current directory.
       uniqueFilesInDirectory.forEach((currentFile: string) => {
-        let currentFileTestSuite = this.getTestSuiteForFile({ tests, currentFile, directory });
+        let currentFileTestSuite = super.getTestSuiteForFile({ tests, currentFile, directory });
         filesInDirectory.push(currentFileTestSuite);
       });
 
@@ -325,47 +227,16 @@ export class RspecTests extends Tests {
 
     // Get files that are direct descendants of the spec/ directory.
     let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-      return filePath.replace(`${this.getSpecDirectory()}`, "").split('/').length === 1;
+      return filePath.replace(`${this.getTestDirectory()}`, "").split('/').length === 1;
     });
 
     topDirectoryFiles.forEach((currentFile) => {
-      let currentFileTestSuite = this.getTestSuiteForFile({ tests, currentFile });
+      let currentFileTestSuite = super.getTestSuiteForFile({ tests, currentFile });
       rootTestSuite.children.push(currentFileTestSuite);
     });
 
     return rootTestSuite;
   }
-
-  /**
-   * Assigns the process to currentChildProcess and handles its output and what happens when it exits.
-   *
-   * @param process A process running the tests.
-   * @return A promise that resolves when the test run completes.
-   */
-  handleChildProcess = async (process: childProcess.ChildProcess) => new Promise<string>((resolve, reject) => {
-    this.currentChildProcess = process;
-
-    this.currentChildProcess!.on('exit', () => {
-      this.currentChildProcess = undefined;
-      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
-      resolve('{}');
-    });
-
-    this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
-      data = data.toString();
-      this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
-      if (data.startsWith('PASSED:')) {
-        data = data.replace('PASSED: ', '');
-        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'passed' });
-      } else if (data.startsWith('FAILED:')) {
-        data = data.replace('FAILED: ', '');
-        this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'failed' });
-      }
-      if (data.includes('START_OF_RSPEC_JSON')) {
-        resolve(data);
-      }
-    });
-  });
 
   /**
    * Runs a single test.
