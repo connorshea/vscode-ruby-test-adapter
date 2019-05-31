@@ -42,6 +42,9 @@ export class RubyAdapter implements TestAdapter {
       this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
       const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
+    } else {
+      this.log.warn('No test framework selected. Configure the rubyTestExplorer.testingFramework setting if you want to use the Ruby Test Explorer.');
+      this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
     }
   }
 
