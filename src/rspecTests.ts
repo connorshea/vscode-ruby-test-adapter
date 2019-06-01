@@ -166,11 +166,27 @@ export class RspecTests extends Tests {
       // Prepend the class name to the error message string.
       let errorMessage: string = `${test.exception.class}:\n${errorMessageNoLinebreaks}`;
 
+      let fileBacktraceLineNumber: number | undefined;
+
+      let filePath = test.file_path.replace('./', '');
+
       // Add backtrace to errorMessage if it exists.
       if (test.exception.backtrace) {
         errorMessage += `\n\nBacktrace:\n`;
         test.exception.backtrace.forEach((line: string) => {
           errorMessage += `${line}\n`;
+          // If the backtrace line includes the current file path, try to get the line number from it.
+          if (line.includes(filePath)) {
+            let filePathArray = filePath.split('/');
+            let fileName = filePathArray[filePathArray.length - 1];
+            // Input: spec/models/game_spec.rb:75:in `block (3 levels) in <top (required)>
+            // Output: 75
+            let regex = new RegExp(`${fileName}\:(\\d+)`);
+            let match = line.match(regex);
+            if (match && match[1]) {
+              fileBacktraceLineNumber = parseInt(match[1]);
+            }
+          }
         });
       }
 
@@ -182,7 +198,7 @@ export class RspecTests extends Tests {
         decorations: [{
           // Strip line breaks from the message.
           message: errorMessageNoLinebreaks,
-          line: test.line_number - 1
+          line: (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1
         }]
       });
     } else if (test.status === "failed" && test.pending_message !== null) {
