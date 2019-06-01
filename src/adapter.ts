@@ -27,17 +27,18 @@ export class RubyAdapter implements TestAdapter {
     this.disposables.push(this.testsEmitter);
     this.disposables.push(this.testStatesEmitter);
     this.disposables.push(this.autorunEmitter);
+    this.disposables.push(this.createWatcher());
   }
 
   async load(): Promise<void> {
     this.log.info('Loading Ruby tests...');
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
-    if (this.getTestingFramework() === "rspec") {
+    if (this.getTestFramework() === "rspec") {
       this.log.info('Loading RSpec tests...');
       this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
       const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
-    } else if (this.getTestingFramework() === "minitest") {
+    } else if (this.getTestFramework() === "minitest") {
       this.log.info('Loading Minitest tests...');
       this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
       const loadedTests = await this.testsInstance.loadTests();
@@ -52,9 +53,9 @@ export class RubyAdapter implements TestAdapter {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
     if (!this.testsInstance) {
-      if (this.getTestingFramework() === "rspec") {
+      if (this.getTestFramework() === "rspec") {
         this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
-      } else if (this.getTestingFramework() === "minitest") {
+      } else if (this.getTestFramework() === "minitest") {
         this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
       }
     }
@@ -81,8 +82,41 @@ export class RubyAdapter implements TestAdapter {
     this.disposables = [];
   }
 
-  private getTestingFramework(): string {
-    let testingFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testingFramework') as string);
-    return testingFramework || 'none';
+  private getTestFramework(): string {
+    let testFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testingFramework') as string);
+    return testFramework || 'none';
+  }
+
+  private getTestDirectory(): string {
+    let testFramework: string = this.getTestFramework();
+    let testDirectory: string = '';
+    if (testFramework === 'rspec') {
+      testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string) || './spec/';
+    } else if (testFramework === 'minitest') {
+      testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string) || './test/';
+    }
+
+    return testDirectory;
+  }
+
+  private createWatcher(): vscode.Disposable {
+    return vscode.workspace.onDidSaveTextDocument(document => {
+      const filename = document.uri.fsPath;
+      this.log.info(`${filename} was saved - checking if this effects ${this.workspace.uri.fsPath}`);
+      if (filename.startsWith(this.workspace.uri.fsPath)) {
+        // relativeFilename is in the format of, e.g. './app/javascript/src/components/library.vue'.
+        let relativeFilename = filename.replace(`${this.workspace.uri.fsPath}`, '.');
+        let testDirectory = this.getTestDirectory();
+
+        // In the case that there's no configured test directory, we shouldn't try to reload the tests.
+        if (testDirectory !== '' && relativeFilename.startsWith(testDirectory)) {
+          this.log.info('A test file has been edited, reloading tests.');
+          this.load();
+        }
+
+        this.log.info('Sending autorun event');
+        this.autorunEmitter.fire();
+      }
+    })
   }
 }
