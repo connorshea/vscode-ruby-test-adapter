@@ -82,7 +82,7 @@
           "type": "string",
           "scope": "resource"
         },
-        "rubyTestExplorer.testingFramework": {
+        "rubyTestExplorer.testFramework": {
           "description": "Framework used for testing (ex: rspec, minitest)",
           "type": "string",
           "default": "none",

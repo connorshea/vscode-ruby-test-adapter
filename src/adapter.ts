@@ -44,7 +44,7 @@ export class RubyAdapter implements TestAdapter {
       const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     } else {
-      this.log.warn('No test framework selected. Configure the rubyTestExplorer.testingFramework setting if you want to use the Ruby Test Explorer.');
+      this.log.warn('No test framework selected. Configure the rubyTestExplorer.testFramework setting if you want to use the Ruby Test Explorer.');
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
     }
   }
@@ -83,7 +83,7 @@ export class RubyAdapter implements TestAdapter {
   }
 
   private getTestFramework(): string {
-    let testFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testingFramework') as string);
+    let testFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testFramework') as string);
     return testFramework || 'none';
   }
 
