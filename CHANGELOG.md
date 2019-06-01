@@ -5,9 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2019-06-01
+### Added
+- Add Minitest support. Thanks [@cristianbica](https://github.com/cristianbica)! ([#14](https://github.com/connorshea/vscode-ruby-test-adapter/pull/14))
+  - The test framework is detected automatically based on the gems installed in the current Bundler environment, no changes should be necessary to continue using the extension. You can also override the test framework manually with the `testFramework` setting if necessary.
+- Add an automated test watcher, tests will now reload automatically when a file in the configured test/spec directory changes.
+
+### Changed
+- [BREAKING] Renamed `specDirectory` config option to `rspecDirectory` for consistency. If you've configured a special RSpec directory you'll need to change the setting name.
+
 ## [0.4.6] - 2019-05-24
 ### Fixed
-- Fix `ActiveSupport#to_json` error when test is not wrapped with a string-based describe/context block. (Thanks @apolzon!)
+- Fix `ActiveSupport#to_json` error when test is not wrapped with a string-based describe/context block. Thanks [@apolzon](https://github.com/apolzon)!
 
 ## [0.4.5] - 2019-05-22
 ### Added
@@ -79,7 +88,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.6...v0.5.0
 [0.4.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.3...v0.4.4
