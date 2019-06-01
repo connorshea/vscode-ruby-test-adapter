@@ -66,7 +66,7 @@ export class RspecTests extends Tests {
    * @return The spec directory
    */
   getTestDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string);
+    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string);
     return directory || './spec/';
   }
 

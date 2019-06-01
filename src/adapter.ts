@@ -151,7 +151,7 @@ export class RubyAdapter implements TestAdapter {
     let testFramework = this.getTestFramework();
     let testDirectory = '';
     if (testFramework === 'rspec') {
-      testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string) || './spec/';
+      testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string) || './spec/';
     } else if (testFramework === 'minitest') {
       testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string) || './test/';
     }
