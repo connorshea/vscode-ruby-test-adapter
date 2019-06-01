@@ -29,6 +29,7 @@ Currently supported:
 - Running full test suite.
 - Running tests for a specific file.
 - Viewing test output for failed tests (click the test in the test explorer sidebar to open the Output view).
+- Line decorations in test files when a test fails.
 - Displaying test statuses. Success, failure, and pending (called 'skipped' in the extension).
 - Live test status updates as the test suite runs.
 - File locations for each test.

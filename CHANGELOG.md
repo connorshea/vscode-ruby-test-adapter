@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2019-06-01
+### Added
+- Add line decorations in RSpec file where a given test failed. Includes the error message.
+
+### Fixed
+- Catch an error that can occur while auto-detecting the test framework where `bundle list` can fail.
+
 ## [0.5.0] - 2019-06-01
 ### Added
 - Add Minitest support. Thanks [@cristianbica](https://github.com/cristianbica)! ([#14](https://github.com/connorshea/vscode-ruby-test-adapter/pull/14))
@@ -88,7 +95,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.6...v0.5.0
 [0.4.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.4...v0.4.5
