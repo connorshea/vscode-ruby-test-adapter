@@ -50,7 +50,13 @@ module VSCode
       def vscode_data
         {
           version: ::Minitest::VERSION,
-          summary: { duration: total_time, example_count: assertions, failure_count: failures, pending_count: skips, errors_outside_of_examples_count: errors },
+          summary: {
+            duration: total_time,
+            example_count: assertions,
+            failure_count: failures,
+            pending_count: skips,
+            errors_outside_of_examples_count: errors
+          },
           summary_line: "Total time: #{total_time}, Runs: #{count}, Assertions: #{assertions}, Failures: #{failures}, Errors: #{errors}, Skips: #{skips}",
           examples: results.map { |r| vscode_result(r) }
         }
