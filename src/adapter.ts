@@ -74,6 +74,7 @@ export class RubyAdapter implements TestAdapter {
       this.testsInstance.killChild();
     } else {
       this.log.info('No tests running currently, no process to kill.')
+      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
     }
   }
 
