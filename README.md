@@ -50,7 +50,7 @@ Property                              | Description
 `rubyTestExplorer.testFramework`      | `none`, `auto`, `rspec`, or `minitest`. `auto` by default, which automatically detects the test framework based on the gems listed by Bundler. Can disable the extension functionality with `none` or set the test framework explicitly, if auto-detect isn't working properly.
 `rubyTestExplorer.rspecCommand`       | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
 `rubyTestExplorer.rspecDirectory`     | Define the relative directory of the specs in a given workspace, for example `./spec/`.
-`rubyTestExplorer.minitestDirectory`  | Define how to run Minitest with Rake, for example `./bin/rake`, bundle exec rake` or `rake`. Must be a Rake command.
+`rubyTestExplorer.minitestDirectory`  | Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`. Must be a Rake command.
 `rubyTestExplorer.minitestCommand`    | Define the relative location of your `test` directory, for example `./test/`.
 
 ## Troubleshooting
