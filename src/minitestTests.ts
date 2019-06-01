@@ -58,7 +58,7 @@ export class MinitestTests extends Tests {
    * @return The Minitest command
    */
   protected getTestCommand(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rakeCommand') as string) || 'bundle exec rake';
+    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestCommand') as string) || 'bundle exec rake';
     return `${command} -R $EXT_DIR`;
 
   }

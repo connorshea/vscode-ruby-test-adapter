@@ -73,17 +73,17 @@
       "title": "Ruby Test Explorer configuration",
       "properties": {
         "rubyTestExplorer.logpanel": {
-          "description": "Write diagnotic logs to an output panel",
+          "description": "Write diagnotic logs to an output panel.",
           "type": "boolean",
           "scope": "resource"
         },
         "rubyTestExplorer.logfile": {
-          "description": "Write diagnostic logs to the given file",
+          "description": "Write diagnostic logs to the given file.",
           "type": "string",
           "scope": "resource"
         },
         "rubyTestExplorer.testFramework": {
-          "description": "Test framework to use by default, for example rspec or minitest",
+          "description": "Test framework to use by default, for example rspec or minitest.",
           "type": "string",
           "default": "auto",
           "enum": [
@@ -112,8 +112,8 @@
           "type": "string",
           "scope": "resource"
         },
-        "rubyTestExplorer.rakeCommand": {
-          "markdownDescription": "Define how to run rake: `./bin/rake`, bundle exec rake` or `rake`.",
+        "rubyTestExplorer.minitestCommand": {
+          "markdownDescription": "Define how to run Minitest with Rake, for example `./bin/rake`, bundle exec rake` or `rake`.",
           "default": "bundle exec rake",
           "type": "string",
           "scope": "resource"
