@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
+import * as childProcess from 'child_process';
 import { Tests } from './tests';
 import { RspecTests } from './rspecTests';
 import { MinitestTests } from './minitestTests';
@@ -12,6 +13,7 @@ export class RubyAdapter implements TestAdapter {
   private readonly testStatesEmitter = new vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>();
   private readonly autorunEmitter = new vscode.EventEmitter<void>();
   private testsInstance: Tests | undefined;
+  private currentTestFramework: string | undefined;
 
   get tests(): vscode.Event<TestLoadStartedEvent | TestLoadFinishedEvent> { return this.testsEmitter.event; }
   get testStates(): vscode.Event<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent> { return this.testStatesEmitter.event; }
@@ -53,9 +55,10 @@ export class RubyAdapter implements TestAdapter {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
     if (!this.testsInstance) {
-      if (this.getTestFramework() === "rspec") {
+      let testFramework = this.getTestFramework();
+      if (testFramework === "rspec") {
         this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
-      } else if (this.getTestFramework() === "minitest") {
+      } else if (testFramework === "minitest") {
         this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
       }
     }
@@ -82,9 +85,63 @@ export class RubyAdapter implements TestAdapter {
     this.disposables = [];
   }
 
-  private getTestFramework(): string {
+  /**
+   * Get the configured test framework.
+   */
+  protected getTestFramework(): string {
+    // Short-circuit the test framework check if we've already determined the current test framework.
+    if (this.currentTestFramework !== undefined) {
+      return this.currentTestFramework;
+    }
+
     let testFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testFramework') as string);
-    return testFramework || 'none';
+    // If the test framework is something other than auto, return the value.
+    if (['rspec', 'minitest', 'none'].includes(testFramework)) {
+      this.currentTestFramework = testFramework;
+      return testFramework;
+    // If the test framework is auto, we need to try to detect the test framework type.
+    } else {
+      let detectedTestFramework = this.detectTestFramework();
+      this.currentTestFramework = detectedTestFramework;
+      return detectedTestFramework;
+    }
+  }
+
+  /**
+   * Detect the current test framework using 'bundle list'.
+   */
+  protected detectTestFramework(): string {
+    this.log.info(`Getting a list of Bundler dependencies with 'bundle list'.`);
+
+    const execArgs: childProcess.ExecOptions = {
+      cwd: vscode.workspace.rootPath,
+      maxBuffer: 8192 * 8192
+    };
+
+    // Run 'bundle list' and set the output to bundlerList.
+    // Execute this syncronously to avoid 
+    let err, stdout = childProcess.execSync('bundle list', execArgs);
+
+    if (err) {
+      this.log.error(`Error while listing Bundler dependencies: ${err}`);
+      this.log.error(`Output: ${stdout}`);
+      throw err;
+    }
+
+    let bundlerList = stdout.toString();
+    
+    // Search for rspec or minitest in the output of 'bundle list'.
+    // The search function returns the index where the string is found, or -1 otherwise.
+    if (bundlerList.search('rspec-core') >= 0) {
+      this.log.info(`Detected RSpec test framework.`);
+      return 'rspec';
+    } else if (bundlerList.search('minitest') >= 0) {
+      this.log.info(`Detected Minitest test framework.`);
+      return 'minitest';
+    } else {
+      this.log.info(`Unable to automatically detect a test framework.`);
+      return 'none';
+    }
   }
 
   private getTestDirectory(): string {

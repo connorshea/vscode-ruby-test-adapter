@@ -83,10 +83,21 @@
           "scope": "resource"
         },
         "rubyTestExplorer.testFramework": {
-          "description": "Framework used for testing (ex: rspec, minitest)",
+          "description": "Test framework to use by default, for example rspec or minitest",
           "type": "string",
-          "default": "none",
-          "enum": ["none", "rspec", "minitest"],
+          "default": "auto",
+          "enum": [
+            "none",
+            "auto",
+            "rspec",
+            "minitest"
+          ],
+          "enumDescriptions": [
+            "Disable Ruby Test Runner.",
+            "Automatically detect test framework for a given workspace using Bundler.",
+            "Use RSpec test framework.",
+            "Use Minitest test framework."
+          ],
           "scope": "resource"
         },
         "rubyTestExplorer.rspecCommand": {
