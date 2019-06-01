@@ -161,7 +161,10 @@ export class RspecTests extends Tests {
     if (test.status === "passed") {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
     } else if (test.status === "failed" && test.pending_message === null) {
-      let errorMessage: string = test.exception.message;
+      // Remove linebreaks from error message.
+      let errorMessageNoLinebreaks = test.exception.message.replace(/(\r\n|\n|\r)/, ' ');
+      // Prepend the class name to the error message string.
+      let errorMessage: string = `${test.exception.class}:\n${errorMessageNoLinebreaks}`;
 
       // Add backtrace to errorMessage if it exists.
       if (test.exception.backtrace) {
@@ -175,7 +178,12 @@ export class RspecTests extends Tests {
         type: 'test',
         test: test.id,
         state: 'failed',
-        message: errorMessage
+        message: errorMessage,
+        decorations: [{
+          // Strip line breaks from the message.
+          message: errorMessageNoLinebreaks,
+          line: test.line_number - 1
+        }]
       });
     } else if (test.status === "failed" && test.pending_message !== null) {
       // Handle pending test cases.
