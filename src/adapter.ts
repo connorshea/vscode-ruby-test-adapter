@@ -118,28 +118,33 @@ export class RubyAdapter implements TestAdapter {
       maxBuffer: 8192 * 8192
     };
 
-    // Run 'bundle list' and set the output to bundlerList.
-    // Execute this syncronously to avoid 
-    let err, stdout = childProcess.execSync('bundle list', execArgs);
+    try {
+      // Run 'bundle list' and set the output to bundlerList.
+      // Execute this syncronously to avoid 
+      let err, stdout = childProcess.execSync('bundle list', execArgs);
 
-    if (err) {
-      this.log.error(`Error while listing Bundler dependencies: ${err}`);
-      this.log.error(`Output: ${stdout}`);
-      throw err;
-    }
-
-    let bundlerList = stdout.toString();
-    
-    // Search for rspec or minitest in the output of 'bundle list'.
-    // The search function returns the index where the string is found, or -1 otherwise.
-    if (bundlerList.search('rspec-core') >= 0) {
-      this.log.info(`Detected RSpec test framework.`);
-      return 'rspec';
-    } else if (bundlerList.search('minitest') >= 0) {
-      this.log.info(`Detected Minitest test framework.`);
-      return 'minitest';
-    } else {
-      this.log.info(`Unable to automatically detect a test framework.`);
+      if (err) {
+        this.log.error(`Error while listing Bundler dependencies: ${err}`);
+        this.log.error(`Output: ${stdout}`);
+        throw err;
+      }
+  
+      let bundlerList = stdout.toString();
+      
+      // Search for rspec or minitest in the output of 'bundle list'.
+      // The search function returns the index where the string is found, or -1 otherwise.
+      if (bundlerList.search('rspec-core') >= 0) {
+        this.log.info(`Detected RSpec test framework.`);
+        return 'rspec';
+      } else if (bundlerList.search('minitest') >= 0) {
+        this.log.info(`Detected Minitest test framework.`);
+        return 'minitest';
+      } else {
+        this.log.info(`Unable to automatically detect a test framework.`);
+        return 'none';
+      }
+    } catch(error) {
+      this.log.error(error);
       return 'none';
     }
   }
