@@ -34,7 +34,6 @@ module VSCode
         runnables << [test[:klass].constantize, filter: test[:method]]
       end
 
-
       def run
         runnables.each do |runnable, options|
           runnable.run(reporter, options)

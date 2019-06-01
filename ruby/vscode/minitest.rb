@@ -25,7 +25,7 @@ module VSCode
     end
 
     def run(*args)
-      args = ["./test/"] if args.empty?
+      args = [ENV['TESTS_DIR']] if args.empty?
       reporter = Reporter.new
       reporter.start
       runner = Runner.new(reporter: reporter)
