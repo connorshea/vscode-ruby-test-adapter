@@ -46,7 +46,7 @@ export class RubyAdapter implements TestAdapter {
       const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     } else {
-      this.log.warn('No test framework selected. Configure the rubyTestExplorer.testFramework setting if you want to use the Ruby Test Explorer.');
+      this.log.warn('No test framework detected. Configure the rubyTestExplorer.testFramework setting if you want to use the Ruby Test Explorer.');
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished' });
     }
   }
@@ -144,9 +144,12 @@ export class RubyAdapter implements TestAdapter {
     }
   }
 
+  /**
+   * Get the test directory based on the configuration value if there's a configured test framework.
+   */
   private getTestDirectory(): string {
-    let testFramework: string = this.getTestFramework();
-    let testDirectory: string = '';
+    let testFramework = this.getTestFramework();
+    let testDirectory = '';
     if (testFramework === 'rspec') {
       testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('specDirectory') as string) || './spec/';
     } else if (testFramework === 'minitest') {
@@ -156,8 +159,16 @@ export class RubyAdapter implements TestAdapter {
     return testDirectory;
   }
 
+  /**
+   * Create a file watcher that will reload the test tree when a relevant file is changed.
+   */
   private createWatcher(): vscode.Disposable {
     return vscode.workspace.onDidSaveTextDocument(document => {
+      // If there isn't a configured/detected test framework, short-circuit to avoid doing unnecessary work.
+      if (this.currentTestFramework === 'none') {
+        this.log.info('No test framework configured. Ignoring file change.')
+        return;
+      }
       const filename = document.uri.fsPath;
       this.log.info(`${filename} was saved - checking if this effects ${this.workspace.uri.fsPath}`);
       if (filename.startsWith(this.workspace.uri.fsPath)) {
@@ -171,6 +182,8 @@ export class RubyAdapter implements TestAdapter {
           this.load();
         }
 
+        // Send an autorun event when a relevant file changes.
+        // This only causes a run if the user has autorun enabled.
         this.log.info('Sending autorun event');
         this.autorunEmitter.fire();
       }
