@@ -22,6 +22,8 @@
     "test",
     "testing",
     "rspec",
+    "minitest",
+    "mini_test",
     "ruby",
     "test explorer",
     "test adapter"
@@ -62,7 +64,8 @@
     "onLanguage:erb",
     "workspaceContains:**/Rakefile",
     "workspaceContains:**/Gemfile",
-    "workspaceContains:**/*.rb"
+    "workspaceContains:**/*.rb",
+    "onCommand:commandId"
   ],
   "contributes": {
     "configuration": {
@@ -70,13 +73,31 @@
       "title": "Ruby Test Explorer configuration",
       "properties": {
         "rubyTestExplorer.logpanel": {
-          "description": "Write diagnotic logs to an output panel",
+          "description": "Write diagnotic logs to an output panel.",
           "type": "boolean",
           "scope": "resource"
         },
         "rubyTestExplorer.logfile": {
-          "description": "Write diagnostic logs to the given file",
+          "description": "Write diagnostic logs to the given file.",
           "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.testFramework": {
+          "description": "Test framework to use by default, for example rspec or minitest.",
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "none",
+            "auto",
+            "rspec",
+            "minitest"
+          ],
+          "enumDescriptions": [
+            "Disable Ruby Test Runner.",
+            "Automatically detect test framework for a given workspace using Bundler.",
+            "Use RSpec test framework.",
+            "Use Minitest test framework."
+          ],
           "scope": "resource"
         },
         "rubyTestExplorer.rspecCommand": {
@@ -88,6 +109,18 @@
         "rubyTestExplorer.specDirectory": {
           "markdownDescription": "The location of your spec directory relative to the root of the workspace.",
           "default": "./spec/",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.minitestCommand": {
+          "markdownDescription": "Define how to run Minitest with Rake, for example `./bin/rake`, bundle exec rake` or `rake`.",
+          "default": "bundle exec rake",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.minitestDirectory": {
+          "markdownDescription": "The location of your test directory relative to the root of the workspace.",
+          "default": "./test/",
           "type": "string",
           "scope": "resource"
         }

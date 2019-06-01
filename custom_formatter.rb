@@ -61,7 +61,7 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
   end
 
   def close(_notification)
-    output.write "START_OF_RSPEC_JSON#{@output_hash.to_json}END_OF_RSPEC_JSON\n"
+    output.write "START_OF_TEST_JSON#{@output_hash.to_json}END_OF_TEST_JSON\n"
   end
 
   def example_passed(notification)
