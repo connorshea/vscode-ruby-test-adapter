@@ -419,6 +419,8 @@ export abstract class Tests {
 
       let testOutput = await this.runFullTestSuite();
       testOutput = this.getJsonFromOutput(testOutput);
+      this.log.debug('Parsing the below JSON:');
+      this.log.debug(`${testOutput}`);
       let testMetadata = JSON.parse(testOutput);
       let tests: Array<any> = testMetadata.examples;
 
@@ -436,6 +438,8 @@ export abstract class Tests {
       let testOutput = await this.runTestFile(`${node.file}`);
 
       testOutput = this.getJsonFromOutput(testOutput);
+      this.log.debug('Parsing the below JSON:');
+      this.log.debug(`${testOutput}`);
       let testMetadata = JSON.parse(testOutput);
       let tests: Array<any> = testMetadata.examples;
 
@@ -466,6 +470,8 @@ export abstract class Tests {
         let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
 
         testOutput = this.getJsonFromOutput(testOutput);
+        this.log.debug('Parsing the below JSON:');
+        this.log.debug(`${testOutput}`);
         let testMetadata = JSON.parse(testOutput);
         let currentTest = testMetadata.examples[0];
 
