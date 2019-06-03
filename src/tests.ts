@@ -44,7 +44,12 @@ export abstract class Tests {
     output = this.getJsonFromOutput(output);
     this.log.debug('Parsing the below JSON:');
     this.log.debug(`${output}`);
-    let testMetadata = JSON.parse(output);
+    let testMetadata;
+    try {
+      testMetadata = JSON.parse(output);
+    } catch(error) {
+      this.log.error(`JSON parsing failed: ${error}`); 
+    }
 
     let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
 
