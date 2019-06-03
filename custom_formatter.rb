@@ -80,23 +80,23 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
 
   private
 
-  # block
-  # description_args
-  # description
-  # full_description
-  # described_class
-  # file_path
-  # line_number
-  # location
-  # absolute_file_path
-  # rerun_file_path
-  # scoped_id
-  # type
-  # execution_result
-  # example_group
-  # shared_group_inclusion_backtrace
-  # last_run_status
-
+  # Properties of example:
+  #   block
+  #   description_args
+  #   description
+  #   full_description
+  #   described_class
+  #   file_path
+  #   line_number
+  #   location
+  #   absolute_file_path
+  #   rerun_file_path
+  #   scoped_id
+  #   type
+  #   execution_result
+  #   example_group
+  #   shared_group_inclusion_backtrace
+  #   last_run_status
   def format_example(example)
     {
       id: example.id,
@@ -105,9 +105,7 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
       status: example.execution_result.status.to_s,
       file_path: example.metadata[:file_path],
       line_number: example.metadata[:line_number],
-      example_group_description_args: example.metadata[:example_group][:description_args].map(&:to_s),
       type: example.metadata[:type],
-      description_args: example.metadata[:description_args],
       pending_message: example.execution_result.pending_message
     }
   end
