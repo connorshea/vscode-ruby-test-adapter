@@ -86,8 +86,8 @@ export abstract class Tests {
   public killChild(): void {
     if (this.currentChildProcess) {
       this.currentChildProcess.kill();
-      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
     }
+    this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 
   /**
