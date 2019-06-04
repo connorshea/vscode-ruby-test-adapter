@@ -342,6 +342,7 @@ export abstract class Tests {
     this.currentChildProcess = process;
 
     this.currentChildProcess.on('exit', () => {
+      this.log.info('Child process has exited. Sending test run finish event.');
       this.currentChildProcess = undefined;
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
       resolve('{}');
