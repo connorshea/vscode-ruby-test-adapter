@@ -92,7 +92,6 @@ export abstract class Tests {
     if (this.currentChildProcess) {
       this.currentChildProcess.kill();
     }
-    this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 
   /**
@@ -342,11 +341,12 @@ export abstract class Tests {
   handleChildProcess = async (process: childProcess.ChildProcess) => new Promise<string>((resolve, reject) => {
     this.currentChildProcess = process;
 
-    this.currentChildProcess!.on('exit', () => {
+    this.currentChildProcess.on('exit', () => {
       this.currentChildProcess = undefined;
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
       resolve('{}');
     });
+    
 
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();

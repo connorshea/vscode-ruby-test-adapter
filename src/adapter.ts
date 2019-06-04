@@ -65,7 +65,6 @@ export class RubyAdapter implements TestAdapter {
     if (this.testsInstance) {
       await this.testsInstance.runTests(tests);
     }
-    this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
   }
 
   cancel(): void {
@@ -74,7 +73,6 @@ export class RubyAdapter implements TestAdapter {
       this.testsInstance.killChild();
     } else {
       this.log.info('No tests running currently, no process to kill.')
-      this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
     }
   }
 
