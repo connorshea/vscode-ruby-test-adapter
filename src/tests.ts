@@ -347,7 +347,6 @@ export abstract class Tests {
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
       resolve('{}');
     });
-    
 
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
