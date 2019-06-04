@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.3] - 2019-06-03
+### Fixed
+- Fix the problem where the test runner was able to get into a state where the tests would never finish, leading to a "Stop" button that was stuck forever.
+
 ## [0.5.2] - 2019-06-01
 ### Fixed
 - Fix an issue where the test runner could get stuck without being able to finish.
@@ -99,7 +103,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.4.6...v0.5.0
