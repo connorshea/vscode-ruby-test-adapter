@@ -204,7 +204,7 @@ export abstract class Tests {
     let currentFileTestInfoArray: Array<TestInfo> = currentFileTests.map((test) => {
       // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
       // but with the latter's first character stripped.
-      let filePath: string = `${vscode.workspace.rootPath}${test.file_path.substr(1)}`;
+      let filePath: string = `${vscode.workspace.workspaceFolders![0].uri.fsPath}${test.file_path.substr(1)}`;
 
       // RSpec provides test ids like "file_name.rb[1:2:3]".
       // This uses the digits at the end of the id to create
@@ -243,11 +243,13 @@ export abstract class Tests {
       return testInfo;
     });
 
+    let currentFileAsAbsolutePath = `${vscode.workspace.workspaceFolders![0].uri.fsPath}${currentFile.substr(1)}`;
+
     let currentFileTestSuite: TestSuiteInfo = {
       type: 'suite',
       id: currentFile,
       label: currentFileLabel,
-      file: currentFile,
+      file: currentFileAsAbsolutePath,
       children: currentFileTestInfoArray
     }
 

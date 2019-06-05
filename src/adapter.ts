@@ -113,7 +113,7 @@ export class RubyAdapter implements TestAdapter {
     this.log.info(`Getting a list of Bundler dependencies with 'bundle list'.`);
 
     const execArgs: childProcess.ExecOptions = {
-      cwd: vscode.workspace.rootPath,
+      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
       maxBuffer: 8192 * 8192
     };
 
