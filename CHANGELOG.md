@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.4] - 2019-06-04
+### Fixed
+- Fix the 'open source file' button not working on test suites.
+
 ## [0.5.3] - 2019-06-03
 ### Fixed
 - Fix the problem where the test runner was able to get into a state where the tests would never finish, leading to a "Stop" button that was stuck forever.
@@ -103,7 +107,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.0...v0.5.1
