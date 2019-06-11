@@ -95,13 +95,13 @@ module VSCode
 
       def clean_backtrace(backtrace)
         backtrace.map do |line|
-          next unless line.starts_with?(VSCode.project_root.to_s)
+          next unless line.start_with?(VSCode.project_root.to_s)
           line.gsub(VSCode.project_root.to_s + "/", "")
         end.compact
       end
 
       def exception_position(backtrace, file)
-        line = backtrace.find { |frame| frame.starts_with?(file) }
+        line = backtrace.find { |frame| frame.start_with?(file) }
         return unless line
         line.split(":")[1].to_i
       end
