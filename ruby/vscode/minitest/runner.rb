@@ -42,6 +42,7 @@ module VSCode
 
       private
 
+      # Taken from https://github.com/rails/rails/blob/fb3ecbf130e141688782bafb7da979bf0ecedf1a/activesupport/lib/active_support/inflector/methods.rb#L271
       def constant_for(str)
         names = str.split("::".freeze)
 
