@@ -1,3 +1,4 @@
+require 'minitest'
 require "vscode/minitest/tests"
 require "vscode/minitest/reporter"
 require "vscode/minitest/runner"
