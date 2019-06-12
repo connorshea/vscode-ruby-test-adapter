@@ -1,3 +1,4 @@
+require 'minitest'
 require "vscode/minitest/tests"
 require "vscode/minitest/reporter"
 require "vscode/minitest/runner"
@@ -20,7 +21,7 @@ module VSCode
     def list(io = $stdout)
       io.sync = true if io.respond_to?(:"sync=")
       data = { version: ::Minitest::VERSION, examples: tests.all }
-      json = ENV.key?("PRETTY") ? JSON.pretty_generate(data.as_json) : JSON.generate(data.as_json)
+      json = ENV.key?("PRETTY") ? JSON.pretty_generate(data) : JSON.generate(data)
       io.puts "START_OF_TEST_JSON#{json}END_OF_TEST_JSON"
     end
 

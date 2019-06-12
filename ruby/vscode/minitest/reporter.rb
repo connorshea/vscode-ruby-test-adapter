@@ -39,7 +39,7 @@ module VSCode
         self.failures   = aggregate[::Minitest::Assertion].size
         self.errors     = aggregate[::Minitest::UnexpectedError].size
         self.skips      = aggregate[::Minitest::Skip].size
-        json = ENV.key?("PRETTY") ? JSON.pretty_generate(vscode_data.as_json) : JSON.generate(vscode_data.as_json)
+        json = ENV.key?("PRETTY") ? JSON.pretty_generate(vscode_data) : JSON.generate(vscode_data)
         io.puts "START_OF_TEST_JSON#{json}END_OF_TEST_JSON"
       end
 
@@ -63,7 +63,7 @@ module VSCode
       end
 
       def vscode_result(r)
-        base = VSCode::Minitest.tests.find_by(klass: r.klass, method: r.name).deep_dup
+        base = VSCode::Minitest.tests.find_by(klass: r.klass, method: r.name).dup
         if r.skipped?
           base[:status] = "failed"
           base[:pending_message] = r.failure.message
@@ -95,13 +95,13 @@ module VSCode
 
       def clean_backtrace(backtrace)
         backtrace.map do |line|
-          next unless line.starts_with?(VSCode.project_root.to_s)
+          next unless line.start_with?(VSCode.project_root.to_s)
           line.gsub(VSCode.project_root.to_s + "/", "")
         end.compact
       end
 
       def exception_position(backtrace, file)
-        line = backtrace.find { |frame| frame.starts_with?(file) }
+        line = backtrace.find { |frame| frame.start_with?(file) }
         return unless line
         line.split(":")[1].to_i
       end
