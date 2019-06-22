@@ -5,7 +5,7 @@
   "icon": "img/ruby-test-explorer.png",
   "author": "Connor Shea <connor.james.shea@gmail.com>",
   "publisher": "connorshea",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "license": "MIT",
   "homepage": "https://github.com/connorshea/vscode-ruby-test-adapter",
   "repository": {
