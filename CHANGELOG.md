@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.6] - 2019-06-22
+### Fixed
+- Fix error when running Minitest suites if JSON wasn't loaded. Thanks [@afuerstenau](https://github.com/afuerstenau)! ([#19](https://github.com/connorshea/vscode-ruby-test-adapter/pull/19))
+
 ## [0.5.5] - 2019-06-11
 ### Fixed
 - Fix Minitest integration relying implicitly on Rails/ActiveSupport functionality. Thanks [@ttilberg](https://github.com/ttilberg)! ([#17](https://github.com/connorshea/vscode-ruby-test-adapter/pull/17))
@@ -111,7 +115,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.2...v0.5.3
