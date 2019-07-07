@@ -5,6 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2019-07-07
+### Added
+- Add support for multi-root workspaces. The test adapter should now work properly when run with multiple workspaces open at once.
+
 ## [0.5.6] - 2019-06-22
 ### Fixed
 - Fix error when running Minitest suites if JSON wasn't loaded. Thanks [@afuerstenau](https://github.com/afuerstenau)! ([#19](https://github.com/connorshea/vscode-ruby-test-adapter/pull/19))
@@ -115,7 +119,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.6...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.3...v0.5.4
