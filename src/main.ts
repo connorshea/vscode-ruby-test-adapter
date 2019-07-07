@@ -4,11 +4,11 @@ import { Log, TestAdapterRegistrar } from 'vscode-test-adapter-util';
 import { RubyAdapter } from './adapter';
 
 export async function activate(context: vscode.ExtensionContext) {
-  const workspaceFolder = (vscode.workspace.workspaceFolders || [])[0];
-
+  // Determine whether to send the logger a workspace.
+  let logWorkspaceFolder = (vscode.workspace.workspaceFolders || [])[0]; 
   // create a simple logger that can be configured with the configuration variables
   // `rubyTestExplorer.logpanel` and `rubyTestExplorer.logfile`
-  const log = new Log('rubyTestExplorer', workspaceFolder, 'Ruby Test Explorer Log');
+  let log = new Log('rubyTestExplorer', logWorkspaceFolder, 'Ruby Test Explorer Log');
   context.subscriptions.push(log);
 
   // get the Test Explorer extension

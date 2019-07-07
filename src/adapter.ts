@@ -37,12 +37,12 @@ export class RubyAdapter implements TestAdapter {
     this.testsEmitter.fire(<TestLoadStartedEvent>{ type: 'started' });
     if (this.getTestFramework() === "rspec") {
       this.log.info('Loading RSpec tests...');
-      this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
+      this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log, this.workspace);
       const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     } else if (this.getTestFramework() === "minitest") {
       this.log.info('Loading Minitest tests...');
-      this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
+      this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log, this.workspace);
       const loadedTests = await this.testsInstance.loadTests();
       this.testsEmitter.fire(<TestLoadFinishedEvent>{ type: 'finished', suite: loadedTests });
     } else {
@@ -57,9 +57,9 @@ export class RubyAdapter implements TestAdapter {
     if (!this.testsInstance) {
       let testFramework = this.getTestFramework();
       if (testFramework === "rspec") {
-        this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log);
+        this.testsInstance = new RspecTests(this.context, this.testStatesEmitter, this.log, this.workspace);
       } else if (testFramework === "minitest") {
-        this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log);
+        this.testsInstance = new MinitestTests(this.context, this.testStatesEmitter, this.log, this.workspace);
       }
     }
     if (this.testsInstance) {
@@ -69,10 +69,10 @@ export class RubyAdapter implements TestAdapter {
 
   cancel(): void {
     if (this.testsInstance) {
-      this.log.info('Killing currently-running tests.')
+      this.log.info('Killing currently-running tests.');
       this.testsInstance.killChild();
     } else {
-      this.log.info('No tests running currently, no process to kill.')
+      this.log.info('No tests running currently, no process to kill.');
     }
   }
 
@@ -113,13 +113,13 @@ export class RubyAdapter implements TestAdapter {
     this.log.info(`Getting a list of Bundler dependencies with 'bundle list'.`);
 
     const execArgs: childProcess.ExecOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       maxBuffer: 8192 * 8192
     };
 
     try {
       // Run 'bundle list' and set the output to bundlerList.
-      // Execute this syncronously to avoid 
+      // Execute this syncronously to avoid the test explorer getting stuck loading.
       let err, stdout = childProcess.execSync('bundle list', execArgs);
 
       if (err) {

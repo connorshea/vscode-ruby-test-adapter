@@ -32,7 +32,7 @@ export class MinitestTests extends Tests {
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       maxBuffer: 8192 * 8192,
       env: this.getProcessEnv()
     };
@@ -105,9 +105,9 @@ export class MinitestTests extends Tests {
   runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running single test: ${testLocation}`);
     let line = testLocation.split(":")[1]
-    let relativeLocation = testLocation.split(":")[0].replace(`${vscode.workspace.workspaceFolders![0].uri.fsPath}/`, "")
+    let relativeLocation = testLocation.split(":")[0].replace(`${this.workspace.uri.fsPath}/`, "")
     const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       shell: true,
       env: this.getProcessEnv()
     };
@@ -131,9 +131,9 @@ export class MinitestTests extends Tests {
    */
   runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running test file: ${testFile}`);
-    let relativeFile = testFile.replace(`${vscode.workspace.workspaceFolders![0].uri.fsPath}/`, "").replace(`./`, "")
+    let relativeFile = testFile.replace(`${this.workspace.uri.fsPath}/`, "").replace(`./`, "")
     const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       shell: true,
       env: this.getProcessEnv()
     };
@@ -158,7 +158,7 @@ export class MinitestTests extends Tests {
   runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       shell: true,
       env: this.getProcessEnv()
     };

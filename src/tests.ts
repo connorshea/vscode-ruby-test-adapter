@@ -10,6 +10,7 @@ export abstract class Tests {
   protected currentChildProcess: childProcess.ChildProcess | undefined;
   protected log: Log;
   protected testSuite: TestSuiteInfo | undefined;
+  protected workspace: vscode.WorkspaceFolder;
   abstract testFrameworkName: string;
 
   /**
@@ -20,11 +21,13 @@ export abstract class Tests {
   constructor(
     context: vscode.ExtensionContext,
     testStatesEmitter: vscode.EventEmitter<TestRunStartedEvent | TestRunFinishedEvent | TestSuiteEvent | TestEvent>,
-    log: Log
+    log: Log,
+    workspace: vscode.WorkspaceFolder
   ) {
     this.context = context;
     this.testStatesEmitter = testStatesEmitter;
     this.log = log;
+    this.workspace = workspace;
   }
 
   abstract tests: () => Promise<TestSuiteInfo>;
@@ -204,7 +207,7 @@ export abstract class Tests {
     let currentFileTestInfoArray: Array<TestInfo> = currentFileTests.map((test) => {
       // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
       // but with the latter's first character stripped.
-      let filePath: string = `${vscode.workspace.workspaceFolders![0].uri.fsPath}${test.file_path.substr(1)}`;
+      let filePath: string = `${this.workspace.uri.fsPath}${test.file_path.substr(1)}`;
 
       // RSpec provides test ids like "file_name.rb[1:2:3]".
       // This uses the digits at the end of the id to create
@@ -243,7 +246,7 @@ export abstract class Tests {
       return testInfo;
     });
 
-    let currentFileAsAbsolutePath = `${vscode.workspace.workspaceFolders![0].uri.fsPath}${currentFile.substr(1)}`;
+    let currentFileAsAbsolutePath = `${this.workspace.uri.fsPath}${currentFile.substr(1)}`;
 
     let currentFileTestSuite: TestSuiteInfo = {
       type: 'suite',
@@ -270,7 +273,7 @@ export abstract class Tests {
     let rootTestSuite: TestSuiteInfo = {
       type: 'suite',
       id: 'root',
-      label: this.testFrameworkName,
+      label: `${this.workspace.name} ${this.testFrameworkName}`,
       children: []
     };
 

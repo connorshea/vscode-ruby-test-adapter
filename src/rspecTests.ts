@@ -34,7 +34,7 @@ export class RspecTests extends Tests {
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       maxBuffer: 8192 * 8192
     };
 
@@ -88,7 +88,7 @@ export class RspecTests extends Tests {
   runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running single test: ${testLocation}`);
     const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       shell: true
     };
 
@@ -112,7 +112,7 @@ export class RspecTests extends Tests {
   runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running test file: ${testFile}`);
     const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       shell: true
     };
 
@@ -136,7 +136,7 @@ export class RspecTests extends Tests {
   runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
-      cwd: vscode.workspace.workspaceFolders![0].uri.fsPath,
+      cwd: this.workspace.uri.fsPath,
       shell: true
     };
 
