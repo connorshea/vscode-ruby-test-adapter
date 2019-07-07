@@ -39,6 +39,7 @@ Currently supported:
 - Configurable Minitest `test/` directory.
 - Test hierarchy information.
 - Automatic reloading of test suite info when a file in the test directory changes.
+- Multi-root workspaces.
 
 ## Configuration
 
