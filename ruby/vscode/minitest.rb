@@ -3,6 +3,7 @@ require "vscode/minitest/tests"
 require "vscode/minitest/reporter"
 require "vscode/minitest/runner"
 require "json"
+require "pathname"
 
 module Minitest
   # we don't want tests to autorun
