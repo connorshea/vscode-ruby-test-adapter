@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.6.1] - 2019-12-10
+### Changed
+- Update npm dependencies.
+
+### Fixed
+- Fix a typo in the README config table. Thanks [@maryamkaka](https://github.com/maryamkaka)! ([#24](https://github.com/connorshea/vscode-ruby-test-adapter/pull/24))
+- Fix a missing require and detection of tests when test files start with `test_` rather than ending with it. Thanks [@agilbert201](https://github.com/agilbert201)! ([#33](https://github.com/connorshea/vscode-ruby-test-adapter/pull/33))
+
 ## [0.6.0] - 2019-07-07
 ### Added
 - Add support for multi-root workspaces. The test adapter should now work properly when run with multiple workspaces open at once.
@@ -119,7 +127,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.4...v0.5.5
