@@ -19,7 +19,8 @@ module VSCode
         test_dir = ENV['TESTS_DIR'].gsub('./', '')
         test_dir = test_dir[0...-1] if test_dir.end_with?('/')
         $LOAD_PATH << VSCode.project_root.join(test_dir).to_s
-        Rake::FileList["#{test_dir}/**/*_test.rb"].each { |path| require File.expand_path(path) }
+        file_list = Rake::FileList["#{test_dir}/**/*_test.rb", "#{test_dir}/**/test_*.rb"]
+        file_list.each { |path| require File.expand_path(path) }
       end
 
       def build_list
