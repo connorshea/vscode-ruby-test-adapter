@@ -60,7 +60,6 @@ export abstract class Tests {
       let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
       let test_location_string: string = test_location_array.join('');
       test.location = parseInt(test_location_string);
-      this.log.info(`TEST LOC ${test.id} ${test.location}`)
       tests.push(test);
     });
 
