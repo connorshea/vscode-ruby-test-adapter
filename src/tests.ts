@@ -50,8 +50,8 @@ export abstract class Tests {
     let testMetadata;
     try {
       testMetadata = JSON.parse(output);
-    } catch(error) {
-      this.log.error(`JSON parsing failed: ${error}`); 
+    } catch (error) {
+      this.log.error(`JSON parsing failed: ${error}`);
     }
 
     let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
@@ -60,7 +60,7 @@ export abstract class Tests {
       let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
       let test_location_string: string = test_location_array.join('');
       test.location = parseInt(test_location_string);
-
+      this.log.info(`TEST LOC ${test.id} ${test.location}`)
       tests.push(test);
     });
 
@@ -174,16 +174,16 @@ export abstract class Tests {
    * Get the tests in a given file.
    */
   public getTestSuiteForFile(
-  { tests, currentFile, directory }: {
-  tests: Array<{
-    id: string;
-    full_description: string;
-    description: string;
-    file_path: string;
-    line_number: number;
-    location: number;
-  }>; currentFile: string; directory?: string;
-  }): TestSuiteInfo {
+    { tests, currentFile, directory }: {
+      tests: Array<{
+        id: string;
+        full_description: string;
+        description: string;
+        file_path: string;
+        line_number: number;
+        location: number;
+      }>; currentFile: string; directory?: string;
+    }): TestSuiteInfo {
     let currentFileTests = tests.filter(test => {
       return test.file_path === currentFile
     });
@@ -436,7 +436,7 @@ export abstract class Tests {
       }
 
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
-    // If the suite is a file, run the tests as a file rather than as separate tests.
+      // If the suite is a file, run the tests as a file rather than as separate tests.
     } else if (node.type === 'suite' && node.label.endsWith('.rb')) {
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
 

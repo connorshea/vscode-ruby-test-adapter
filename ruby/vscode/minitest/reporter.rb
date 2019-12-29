@@ -44,7 +44,7 @@ module VSCode
       end
 
       def passed?
-        failures == 0
+        failures.zero?
       end
 
       def vscode_data
