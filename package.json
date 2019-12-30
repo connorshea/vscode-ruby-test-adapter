@@ -135,6 +135,18 @@
             "type": "string"
           },
           "scope": "resource"
+        },
+        "rubyTestExplorer.debuggerHost": {
+          "markdownDescription": "The host to connect the debugger to.",
+          "default": "127.0.0.1",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.debuggerPort": {
+          "markdownDescription": "The port to connect the debugger to.",
+          "default": "1234",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }

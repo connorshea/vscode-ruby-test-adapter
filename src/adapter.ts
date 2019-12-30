@@ -30,6 +30,7 @@ export class RubyAdapter implements TestAdapter {
     this.disposables.push(this.testStatesEmitter);
     this.disposables.push(this.autorunEmitter);
     this.disposables.push(this.createWatcher());
+    this.disposables.push(this.configWatcher());
   }
 
   async load(): Promise<void> {
@@ -51,7 +52,7 @@ export class RubyAdapter implements TestAdapter {
     }
   }
 
-  async run(tests: string[]): Promise<void> {
+  async run(tests: string[], debuggerConfig?: vscode.DebugConfiguration): Promise<void> {
     this.log.info(`Running Ruby tests ${JSON.stringify(tests)}`);
     this.testStatesEmitter.fire(<TestRunStartedEvent>{ type: 'started', tests });
     if (!this.testsInstance) {
@@ -63,8 +64,45 @@ export class RubyAdapter implements TestAdapter {
       }
     }
     if (this.testsInstance) {
-      await this.testsInstance.runTests(tests);
+      await this.testsInstance.runTests(tests, debuggerConfig);
     }
+  }
+
+  async debug(testsToRun: string[]): Promise<void> {
+    this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspace.uri.fsPath}`);
+
+    const config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
+
+    const debuggerConfig = {
+      name: "Debug Ruby Tests",
+      type: "Ruby",
+      request: "attach",
+      remoteHost: config.get('debuggerHost') || "127.0.0.1",
+      remotePort: config.get('debuggerPort') || "1234",
+      remoteWorkspaceRoot: "${workspaceRoot}"
+    }
+
+    const testRunPromise = this.run(testsToRun, debuggerConfig);
+
+    this.log.info('Starting the debug session');
+    let debugSession: any;
+    try {
+      await this.testsInstance!.debugCommandStarted()
+      debugSession = await this.startDebugging(debuggerConfig);
+    } catch (err) {
+      this.log.error('Failed starting the debug session - aborting', err);
+      this.cancel();
+      return;
+    }
+
+    const subscription = this.onDidTerminateDebugSession((session) => {
+      if (debugSession != session) return;
+      this.log.info('Debug session ended');
+      this.cancel(); // terminate the test run
+      subscription.dispose();
+    });
+
+    await testRunPromise;
   }
 
   cancel(): void {
@@ -98,7 +136,7 @@ export class RubyAdapter implements TestAdapter {
     if (['rspec', 'minitest', 'none'].includes(testFramework)) {
       this.currentTestFramework = testFramework;
       return testFramework;
-    // If the test framework is auto, we need to try to detect the test framework type.
+      // If the test framework is auto, we need to try to detect the test framework type.
     } else {
       let detectedTestFramework = this.detectTestFramework();
       this.currentTestFramework = detectedTestFramework;
@@ -127,9 +165,9 @@ export class RubyAdapter implements TestAdapter {
         this.log.error(`Output: ${stdout}`);
         throw err;
       }
-  
+
       let bundlerList = stdout.toString();
-      
+
       // Search for rspec or minitest in the output of 'bundle list'.
       // The search function returns the index where the string is found, or -1 otherwise.
       if (bundlerList.search('rspec-core') >= 0) {
@@ -142,10 +180,43 @@ export class RubyAdapter implements TestAdapter {
         this.log.info(`Unable to automatically detect a test framework.`);
         return 'none';
       }
-    } catch(error) {
+    } catch (error) {
       this.log.error(error);
       return 'none';
     }
+  }
+
+  protected async startDebugging(debuggerConfig: vscode.DebugConfiguration): Promise<vscode.DebugSession> {
+    const debugSessionPromise = new Promise<vscode.DebugSession>((resolve, reject) => {
+
+      let subscription: vscode.Disposable | undefined;
+      subscription = vscode.debug.onDidStartDebugSession(debugSession => {
+        if ((debugSession.name === debuggerConfig.name) && subscription) {
+          resolve(debugSession);
+          subscription.dispose();
+          subscription = undefined;
+        }
+      });
+
+      setTimeout(() => {
+        if (subscription) {
+          reject(new Error('Debug session failed to start within 5 seconds'));
+          subscription.dispose();
+          subscription = undefined;
+        }
+      }, 5000);
+    });
+
+    const started = await vscode.debug.startDebugging(this.workspace, debuggerConfig);
+    if (started) {
+      return await debugSessionPromise;
+    } else {
+      throw new Error('Debug session couldn\'t be started');
+    }
+  }
+
+  protected onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
+    return vscode.debug.onDidTerminateDebugSession(cb);
   }
 
   /**
@@ -189,6 +260,18 @@ export class RubyAdapter implements TestAdapter {
         // Send an autorun event when a relevant file changes.
         // This only causes a run if the user has autorun enabled.
         this.log.info('Sending autorun event');
+        this.autorunEmitter.fire();
+      }
+    })
+  }
+
+  private configWatcher(): vscode.Disposable {
+    return vscode.workspace.onDidChangeConfiguration(configChange => {
+      this.log.info('Configuration changed');
+      if (configChange.affectsConfiguration("rubyTestExplorer")) {
+        this.cancel();
+        this.currentTestFramework = undefined;
+        this.load();
         this.autorunEmitter.fire();
       }
     })

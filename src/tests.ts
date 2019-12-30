@@ -12,6 +12,7 @@ export abstract class Tests {
   protected testSuite: TestSuiteInfo | undefined;
   protected workspace: vscode.WorkspaceFolder;
   abstract testFrameworkName: string;
+  protected debugCommandStartedResolver: Function | undefined;
 
   /**
    * @param context Extension context provided by vscode.
@@ -94,6 +95,16 @@ export abstract class Tests {
     if (this.currentChildProcess) {
       this.currentChildProcess.kill();
     }
+  }
+
+  /**
+  * Get the user-configured test file pattern.
+  *
+  * @return The file pattern
+  */
+  getFilePattern(): Array<string> {
+    let pattern: Array<string> = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('filePattern') as Array<string>);
+    return pattern || ['*_test.rb', 'test_*.rb'];
   }
 
   /**
@@ -352,6 +363,14 @@ export abstract class Tests {
       resolve('{}');
     });
 
+    this.currentChildProcess.stderr!.pipe(split2()).on('data', (data) => {
+      data = data.toString();
+      this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
+      if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
+        this.debugCommandStartedResolver()
+      }
+    });
+
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
       this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
@@ -379,15 +398,13 @@ export abstract class Tests {
    *
    * @param tests
    */
-  runTests = async (
-    tests: string[]
-  ): Promise<void> => {
+  runTests = async (tests: string[], debuggerConfig?: vscode.DebugConfiguration): Promise<void> => {
     let testSuite: TestSuiteInfo = await this.tests();
 
     for (const suiteOrTestId of tests) {
       const node = this.findNode(testSuite, suiteOrTestId);
       if (node) {
-        await this.runNode(node);
+        await this.runNode(node, debuggerConfig);
       }
     }
   }
@@ -415,13 +432,13 @@ export abstract class Tests {
    *
    * @param node A test or test suite.
    */
-  protected async runNode(node: TestSuiteInfo | TestInfo): Promise<void> {
+  protected async runNode(node: TestSuiteInfo | TestInfo, debuggerConfig?: vscode.DebugConfiguration): Promise<void> {
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     if (node.type === 'suite' && node.id === 'root') {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
 
-      let testOutput = await this.runFullTestSuite();
+      let testOutput = await this.runFullTestSuite(debuggerConfig);
       testOutput = Tests.getJsonFromOutput(testOutput);
       this.log.debug('Parsing the below JSON:');
       this.log.debug(`${testOutput}`);
@@ -439,7 +456,7 @@ export abstract class Tests {
     } else if (node.type === 'suite' && node.label.endsWith('.rb')) {
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
 
-      let testOutput = await this.runTestFile(`${node.file}`);
+      let testOutput = await this.runTestFile(`${node.file}`, debuggerConfig);
 
       testOutput = Tests.getJsonFromOutput(testOutput);
       this.log.debug('Parsing the below JSON:');
@@ -460,7 +477,7 @@ export abstract class Tests {
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'running' });
 
       for (const child of node.children) {
-        await this.runNode(child);
+        await this.runNode(child, debuggerConfig);
       }
 
       this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
@@ -471,7 +488,7 @@ export abstract class Tests {
 
         // Run the test at the given line, add one since the line is 0-indexed in
         // VS Code and 1-indexed for RSpec/Minitest.
-        let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
+        let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`, debuggerConfig);
 
         testOutput = Tests.getJsonFromOutput(testOutput);
         this.log.debug('Parsing the below JSON:');
@@ -484,13 +501,29 @@ export abstract class Tests {
     }
   }
 
+  public async debugCommandStarted(): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      this.debugCommandStartedResolver = resolve;
+      setTimeout(() => { reject("debugCommandStarted timed out") }, 10000)
+    })
+  }
+
+  /**
+   * Get the absolute path of the custom_formatter.rb file.
+   *
+   * @return The spec directory
+   */
+  protected getRubyScriptsLocation(): string {
+    return this.context.asAbsolutePath('./ruby');
+  }
+
   /**
    * Runs a single test.
    *
    * @param testLocation A file path with a line number, e.g. `/path/to/test.rb:12`.
    * @return The raw output from running the test.
    */
-  abstract runSingleTest: (testLocation: string) => Promise<string>;
+  abstract runSingleTest: (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => Promise<string>;
 
   /**
    * Runs tests in a given file.
@@ -498,14 +531,14 @@ export abstract class Tests {
    * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
    * @return The raw output from running the tests.
    */
-  abstract runTestFile: (testFile: string) => Promise<string>;
+  abstract runTestFile: (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => Promise<string>;
 
   /**
    * Runs the full test suite for the current workspace.
    *
    * @return The raw output from running the test suite.
    */
-  abstract runFullTestSuite: () => Promise<string>;
+  abstract runFullTestSuite: (debuggerConfig?: vscode.DebugConfiguration) => Promise<string>;
 
   /**
    * Handles test state based on the output returned by the test command.

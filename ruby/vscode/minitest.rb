@@ -7,12 +7,12 @@ require "pathname"
 
 module Minitest
   # we don't want tests to autorun
-  def self.autorun
-  end
+  def self.autorun; end
 end
 
 module VSCode
   module_function
+
   def project_root
     @project_root ||= Pathname.new(Dir.pwd)
   end
@@ -32,6 +32,7 @@ module VSCode
       reporter = Reporter.new
       reporter.start
       runner = Runner.new(reporter: reporter)
+      puts args
       args.each { |arg| runner.add(arg) }
       runner.run
       reporter.report

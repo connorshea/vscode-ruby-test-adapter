@@ -16,7 +16,7 @@ export class RspecTests extends Tests {
       // If test suite already exists, use testSuite. Otherwise, load them.
       let rspecTests = this.testSuite ? this.testSuite : this.loadTests();
       return resolve(rspecTests);
-    } catch(err) {
+    } catch (err) {
       this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
       return reject(err);
     }
@@ -76,7 +76,13 @@ export class RspecTests extends Tests {
    */
   protected getTestCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
-    return command || 'bundle exec rspec';
+    const dir = this.getTestDirectory();
+    let pattern = this.getFilePattern().map(p => `${dir}/**/${p}`).join(',')
+    if (command && / (--pattern|-P) /.test(command)) {
+      return command
+    }
+    command = command || `bundle exec rspec`
+    return `${command} --pattern '${pattern}'`;
   }
 
   /**
@@ -99,19 +105,45 @@ export class RspecTests extends Tests {
   }
 
   /**
+   * Get test command with formatter and debugger arguments
+   *
+   * @return The test command
+   */
+  protected testCommandWithFormatterAndDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
+    let args = `--require ${this.getCustomFormatterLocation()} --format CustomFormatter`
+    let cmd = `${this.getTestCommand()} ${args}`
+    if (debuggerConfig) {
+      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort} -- $EXT_DIR/debug_rspec.rb ${args}`
+    }
+    return cmd
+  }
+
+  /**
+   * Get the env vars to run the subprocess with.
+   *
+   * @return The env
+   */
+  protected getProcessEnv(): any {
+    return Object.assign({}, process.env, {
+      "EXT_DIR": this.getRubyScriptsLocation(),
+    });
+  }
+
+  /**
    * Runs a single test.
    *
    * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
    * @return The raw output from running the test.
    */
-  runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
+  runSingleTest = async (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running single test: ${testLocation}`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
-      shell: true
+      shell: true,
+      env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter '${testLocation}'`;
+    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} ${testLocation}`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -128,7 +160,7 @@ export class RspecTests extends Tests {
    * @param testFile The test file's file path, e.g. `/path/to/spec.rb`.
    * @return The raw output from running the tests.
    */
-  runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
+  runTestFile = async (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running test file: ${testFile}`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
@@ -136,7 +168,7 @@ export class RspecTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter '${testFile}'`;
+    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} ${testFile}`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -152,14 +184,14 @@ export class RspecTests extends Tests {
    *
    * @return The raw output from running the test suite.
    */
-  runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
+  runFullTestSuite = async (debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
       shell: true
     };
 
-    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter`;
+    let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(

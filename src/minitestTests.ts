@@ -93,7 +93,6 @@ export class MinitestTests extends Tests {
     return this.context.asAbsolutePath('./ruby');
   }
 
-
   /**
    * Get the env vars to run the subprocess with.
    *
@@ -109,12 +108,25 @@ export class MinitestTests extends Tests {
   }
 
   /**
+  * Get test command with formatter and debugger arguments
+  *
+  * @return The test command
+  */
+  protected testCommandWithDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
+    let cmd = `${this.getTestCommand()} vscode:minitest:run`
+    if (debuggerConfig) {
+      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort} -- $EXT_DIR/debug_minitest.rb`
+    }
+    return cmd
+  }
+
+  /**
    * Runs a single test.
    *
    * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
    * @return The raw output from running the test.
    */
-  runSingleTest = async (testLocation: string) => new Promise<string>(async (resolve, reject) => {
+  runSingleTest = async (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running single test: ${testLocation}`);
     let line = testLocation.split(":")[1]
     let relativeLocation = testLocation.split(":")[0].replace(`${this.workspace.uri.fsPath}/`, "")
@@ -124,7 +136,7 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.getTestCommand()} vscode:minitest:run '${relativeLocation}:${line}'`;
+    let testCommand = `${this.testCommandWithDebugger(debuggerConfig)} ${relativeLocation}:${line}`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -141,7 +153,7 @@ export class MinitestTests extends Tests {
    * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
    * @return The raw output from running the tests.
    */
-  runTestFile = async (testFile: string) => new Promise<string>(async (resolve, reject) => {
+  runTestFile = async (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running test file: ${testFile}`);
     let relativeFile = testFile.replace(`${this.workspace.uri.fsPath}/`, "").replace(`./`, "")
     const spawnArgs: childProcess.SpawnOptions = {
@@ -151,7 +163,7 @@ export class MinitestTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.getTestCommand()} vscode:minitest:run '${relativeFile}'`;
+    let testCommand = `${this.testCommandWithDebugger(debuggerConfig)} ${relativeFile}`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -167,7 +179,7 @@ export class MinitestTests extends Tests {
    *
    * @return The raw output from running the test suite.
    */
-  runFullTestSuite = async () => new Promise<string>(async (resolve, reject) => {
+  runFullTestSuite = async (debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
@@ -175,7 +187,7 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.getTestCommand()} vscode:minitest:run`;
+    let testCommand = this.testCommandWithDebugger(debuggerConfig);
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
