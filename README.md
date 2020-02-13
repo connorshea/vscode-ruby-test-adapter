@@ -45,15 +45,16 @@ Currently supported:
 
 The following configuration options are available:
 
-Property                              | Description
---------------------------------------|---------------------------------------------------------------
-`rubyTestExplorer.logpanel`           | Whether to write diagnotic logs to an output panel.
-`rubyTestExplorer.logfile`            | Write diagnostic logs to the given file.
-`rubyTestExplorer.testFramework`      | `none`, `auto`, `rspec`, or `minitest`. `auto` by default, which automatically detects the test framework based on the gems listed by Bundler. Can disable the extension functionality with `none` or set the test framework explicitly, if auto-detect isn't working properly.
-`rubyTestExplorer.rspecCommand`       | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
-`rubyTestExplorer.rspecDirectory`     | Define the relative directory of the specs in a given workspace, for example `./spec/`.
-`rubyTestExplorer.minitestCommand`  | Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`. Must be a Rake command.
-`rubyTestExplorer.minitestDirectory`    | Define the relative location of your `test` directory, for example `./test/`.
+Property                               | Description
+---------------------------------------|---------------------------------------------------------------
+`rubyTestExplorer.logpanel`            | Whether to write diagnotic logs to an output panel.
+`rubyTestExplorer.logfile`             | Write diagnostic logs to the given file.
+`rubyTestExplorer.testFramework`       | `none`, `auto`, `rspec`, or `minitest`. `auto` by default, which automatically detects the test framework based on the gems listed by Bundler. Can disable the extension functionality with `none` or set the test framework explicitly, if auto-detect isn't working properly.
+`rubyTestExplorer.rspecCommand`        | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
+`rubyTestExplorer.rspecDirectory`      | Define the relative directory of the specs in a given workspace, for example `./spec/`.
+`rubyTestExplorer.minitestCommand`     | Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`. Must be a Rake command.
+`rubyTestExplorer.minitestDirectory`   | Define the relative location of your `test` directory, for example `./test/`.
+`rubyTestExplorer.minitestFilePattern` | Define the pattern to match test files by, for example `["*_test.rb", "test_*.rb"]`.
 
 ## Troubleshooting
 
