@@ -1,5 +1,5 @@
 {
-  "rubyTestExplorer.minitestFilePattern": [
+  "rubyTestExplorer.filePattern": [
     "*_test.rb",
     "test_*.rb",
     "*_spec.rb"

@@ -124,7 +124,7 @@
           "type": "string",
           "scope": "resource"
         },
-        "rubyTestExplorer.minitestFilePattern": {
+        "rubyTestExplorer.filePattern": {
           "markdownDescription": "The naming pattern for your tests.",
           "default": [
             "*_test.rb",

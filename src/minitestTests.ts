@@ -73,17 +73,6 @@ export class MinitestTests extends Tests {
     return directory || './test/';
   }
 
-
-  /**
-   * Get the user-configured test file pattern.
-   *
-   * @return The file pattern
-   */
-  getFilePattern(): Array<string> {
-    let pattern: Array<string> = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestFilePattern') as Array<string>);
-    return pattern || ['*_test.rb', 'test_*.rb'];
-  }
-
   /**
    * Get the absolute path of the custom_formatter.rb file.
    *
