@@ -40,10 +40,31 @@ export class RspecTests extends Tests {
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
       if (err) {
+        console.log(err);
+        console.log(stdout);
         this.log.error(`Error while finding RSpec test suite: ${err.message}`);
         // Show an error message.
-        vscode.window.showWarningMessage("Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.");
-        vscode.window.showErrorMessage(err.message);
+        vscode.window.showWarningMessage(
+          "Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.",
+          "View error message"
+        ).then(selection => {
+          if (selection === "View error message") {
+            let outputJson = JSON.parse(Tests.getJsonFromOutput(stdout));
+            let outputChannel = vscode.window.createOutputChannel('Ruby Test Explorer Error Message');
+
+            if (outputJson.messages.length > 0) {
+              let outputJsonString = outputJson.messages.join("\n\n");
+              let outputJsonArray = outputJsonString.split("\n");
+              outputJsonArray.forEach((line: string) => {
+                outputChannel.appendLine(line);
+              })
+            } else {
+              outputChannel.append(err.message);
+            }
+            outputChannel.show(false);
+          }
+        });
+
         throw err;
       }
       resolve(stdout);
