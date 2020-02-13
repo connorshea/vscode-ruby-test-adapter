@@ -124,7 +124,7 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.getTestCommand()} vscode:minitest:run ${relativeLocation}:${line}`;
+    let testCommand = `${this.getTestCommand()} vscode:minitest:run '${relativeLocation}:${line}'`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -151,7 +151,7 @@ export class MinitestTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.getTestCommand()} vscode:minitest:run ${relativeFile}`;
+    let testCommand = `${this.getTestCommand()} vscode:minitest:run '${relativeFile}'`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
