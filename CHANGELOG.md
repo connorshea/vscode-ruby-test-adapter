@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.7.0] - 2020-02-12
 ### Added
 - Add support for `Minitest::Spec`-style tests and allow configuration of the minitest files' file pattern with `minitestFilePattern`. Thanks [@baelter](https://github.com/baelter)! ([#34](https://github.com/connorshea/vscode-ruby-test-adapter/pull/34))
 
@@ -133,7 +133,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.6...v0.6.0
 [0.5.6]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.5.5...v0.5.6
