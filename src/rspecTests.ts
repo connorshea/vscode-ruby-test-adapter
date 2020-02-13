@@ -92,7 +92,7 @@ export class RspecTests extends Tests {
       shell: true
     };
 
-    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testLocation}`;
+    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter '${testLocation}'`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -117,7 +117,7 @@ export class RspecTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter ${testFile}`;
+    let testCommand = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter '${testFile}'`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
