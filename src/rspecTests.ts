@@ -143,7 +143,7 @@ export class RspecTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} ${testLocation}`;
+    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testLocation}'`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -168,7 +168,7 @@ export class RspecTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} ${testFile}`;
+    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testFile}'`;
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
