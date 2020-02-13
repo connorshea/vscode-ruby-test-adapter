@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- Add support for `Minitest::Spec`-style tests and allow configuration of the minitest files' file pattern with `minitestFilePattern`. Thanks [@baelter](https://github.com/baelter)! ([#34](https://github.com/connorshea/vscode-ruby-test-adapter/pull/34))
+
+### Fixed
+- Fix minitest nested tests. Thanks [@baelter](https://github.com/baelter)! ([#37](https://github.com/connorshea/vscode-ruby-test-adapter/pull/37))
+- Fix tests not running properly when the path had a space in it. Thanks [@noniq](https://github.com/noniq)! ([#42](https://github.com/connorshea/vscode-ruby-test-adapter/pull/42))
 
 ## [0.6.1] - 2019-12-10
 ### Changed
