@@ -80,7 +80,7 @@ export class MinitestTests extends Tests {
    * @return The file pattern
    */
   getFilePattern(): Array<string> {
-    let pattern: Array<string> = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('filePattern') as Array<string>);
+    let pattern: Array<string> = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestFilePattern') as Array<string>);
     return pattern || ['*_test.rb', 'test_*.rb'];
   }
 
