@@ -19,7 +19,8 @@ module VSCode
         test_dir = ENV['TESTS_DIR'].gsub('./', '')
         test_dir = test_dir[0...-1] if test_dir.end_with?('/')
         $LOAD_PATH << VSCode.project_root.join(test_dir).to_s
-        file_list = Rake::FileList["#{test_dir}/**/*_test.rb", "#{test_dir}/**/test_*.rb"]
+        patterns = ENV.fetch('TESTS_PATTERN').split(',').map { |p| "#{test_dir}/**/#{p}" }
+        file_list = Rake::FileList[*patterns]
         file_list.each { |path| require File.expand_path(path) }
       end
 
@@ -30,20 +31,21 @@ module VSCode
             path, line = runnable.instance_method(test_name).source_location
             full_path = File.expand_path(path, VSCode.project_root)
             path = full_path.gsub(VSCode.project_root.to_s, ".")
-            path = "./#{path}" unless path =~ /^\./
+            path = "./#{path}" unless path.match?(/^\./)
             {
-              description: test_name.gsub(/^test_/, "").gsub("_", " "),
-              full_description: test_name.gsub(/^test_/, "").gsub("_", " "),
+              description: test_name.gsub(/^test_/, "").tr("_", " "),
+              full_description: test_name.gsub(/^test_/, "").tr("_", " "),
               file_path: path,
               full_path: full_path,
               line_number: line,
               klass: runnable.name,
-              method: test_name
+              method: test_name,
+              runnable: runnable
             }
           end
           file_tests.sort_by! { |t| t[:line_number] }
-          file_tests.each_with_index do |t, index|
-            t[:id]= "#{t[:file_path]}[1:1:#{index + 1}]"
+          file_tests.each do |t|
+            t[:id] = "#{t[:file_path]}[#{t[:line_number]}]"
           end
           tests.concat(file_tests)
         end

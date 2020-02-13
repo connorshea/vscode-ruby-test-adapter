@@ -113,7 +113,7 @@
           "scope": "resource"
         },
         "rubyTestExplorer.minitestCommand": {
-          "markdownDescription": "Define how to run Minitest with Rake, for example `./bin/rake`, bundle exec rake` or `rake`.",
+          "markdownDescription": "Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`.",
           "default": "bundle exec rake",
           "type": "string",
           "scope": "resource"
@@ -122,6 +122,18 @@
           "markdownDescription": "The location of your test directory relative to the root of the workspace.",
           "default": "./test/",
           "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.filePattern": {
+          "markdownDescription": "The naming pattern for your tests.",
+          "default": [
+            "*_test.rb",
+            "test_*.rb"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
           "scope": "resource"
         }
       }
