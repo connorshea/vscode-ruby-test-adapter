@@ -44,7 +44,7 @@ export abstract class Tests {
     let output = await this.initTests();
     this.log.debug('Passing raw output from dry-run into getJsonFromOutput.');
     this.log.debug(`${output}`);
-    output = this.getJsonFromOutput(output);
+    output = Tests.getJsonFromOutput(output);
     this.log.debug('Parsing the below JSON:');
     this.log.debug(`${output}`);
     let testMetadata;
@@ -116,7 +116,7 @@ export abstract class Tests {
    * @param output The output returned by running a command.
    * @return A string representation of the JSON found in the output.
    */
-  protected getJsonFromOutput(output: string): string {
+  static getJsonFromOutput(output: string): string {
     output = output.substring(output.indexOf('START_OF_TEST_JSON{'), output.lastIndexOf('}END_OF_TEST_JSON') + 1);
     // Get rid of the `START_OF_TEST_JSON` and `END_OF_TEST_JSON` to verify that the JSON is valid.
     return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
@@ -422,7 +422,7 @@ export abstract class Tests {
       this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
 
       let testOutput = await this.runFullTestSuite();
-      testOutput = this.getJsonFromOutput(testOutput);
+      testOutput = Tests.getJsonFromOutput(testOutput);
       this.log.debug('Parsing the below JSON:');
       this.log.debug(`${testOutput}`);
       let testMetadata = JSON.parse(testOutput);
@@ -441,7 +441,7 @@ export abstract class Tests {
 
       let testOutput = await this.runTestFile(`${node.file}`);
 
-      testOutput = this.getJsonFromOutput(testOutput);
+      testOutput = Tests.getJsonFromOutput(testOutput);
       this.log.debug('Parsing the below JSON:');
       this.log.debug(`${testOutput}`);
       let testMetadata = JSON.parse(testOutput);
@@ -473,7 +473,7 @@ export abstract class Tests {
         // VS Code and 1-indexed for RSpec/Minitest.
         let testOutput = await this.runSingleTest(`${node.file}:${node.line + 1}`);
 
-        testOutput = this.getJsonFromOutput(testOutput);
+        testOutput = Tests.getJsonFromOutput(testOutput);
         this.log.debug('Parsing the below JSON:');
         this.log.debug(`${testOutput}`);
         let testMetadata = JSON.parse(testOutput);
