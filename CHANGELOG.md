@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+### Changed
+- Improved the way errors are handled when loading a project's RSpec tests. ([#43](https://github.com/connorshea/vscode-ruby-test-adapter/pull/43))
+
 ## [0.7.0] - 2020-02-12
 ### Added
 - Add support for `Minitest::Spec`-style tests and allow configuration of the minitest files' file pattern with `minitestFilePattern`. Thanks [@baelter](https://github.com/baelter)! ([#34](https://github.com/connorshea/vscode-ruby-test-adapter/pull/34))
