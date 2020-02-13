@@ -2,4 +2,3 @@ node_modules/
 out/
 .DS_Store
 ruby/Gemfile.lock
-.vscode-test
