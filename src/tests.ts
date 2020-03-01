@@ -397,6 +397,7 @@ export abstract class Tests {
    * Runs the test suite by iterating through each test and running it.
    *
    * @param tests
+   * @param debuggerConfig A VS Code debugger configuration.
    */
   runTests = async (tests: string[], debuggerConfig?: vscode.DebugConfiguration): Promise<void> => {
     let testSuite: TestSuiteInfo = await this.tests();
@@ -431,6 +432,7 @@ export abstract class Tests {
    * Recursively run a node or its children.
    *
    * @param node A test or test suite.
+   * @param debuggerConfig A VS Code debugger configuration.
    */
   protected async runNode(node: TestSuiteInfo | TestInfo, debuggerConfig?: vscode.DebugConfiguration): Promise<void> {
     // Special case handling for the root suite, since it can be run
@@ -521,6 +523,7 @@ export abstract class Tests {
    * Runs a single test.
    *
    * @param testLocation A file path with a line number, e.g. `/path/to/test.rb:12`.
+   * @param debuggerConfig A VS Code debugger configuration.
    * @return The raw output from running the test.
    */
   abstract runSingleTest: (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => Promise<string>;
@@ -529,6 +532,7 @@ export abstract class Tests {
    * Runs tests in a given file.
    *
    * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
+   * @param debuggerConfig A VS Code debugger configuration.
    * @return The raw output from running the tests.
    */
   abstract runTestFile: (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => Promise<string>;
@@ -536,6 +540,7 @@ export abstract class Tests {
   /**
    * Runs the full test suite for the current workspace.
    *
+   * @param debuggerConfig A VS Code debugger configuration.
    * @return The raw output from running the test suite.
    */
   abstract runFullTestSuite: (debuggerConfig?: vscode.DebugConfiguration) => Promise<string>;

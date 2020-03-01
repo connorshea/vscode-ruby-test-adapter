@@ -99,6 +99,7 @@ export class MinitestTests extends Tests {
   /**
   * Get test command with formatter and debugger arguments
   *
+  * @param debuggerConfig A VS Code debugger configuration.
   * @return The test command
   */
   protected testCommandWithDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
@@ -113,6 +114,7 @@ export class MinitestTests extends Tests {
    * Runs a single test.
    *
    * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
+   * @param debuggerConfig A VS Code debugger configuration.
    * @return The raw output from running the test.
    */
   runSingleTest = async (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
@@ -140,6 +142,7 @@ export class MinitestTests extends Tests {
    * Runs tests in a given file.
    *
    * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
+   * @param debuggerConfig A VS Code debugger configuration.
    * @return The raw output from running the tests.
    */
   runTestFile = async (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
@@ -166,6 +169,7 @@ export class MinitestTests extends Tests {
   /**
    * Runs the full test suite for the current workspace.
    *
+   * @param debuggerConfig A VS Code debugger configuration.
    * @return The raw output from running the test suite.
    */
   runFullTestSuite = async (debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
