@@ -391,6 +391,10 @@ export abstract class Tests {
         resolve(data);
       }
     });
+    this.currentChildProcess.stderr!.pipe(split2()).on('data', (data) => {
+      data = data.toString();
+      this.log.debug(`[CHILD PROCESS STDERR], ${data}`);
+    });
   });
 
   /**
