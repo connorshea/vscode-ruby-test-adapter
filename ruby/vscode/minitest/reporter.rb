@@ -63,7 +63,8 @@ module VSCode
       end
 
       def vscode_result(r)
-        base = VSCode::Minitest.tests.find_by(klass: r.klass, method: r.name).dup
+        klass = r.respond_to?(:klass) ? r.klass : r.class.to_s
+        base = VSCode::Minitest.tests.find_by(klass: klass, method: r.name).dup
         if r.skipped?
           base[:status] = "failed"
           base[:pending_message] = r.failure.message
