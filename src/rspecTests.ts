@@ -217,7 +217,8 @@ export class RspecTests extends Tests {
         decorations: [{
           // Strip line breaks from the message.
           message: errorMessageNoLinebreaks,
-          line: (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1
+          file: filePath,
+          line: (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
         }]
       });
     } else if (test.status === "failed" && test.pending_message !== null) {
