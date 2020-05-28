@@ -119,8 +119,8 @@ export class MinitestTests extends Tests {
    */
   runSingleTest = async (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
     this.log.info(`Running single test: ${testLocation}`);
-    let line = testLocation.split(":")[1]
-    let relativeLocation = testLocation.split(":")[0].replace(`${this.workspace.uri.fsPath}/`, "")
+    let line = testLocation.split(':').pop();
+    let relativeLocation = testLocation.split(/:\d+$/)[0].replace(`${this.workspace.uri.fsPath}/`, "")
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
       shell: true,
