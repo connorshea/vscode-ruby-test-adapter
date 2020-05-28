@@ -11,4 +11,9 @@ describe Factorial do
     calculator = Factorial.new
     expect(calculator.factorial_of(5)).to eq(120)
   end
+
+  it "finds the factorial of 6" do
+    calculator = Factorial.new
+    expect(calculator.factorial_of(6)).to eq(720)
+  end
 end
