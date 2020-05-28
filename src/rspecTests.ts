@@ -28,7 +28,8 @@ export class RspecTests extends Tests {
    * @return The raw output from the RSpec JSON formatter.
    */
   initTests = async () => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getTestCommand()} --require ${this.getCustomFormatterLocation()} --format CustomFormatter --order defined --dry-run`;
+    let cmd = `${this.getTestCommandWithFilePattern()} --require ${this.getCustomFormatterLocation()}`
+              + ` --format CustomFormatter --order defined --dry-run`;
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
 
@@ -76,11 +77,18 @@ export class RspecTests extends Tests {
    */
   protected getTestCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
+    return command || `bundle exec rspec`
+  }
+
+  /**
+   * Get the user-configured RSpec command and add file pattern detection.
+   *
+   * @return The RSpec command
+   */
+  protected getTestCommandWithFilePattern(): string {
+    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
     const dir = this.getTestDirectory();
     let pattern = this.getFilePattern().map(p => `${dir}/**/${p}`).join(',')
-    if (command && / (--pattern|-P) /.test(command)) {
-      return command
-    }
     command = command || `bundle exec rspec`
     return `${command} --pattern '${pattern}'`;
   }
