@@ -114,7 +114,8 @@ export class RspecTests extends Tests {
     let args = `--require ${this.getCustomFormatterLocation()} --format CustomFormatter`
     let cmd = `${this.getTestCommand()} ${args}`
     if (debuggerConfig) {
-      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort} -- $EXT_DIR/debug_rspec.rb ${args}`
+      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}`
+            + ` -- ${(process.platform == 'win32') ? '%EXT_DIR%' : '$EXT_DIR'}/debug_rspec.rb ${args}`
     }
     return cmd
   }

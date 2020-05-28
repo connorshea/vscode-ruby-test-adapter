@@ -59,8 +59,7 @@ export class MinitestTests extends Tests {
    */
   protected getTestCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestCommand') as string) || 'bundle exec rake';
-    return `${command} -R $EXT_DIR`;
-
+    return `${command} -R ${(process.platform == 'win32') ? '%EXT_DIR%' : '$EXT_DIR'}`;
   }
 
   /**
@@ -105,7 +104,8 @@ export class MinitestTests extends Tests {
   protected testCommandWithDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
     let cmd = `${this.getTestCommand()} vscode:minitest:run`
     if (debuggerConfig) {
-      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort} -- $EXT_DIR/debug_minitest.rb`
+      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}`
+            + ` -- ${(process.platform == 'win32') ? '%EXT_DIR%' : '$EXT_DIR'}/debug_minitest.rb`
     }
     return cmd
   }
