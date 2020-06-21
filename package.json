@@ -128,7 +128,8 @@
           "markdownDescription": "The naming pattern for your tests.",
           "default": [
             "*_test.rb",
-            "test_*.rb"
+            "test_*.rb",
+            "*_spec.rb"
           ],
           "type": "array",
           "items": {

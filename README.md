@@ -50,7 +50,7 @@ Property                               | Description
 `rubyTestExplorer.logpanel`            | Whether to write diagnotic logs to an output panel.
 `rubyTestExplorer.logfile`             | Write diagnostic logs to the given file.
 `rubyTestExplorer.testFramework`       | `none`, `auto`, `rspec`, or `minitest`. `auto` by default, which automatically detects the test framework based on the gems listed by Bundler. Can disable the extension functionality with `none` or set the test framework explicitly, if auto-detect isn't working properly.
-`rubyTestExplorer.filePattern`         | Define the pattern to match test files by, for example `["*_test.rb", "test_*.rb"]`.
+`rubyTestExplorer.filePattern`         | Define the pattern to match test files by, for example `["*_test.rb", "test_*.rb", "*_spec.rb"]`.
 `rubyTestExplorer.debuggerHost`        | Define the host to connect the debugger to, for example `127.0.0.1`.
 `rubyTestExplorer.debuggerPort`        | Define the port to connect the debugger to, for example `1234`.
 `rubyTestExplorer.rspecCommand`        | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
