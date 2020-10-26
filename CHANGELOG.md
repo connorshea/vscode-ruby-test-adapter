@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **BREAKING**: `minitestFilePattern` renamed to `filePattern` to make it work for both test frameworks we support. ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
 
 ### Fixed
+- Fix extension failing when `TESTS_DIR` environment variable wasn't set correctly. Thanks [@dwarburt](https://github.com/dwarburt)! ([#47](https://github.com/connorshea/vscode-ruby-test-adapter/pull/47))
 - Fix `EXT_DIR` environment variable and line number handling in minitests for Windows OS. Thanks [@CezaryGapinski](https://github.com/CezaryGapinski)! ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
 
 ### Internal
