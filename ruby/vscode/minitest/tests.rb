@@ -16,7 +16,8 @@ module VSCode
 
       def load_files
         # Take the tests dir in the format of `./test/` and turn it into `test`.
-        test_dir = ENV['TESTS_DIR'].gsub('./', '')
+        test_dir = ENV['TESTS_DIR'] || './test/'
+        test_dir = test_dir.gsub('./', '')
         test_dir = test_dir[0...-1] if test_dir.end_with?('/')
         $LOAD_PATH << VSCode.project_root.join(test_dir).to_s
         patterns = ENV.fetch('TESTS_PATTERN').split(',').map { |p| "#{test_dir}/**/#{p}" }
