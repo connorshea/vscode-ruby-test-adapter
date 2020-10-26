@@ -1,4 +1,4 @@
-$LOAD_PATH << File.expand_path('..', __FILE__)
+$LOAD_PATH << File.expand_path(__dir__)
 require "vscode/minitest"
 
 namespace :vscode do

@@ -7,12 +7,12 @@ require "pathname"
 
 module Minitest
   # we don't want tests to autorun
-  def self.autorun
-  end
+  def self.autorun; end
 end
 
 module VSCode
   module_function
+
   def project_root
     @project_root ||= Pathname.new(Dir.pwd)
   end

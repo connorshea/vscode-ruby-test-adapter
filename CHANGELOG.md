@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Changed
+- Add `filePattern`configuration support for rspec. `minitestFilePattern` renamed to `filePattern`
+- Add support for debugging specs
+- Add RSpec tests
+- Fix `EXT_DIR` environment variable and line number handling in minitests for Windows OS
 
 ## [0.7.1] - 2020-02-12
 ### Changed

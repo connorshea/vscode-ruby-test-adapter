@@ -1,3 +1,5 @@
+require "rake"
+
 module VSCode
   module Minitest
     class Tests

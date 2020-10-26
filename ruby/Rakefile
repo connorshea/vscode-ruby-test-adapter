@@ -1,10 +1,14 @@
 require "bundler/setup"
 require "rake/testtask"
+require 'rspec/core/rake_task'
 
-Rake::TestTask.new(:test) do |t|
-  t.libs << "specs"
-  t.libs << "lib"
-  t.test_files = FileList['specs/**/*_spec.rb']
+RSpec::Core::RakeTask.new(:rspectest) do |t|
+  t.pattern = ['rspecs/**/*_spec.rb', 'rspecs/**/*_test.rb']
 end
 
-task default: :test
+Rake::TestTask.new(:minitest) do |t|
+  t.libs << "minispecs"
+  t.test_files = FileList['minispecs/**/*_spec.rb', 'minispecs/**/*_test.rb']
+end
+
+task default: [:minitest, :rspectest]

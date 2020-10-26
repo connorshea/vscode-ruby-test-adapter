@@ -124,16 +124,29 @@
           "type": "string",
           "scope": "resource"
         },
-        "rubyTestExplorer.minitestFilePattern": {
+        "rubyTestExplorer.filePattern": {
           "markdownDescription": "The naming pattern for your tests.",
           "default": [
             "*_test.rb",
-            "test_*.rb"
+            "test_*.rb",
+            "*_spec.rb"
           ],
           "type": "array",
           "items": {
             "type": "string"
           },
+          "scope": "resource"
+        },
+        "rubyTestExplorer.debuggerHost": {
+          "markdownDescription": "The host to connect the debugger to.",
+          "default": "127.0.0.1",
+          "type": "string",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.debuggerPort": {
+          "markdownDescription": "The port to connect the debugger to.",
+          "default": "1234",
+          "type": "string",
           "scope": "resource"
         }
       }
