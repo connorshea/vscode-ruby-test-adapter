@@ -4,11 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- Add support for debugging specs. Thanks [@baelter](https://github.com/baelter) and [@CezaryGapinski](https://github.com/CezaryGapinski)! ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
+- Add `filePattern` configuration support for RSpec. ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
+
 ### Changed
-- Add `filePattern`configuration support for rspec. `minitestFilePattern` renamed to `filePattern`
-- Add support for debugging specs
-- Add RSpec tests
-- Fix `EXT_DIR` environment variable and line number handling in minitests for Windows OS
+- **BREAKING**: `minitestFilePattern` renamed to `filePattern` to make it work for both test frameworks we support. ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
+
+### Fixed
+- Fix `EXT_DIR` environment variable and line number handling in minitests for Windows OS. Thanks [@CezaryGapinski](https://github.com/CezaryGapinski)! ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
+
+### Internal
+- Add RSpec tests.
 
 ## [0.7.1] - 2020-02-12
 ### Changed
