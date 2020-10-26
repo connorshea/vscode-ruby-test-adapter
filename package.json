@@ -40,18 +40,18 @@
     "test": "npm run build && node ./node_modules/vscode/bin/test"
   },
   "dependencies": {
-    "split2": "^3.1.1",
-    "tslib": "^1.10.0",
-    "vscode-test-adapter-api": "^1.7.0",
-    "vscode-test-adapter-util": "^0.7.0"
+    "split2": "^3.2.2",
+    "tslib": "^1.14.1",
+    "vscode-test-adapter-api": "^1.9.0",
+    "vscode-test-adapter-util": "^0.7.1"
   },
   "devDependencies": {
     "@types/mocha": "^5.2.7",
     "@types/split2": "^2.1.6",
     "rimraf": "^2.7.1",
-    "typescript": "^3.7.3",
-    "vsce": "^1.71.0",
-    "vscode": "^1.1.36"
+    "typescript": "^3.9.7",
+    "vsce": "^1.81.1",
+    "vscode": "^1.1.37"
   },
   "engines": {
     "vscode": "^1.33.0"
