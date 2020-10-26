@@ -88,7 +88,7 @@ This extension is based on [the example test adapter](https://github.com/hbenl/v
 
 See [the VS Code extension docs](https://code.visualstudio.com/api/working-with-extensions/publishing-extension) for more info.
 
-Before publishing, make sure to update the `CHANGELOG.md` file. You also need to be logged in to `vsce`.
+Before publishing, make sure to update the `CHANGELOG.md` file. You also need to be logged in to `vsce`. When creating a Personal Access Token to log in, make sure to give it access to _all organizations_ in your Azure DevOps account. Otherwise, it won't work correctly.
 
 `vsce publish VERSION`, e.g. `vsce publish 1.0.0` will automatically handle creating the git commit and git tag, updating the `package.json`, and publishing the new version to the Visual Studio Marketplace. You'll need to manually run `git push` and `git push --tags` after publishing.
 
