@@ -72,6 +72,7 @@ export class RubyAdapter implements TestAdapter {
     this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspace.uri.fsPath}`);
 
     const config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
+    const rubyConfig = vscode.workspace.getConfiguration('ruby', null)
 
     const debuggerConfig = {
       name: "Debug Ruby Tests",
@@ -79,7 +80,8 @@ export class RubyAdapter implements TestAdapter {
       request: "attach",
       remoteHost: config.get('debuggerHost') || "127.0.0.1",
       remotePort: config.get('debuggerPort') || "1234",
-      remoteWorkspaceRoot: "${workspaceRoot}"
+      remoteWorkspaceRoot: "${workspaceRoot}",
+      useBundler: rubyConfig.get("useBundler") || false
     }
 
     const testRunPromise = this.run(testsToRun, debuggerConfig);
