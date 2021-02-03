@@ -63,6 +63,22 @@ export class MinitestTests extends Tests {
   }
 
   /**
+   * Get the user-configured rdebug-ide command, if there is one.
+   *
+   * @return The rdebug-ide command
+   */
+  protected getDebugCommand(debuggerConfig: vscode.DebugConfiguration): string {
+    let command: string =
+      (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
+      'rdebug-ide';
+
+    return (
+      `${command}  --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
+      ` -- ${process.platform == 'win32' ? '%EXT_DIR%' : '$EXT_DIR'}/debug_minitest.rb`
+    );
+  }
+
+  /**
    * Get the user-configured test directory, if there is one.
    *
    * @return The test directory
@@ -104,10 +120,9 @@ export class MinitestTests extends Tests {
   protected testCommandWithDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
     let cmd = `${this.getTestCommand()} vscode:minitest:run`
     if (debuggerConfig) {
-      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}`
-            + ` -- ${(process.platform == 'win32') ? '%EXT_DIR%' : '$EXT_DIR'}/debug_minitest.rb`
+      cmd = this.getDebugCommand(debuggerConfig);
     }
-    return cmd
+    return cmd;
   }
 
   /**
