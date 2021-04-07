@@ -28,7 +28,7 @@
     "test explorer",
     "test adapter"
   ],
-  "main": "out/main.js",
+  "main": "out/src/main.js",
   "scripts": {
     "postinstall": "node ./node_modules/vscode/bin/install",
     "clean": "rimraf out *.vsix",
