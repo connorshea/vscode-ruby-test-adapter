@@ -12,6 +12,18 @@
       "outFiles": [
         "${workspaceFolder}/out/src"
       ]
+    },
+    {
+      "name": "Tests for Minitest",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out/test/suite/minitest/index",
+        "${workspaceFolder}/test/fixtures/minitest"
+      ],
+      "outFiles": ["${workspaceFolder}/out/test/**/*.js"]
     }
   ]
 }
