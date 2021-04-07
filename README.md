@@ -76,13 +76,22 @@ If all else fails or you suspect something is broken with the extension, please 
 You'll need VS Code, Node (any version >= 8 should probably work), and Ruby installed.
 
 - Clone the repository: `git clone https://github.com/connorshea/vscode-ruby-test-adapter`
-- Run `npm install` to install dependencies.
+- Run `bin/setup` to install dependencies.
 - Open the directory in VS Code.
 - Run `npm run watch` or start the `watch` Task in VS Code to get the TypeScript compiler running.
 - Go to the Debug section in the sidebar and run "Ruby adapter". This will start a separate VS Code instance for testing the extension in. It gets updated code whenever "Reload Window" is run in the Command Palette.
   - You'll need a Ruby project if you want to actually use the extension to run tests, I generally use my project [VideoGameList](https://github.com/connorshea/VideoGameList) for testing, but any Ruby project with RSpec or Minitest tests will work.
 
 This extension is based on [the example test adapter](https://github.com/hbenl/vscode-example-test-adapter), it may be useful to check that repository for more information. Test adapters for other languages may also be useful references.
+
+### Running tests
+
+There are two groups of tests included in the repository.
+
+- Tests for Ruby scripts to collect test information and run tests. Run with `bundle exec rake` in `ruby` directory.
+- Tests for VS Code extensiion which invokes the Ruby scripts. Run from VS Code with "Tests for" configuration.
+
+You can see `.github/workflows/test.yml` for CI configurations.
 
 ### Publishing a new version
 
