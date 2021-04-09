@@ -90,6 +90,7 @@ There are two groups of tests included in the repository.
 
 - Tests for Ruby scripts to collect test information and run tests. Run with `bundle exec rake` in `ruby` directory.
 - Tests for VS Code extension which invokes the Ruby scripts. Run from VS Code's debug panel with the "Run tests for" configuration.
+  - Note that you'll need to run `npm run build && npm run package` before you'll be able to successfully run the extension tests. You'll also need to re-run these every time you make changes to the extension code.
 
 You can see `.github/workflows/test.yml` for CI configurations.
 
