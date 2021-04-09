@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+IFS=$'\n\t'
+set -vx
+
+npm install
+bundle install --gemfile=ruby/Gemfile
+bundle install --gemfile=test/fixtures/minitest/Gemfile
