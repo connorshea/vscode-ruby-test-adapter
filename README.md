@@ -89,7 +89,7 @@ This extension is based on [the example test adapter](https://github.com/hbenl/v
 There are two groups of tests included in the repository.
 
 - Tests for Ruby scripts to collect test information and run tests. Run with `bundle exec rake` in `ruby` directory.
-- Tests for VS Code extensiion which invokes the Ruby scripts. Run from VS Code with "Tests for" configuration.
+- Tests for VS Code extension which invokes the Ruby scripts. Run from VS Code's debug panel with the "Run tests for" configuration.
 
 You can see `.github/workflows/test.yml` for CI configurations.
 

@@ -14,7 +14,7 @@
       ]
     },
     {
-      "name": "Tests for Minitest",
+      "name": "Run tests for Minitest",
       "type": "extensionHost",
       "request": "launch",
       "runtimeExecutable": "${execPath}",
