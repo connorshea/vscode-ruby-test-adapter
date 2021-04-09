@@ -18,7 +18,7 @@ async function main() {
     await runTests(
       {
         extensionDevelopmentPath,
-        extensionTestsPath: path.resolve(__dirname, './suite/minitest/index'),
+        extensionTestsPath: path.resolve(__dirname, './suite/frameworks/minitest/index'),
         launchArgs: [path.resolve(extensionDevelopmentPath, 'test/fixtures/minitest')]
       }
     );
