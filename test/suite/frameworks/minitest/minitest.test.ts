@@ -5,7 +5,7 @@ import * as path from 'path';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 import { testExplorerExtensionId, TestHub, TestSuiteInfo } from 'vscode-test-adapter-api';
-import { DummyController } from '../DummyController';
+import { DummyController } from '../../DummyController';
 
 suite('Extension Test for Minitest', () => {
   test('Load all tests', async () => {

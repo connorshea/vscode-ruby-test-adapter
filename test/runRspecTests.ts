@@ -18,8 +18,8 @@ async function main() {
     await runTests(
       {
         extensionDevelopmentPath,
-        extensionTestsPath: path.resolve(__dirname, './suite/minitest/index'),
-        launchArgs: [path.resolve(extensionDevelopmentPath, 'test/fixtures/minitest')]
+        extensionTestsPath: path.resolve(__dirname, './suite/frameworks/rspec/index'),
+        launchArgs: [path.resolve(extensionDevelopmentPath, 'test/fixtures/rspec')]
       }
     );
   } catch (err) {

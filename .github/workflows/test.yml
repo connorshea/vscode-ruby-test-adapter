@@ -30,9 +30,12 @@ jobs:
       run: |
         npm run build
         npm run package
-    - name: Run test
+    - name: Run minitest tests
       run: |
-        xvfb-run -a node ./out/test/runTest.js
+        xvfb-run -a node ./out/test/runMinitestTests.js
+    - name: Run rspec tests
+      run: |
+        xvfb-run -a node ./out/test/runRspecTests.js
     - name: Run Ruby test
       run: |
         cd ruby && bundle exec rake
