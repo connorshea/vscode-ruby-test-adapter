@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Changed
+- Increase the minimum VS Code version required for the extension to v1.54 (the February 2021 release).
+
+### Internal
+- Add an automated test suite for the extension. Thanks [@soutaro](https://github.com/soutaro)! ([#74](https://github.com/connorshea/vscode-ruby-test-adapter/pull/74))
 
 ## [0.8.0] - 2020-10-25
 ### Added
