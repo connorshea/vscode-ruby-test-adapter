@@ -35,7 +35,7 @@ module VSCode
             full_path = File.expand_path(path, VSCode.project_root)
             path = full_path.gsub(VSCode.project_root.to_s, ".")
             path = "./#{path}" unless path.match?(/^\./)
-            description = test_name.gsub(/^test_/, "")
+            description = test_name.gsub(/^test_[:\s]*/, "")
             description = description.tr("_", " ") unless description.match?(/\s/)
 
             {
