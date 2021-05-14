@@ -236,9 +236,8 @@ export class RubyAdapter implements TestAdapter {
         || path.join('.', 'test');
     }
 
-    if (testDirectory === '')
-    {
-      return undefined
+    if (testDirectory === '') {
+      return undefined;
     }
 
     return path.join(this.workspace.uri.fsPath, testDirectory);
@@ -251,7 +250,7 @@ export class RubyAdapter implements TestAdapter {
     return vscode.workspace.onDidSaveTextDocument(document => {
       // If there isn't a configured/detected test framework, short-circuit to avoid doing unnecessary work.
       if (this.currentTestFramework === 'none') {
-        this.log.info('No test framework configured. Ignoring file change.')
+        this.log.info('No test framework configured. Ignoring file change.');
         return;
       }
       const filename = document.uri.fsPath;
@@ -260,8 +259,7 @@ export class RubyAdapter implements TestAdapter {
         let testDirectory = this.getTestDirectory();
 
         // In the case that there's no configured test directory, we shouldn't try to reload the tests.
-        if (testDirectory !== undefined
-          && filename.startsWith(testDirectory)) {
+        if (testDirectory !== undefined && filename.startsWith(testDirectory)) {
           this.log.info('A test file has been edited, reloading tests.');
           this.load();
         }
