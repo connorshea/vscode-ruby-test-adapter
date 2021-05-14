@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Added
+- Add `rubyTestExplorer.debugCommand` configuration. Allows customizing how the Ruby debugger is accessed, e.g. `bundle exec rdebug-ide`. Thanks [@Juice10](https://github.com/Juice10)! ([#72](https://github.com/connorshea/vscode-ruby-test-adapter/pull/72))
+
+### Changed
+- Do not replace underscores in Minitest test names that contain whitespace (e.g. `'Object#foo_bar should work'`). Thanks [@jochenseeber](https://github.com/jochenseeber)! ([#67](https://github.com/connorshea/vscode-ruby-test-adapter/pull/67))
+
+### Internal
+- Add `.vsix` files to `.gitignore` and `.vscodeignore`. Thanks [@jochenseeber](https://github.com/jochenseeber)! ([#61](https://github.com/connorshea/vscode-ruby-test-adapter/pull/61))
 
 ## [0.8.1] - 2021-05-14
 ### Changed
