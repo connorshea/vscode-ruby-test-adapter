@@ -81,6 +81,21 @@ export class RspecTests extends Tests {
   }
 
   /**
+   * Get the user-configured rdebug-ide command, if there is one.
+   *
+   * @return The rdebug-ide command
+   */
+  protected getDebugCommand(debuggerConfig: vscode.DebugConfiguration, args: string): string {
+    let command: string =
+      (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
+      'rdebug-ide';
+
+    return (
+      `${command} --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
+      ` -- ${process.platform == 'win32' ? '%EXT_DIR%' : '$EXT_DIR'}/debug_rspec.rb ${args}`
+    );
+  }
+  /**
    * Get the user-configured RSpec command and add file pattern detection.
    *
    * @return The RSpec command
@@ -122,8 +137,7 @@ export class RspecTests extends Tests {
     let args = `--require ${this.getCustomFormatterLocation()} --format CustomFormatter`
     let cmd = `${this.getTestCommand()} ${args}`
     if (debuggerConfig) {
-      cmd = `rdebug-ide --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}`
-            + ` -- ${(process.platform == 'win32') ? '%EXT_DIR%' : '$EXT_DIR'}/debug_rspec.rb ${args}`
+      cmd = this.getDebugCommand(debuggerConfig, args);
     }
     return cmd
   }

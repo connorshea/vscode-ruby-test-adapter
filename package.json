@@ -5,7 +5,7 @@
   "icon": "img/ruby-test-explorer.png",
   "author": "Connor Shea <connor.james.shea@gmail.com>",
   "publisher": "connorshea",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "license": "MIT",
   "homepage": "https://github.com/connorshea/vscode-ruby-test-adapter",
   "repository": {
@@ -28,7 +28,7 @@
     "test explorer",
     "test adapter"
   ],
-  "main": "out/main.js",
+  "main": "out/src/main.js",
   "scripts": {
     "postinstall": "node ./node_modules/vscode/bin/install",
     "clean": "rimraf out *.vsix",
@@ -41,20 +41,23 @@
   },
   "dependencies": {
     "split2": "^3.2.2",
-    "tslib": "^1.14.1",
+    "tslib": "^2.2.0",
     "vscode-test-adapter-api": "^1.9.0",
     "vscode-test-adapter-util": "^0.7.1"
   },
   "devDependencies": {
+    "@types/glob": "^7.1.3",
     "@types/mocha": "^5.2.7",
     "@types/split2": "^2.1.6",
+    "glob": "^7.1.6",
     "rimraf": "^2.7.1",
-    "typescript": "^3.9.7",
-    "vsce": "^1.81.1",
-    "vscode": "^1.1.37"
+    "typescript": "^4.2.4",
+    "vsce": "^1.87.1",
+    "vscode": "^1.1.37",
+    "vscode-test": "^1.5.2"
   },
   "engines": {
-    "vscode": "^1.33.0"
+    "vscode": "^1.54.0"
   },
   "extensionDependencies": [
     "hbenl.vscode-test-explorer"
@@ -148,8 +151,21 @@
           "default": "1234",
           "type": "string",
           "scope": "resource"
+        },
+        "rubyTestExplorer.debugCommand": {
+          "markdownDescription": "Define how to run rdebug-ide, for example `rdebug-ide` or `bundle exec rdebug-ide`.",
+          "default": "rdebug-ide",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "This extension runs code from tests and therefore can't be assumed to be safe to use in an untrusted workspace."
+    },
+    "virtualWorkspaces": false
   }
 }
