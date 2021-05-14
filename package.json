@@ -30,14 +30,14 @@
   ],
   "main": "out/src/main.js",
   "scripts": {
-    "postinstall": "node ./node_modules/vscode/bin/install",
     "clean": "rimraf out *.vsix",
     "build": "tsc",
     "watch": "tsc -w",
     "rebuild": "npm run clean && npm run build",
     "package": "vsce package",
     "publish": "vsce publish",
-    "test": "npm run build && node ./node_modules/vscode/bin/test"
+    "test:minitest": "npm run build && node ./out/test/runMinitestTests.js",
+    "test:rspec": "npm run build && node ./out/test/runRspecTests.js"
   },
   "dependencies": {
     "split2": "^3.2.2",
@@ -49,11 +49,12 @@
     "@types/glob": "^7.1.3",
     "@types/mocha": "^5.2.7",
     "@types/split2": "^2.1.6",
+    "@types/vscode": "^1.54.0",
     "glob": "^7.1.6",
+    "mocha": "^6.1.4",
     "rimraf": "^2.7.1",
     "typescript": "^4.2.4",
     "vsce": "^1.87.1",
-    "vscode": "^1.1.37",
     "vscode-test": "^1.5.2"
   },
   "engines": {
