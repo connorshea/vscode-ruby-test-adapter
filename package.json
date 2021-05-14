@@ -154,5 +154,12 @@
         }
       }
     }
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "This extension runs code from tests and therefore can't be assumed to be safe to use in an untrusted workspace."
+    },
+    "virtualWorkspaces": false
   }
 }
