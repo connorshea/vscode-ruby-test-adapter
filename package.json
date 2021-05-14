@@ -151,6 +151,12 @@
           "default": "1234",
           "type": "string",
           "scope": "resource"
+        },
+        "rubyTestExplorer.debugCommand": {
+          "markdownDescription": "Define how to run rdebug-ide, for example `rdebug-ide` or `bundle exec rdebug-ide`.",
+          "default": "rdebug-ide",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }

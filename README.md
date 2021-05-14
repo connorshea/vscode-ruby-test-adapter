@@ -53,6 +53,7 @@ Property                               | Description
 `rubyTestExplorer.filePattern`         | Define the pattern to match test files by, for example `["*_test.rb", "test_*.rb", "*_spec.rb"]`.
 `rubyTestExplorer.debuggerHost`        | Define the host to connect the debugger to, for example `127.0.0.1`.
 `rubyTestExplorer.debuggerPort`        | Define the port to connect the debugger to, for example `1234`.
+`rubyTestExplorer.debugCommand`        | Define how to run rdebug-ide, for example `rdebug-ide` or `bundle exec rdebug-ide`.
 `rubyTestExplorer.rspecCommand`        | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
 `rubyTestExplorer.rspecDirectory`      | Define the relative directory of the specs in a given workspace, for example `./spec/`.
 `rubyTestExplorer.minitestCommand`     | Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`. Must be a Rake command.
