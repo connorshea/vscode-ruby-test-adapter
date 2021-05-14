@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 - Do not replace underscores in Minitest test names that contain whitespace (e.g. `'Object#foo_bar should work'`). Thanks [@jochenseeber](https://github.com/jochenseeber)! ([#67](https://github.com/connorshea/vscode-ruby-test-adapter/pull/67))
+- Remove colon and leading whitespace from beginning of Minitest test names, when relevant. Thanks [@jochenseeber](https://github.com/jochenseeber)! ([#62](https://github.com/connorshea/vscode-ruby-test-adapter/pull/62)) 
 
 ### Internal
 - Add `.vsix` files to `.gitignore` and `.vscodeignore`. Thanks [@jochenseeber](https://github.com/jochenseeber)! ([#61](https://github.com/connorshea/vscode-ruby-test-adapter/pull/61))
