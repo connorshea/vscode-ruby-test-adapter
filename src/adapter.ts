@@ -5,6 +5,7 @@ import * as childProcess from 'child_process';
 import { Tests } from './tests';
 import { RspecTests } from './rspecTests';
 import { MinitestTests } from './minitestTests';
+import * as path from 'path';
 
 export class RubyAdapter implements TestAdapter {
   private disposables: { dispose(): void }[] = [];
@@ -222,16 +223,24 @@ export class RubyAdapter implements TestAdapter {
   /**
    * Get the test directory based on the configuration value if there's a configured test framework.
    */
-  private getTestDirectory(): string {
+  private getTestDirectory(): string | undefined {
     let testFramework = this.getTestFramework();
     let testDirectory = '';
     if (testFramework === 'rspec') {
-      testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string) || './spec/';
+      testDirectory =
+        (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string)
+        || path.join('.', 'spec');
     } else if (testFramework === 'minitest') {
-      testDirectory = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string) || './test/';
+      testDirectory =
+        (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string)
+        || path.join('.', 'test');
     }
 
-    return testDirectory;
+    if (testDirectory === '') {
+      return undefined;
+    }
+
+    return path.join(this.workspace.uri.fsPath, testDirectory);
   }
 
   /**
@@ -241,18 +250,16 @@ export class RubyAdapter implements TestAdapter {
     return vscode.workspace.onDidSaveTextDocument(document => {
       // If there isn't a configured/detected test framework, short-circuit to avoid doing unnecessary work.
       if (this.currentTestFramework === 'none') {
-        this.log.info('No test framework configured. Ignoring file change.')
+        this.log.info('No test framework configured. Ignoring file change.');
         return;
       }
       const filename = document.uri.fsPath;
       this.log.info(`${filename} was saved - checking if this effects ${this.workspace.uri.fsPath}`);
       if (filename.startsWith(this.workspace.uri.fsPath)) {
-        // relativeFilename is in the format of, e.g. './app/javascript/src/components/library.vue'.
-        let relativeFilename = filename.replace(`${this.workspace.uri.fsPath}`, '.');
         let testDirectory = this.getTestDirectory();
 
         // In the case that there's no configured test directory, we shouldn't try to reload the tests.
-        if (testDirectory !== '' && relativeFilename.startsWith(testDirectory)) {
+        if (testDirectory !== undefined && filename.startsWith(testDirectory)) {
           this.log.info('A test file has been edited, reloading tests.');
           this.load();
         }
