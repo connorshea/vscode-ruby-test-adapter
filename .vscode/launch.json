@@ -10,8 +10,32 @@
         "--extensionDevelopmentPath=${workspaceFolder}"
       ],
       "outFiles": [
-        "${workspaceFolder}/out"
+        "${workspaceFolder}/out/src"
       ]
+    },
+    {
+      "name": "Run tests for Minitest",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out/test/suite/frameworks/minitest/index",
+        "${workspaceFolder}/test/fixtures/minitest"
+      ],
+      "outFiles": ["${workspaceFolder}/out/test/**/*.js"]
+    },
+    {
+      "name": "Run tests for RSpec",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out/test/suite/frameworks/rspec/index",
+        "${workspaceFolder}/test/fixtures/rspec"
+      ],
+      "outFiles": ["${workspaceFolder}/out/test/**/**/*.js"]
     }
   ]
 }

@@ -6,3 +6,4 @@ tsconfig.json
 .vscode/**
 .gitignore
 *.vsix
+out/test/**

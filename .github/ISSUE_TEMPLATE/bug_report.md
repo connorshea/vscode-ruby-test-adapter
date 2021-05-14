@@ -13,7 +13,7 @@ assignees: ''
 - Ruby version:
 - VS Code version:
 - Operating System:
-- RSpec version:
+- RSpec or Minitest version:
 
 ### Expected behavior
 

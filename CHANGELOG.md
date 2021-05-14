@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.1] - 2021-05-14
+### Changed
+- Increase the minimum VS Code version required for the extension to v1.54 (the February 2021 release).
+- Disable the extension in Untrusted Workspaces and Virtual Workspaces. It shouldn't be enabled if the code in the repo isn't trusted (since it essentially executes arbitrary code on-load) and cannot work in a Virtual Workspace since Ruby gems need to be installed and test files must all be available.
+
+### Internal
+- Add an automated test suite for the extension. Thanks [@soutaro](https://github.com/soutaro)! ([#74](https://github.com/connorshea/vscode-ruby-test-adapter/pull/74))
+
 ## [0.8.0] - 2020-10-25
 ### Added
 - Add support for debugging specs. Thanks [@baelter](https://github.com/baelter) and [@CezaryGapinski](https://github.com/CezaryGapinski)! ([#51](https://github.com/connorshea/vscode-ruby-test-adapter/pull/51))
@@ -154,7 +162,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.6.1...v0.7.0
