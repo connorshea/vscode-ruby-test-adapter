@@ -64,6 +64,7 @@ Property                               | Description
 If the extension doesn't work for you, here are a few things you can try:
 
 - Make sure you've run `bundle install` and that any gems specified in your `Gemfile.lock` have been installed (assuming you're using Bundler).
+- Disable parallel tests if you are using minitest. To do this set `parallelize(workers: 1)` in `test_helper.rb`, or add `PARALLEL_WORKERS=1` to the `rubyTestExplorer.minitestCommand`.
 - Enable the `rubyTestExplorer.logpanel` config setting and take a look at the output in Output > Ruby Test Explorer Log. This should show what the extension is doing and provide more context on what's happening behind the scenes. (You can alternatively use `rubyTestExplorer.logfile` to log to a specific file instead).
 - Check the VS Code Developer Tools (Command Palette > 'Developer: Toggle Developer Tools') for any JSON parsing errors, or anything else that looks like it might come from the extension. That could be a bug in the extension, or a problem with your setup.
 - If you're using RSpec, make sure you're using a recent version of the `rspec-core` gem. If you're on a version prior to 3.6.0, the extension may not work.
