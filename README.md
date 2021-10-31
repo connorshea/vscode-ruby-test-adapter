@@ -74,7 +74,7 @@ If all else fails or you suspect something is broken with the extension, please 
 
 ## Contributing
 
-You'll need VS Code, Node (any version >= 8 should probably work), and Ruby installed.
+You'll need VS Code, Node (any version >= 12 should probably work), and Ruby installed.
 
 - Clone the repository: `git clone https://github.com/connorshea/vscode-ruby-test-adapter`
 - Run `bin/setup` to install dependencies.
