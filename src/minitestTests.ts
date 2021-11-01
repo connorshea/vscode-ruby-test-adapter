@@ -17,8 +17,10 @@ export class MinitestTests extends Tests {
       let minitestTests = this.testSuite ? this.testSuite : this.loadTests();
       return resolve(minitestTests);
     } catch (err) {
-      this.log.error(`Error while attempting to load Minitest tests: ${err.message}`);
-      return reject(err);
+      if (err instanceof Error) {
+        this.log.error(`Error while attempting to load Minitest tests: ${err.message}`);
+        return reject(err);
+      }
     }
   });
 

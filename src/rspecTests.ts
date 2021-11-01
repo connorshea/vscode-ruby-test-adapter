@@ -17,8 +17,10 @@ export class RspecTests extends Tests {
       let rspecTests = this.testSuite ? this.testSuite : this.loadTests();
       return resolve(rspecTests);
     } catch (err) {
-      this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
-      return reject(err);
+      if (err instanceof Error) {
+        this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
+        return reject(err);
+      }
     }
   });
 
