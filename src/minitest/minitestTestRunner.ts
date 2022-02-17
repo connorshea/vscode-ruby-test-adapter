@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
-import { Tests } from '../tests';
+import { TestRunner } from '../testRunner';
 
-export class MinitestTests extends Tests {
+export class MinitestTestRunner extends TestRunner {
   testFrameworkName = 'Minitest';
 
   /**

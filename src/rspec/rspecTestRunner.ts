@@ -1,11 +1,8 @@
 import * as vscode from 'vscode';
-import { TestSuiteInfo, TestEvent } from 'vscode-test-adapter-api';
 import * as childProcess from 'child_process';
-import { Tests } from './tests';
+import { TestRunner } from '../testRunner';
 
-export class RspecTests extends Tests {
-  testFrameworkName = 'RSpec';
-
+export class RspecTestRunner extends TestRunner {
   /**
    * Representation of the RSpec test suite as a TestSuiteInfo object.
    *
@@ -29,16 +26,21 @@ export class RspecTests extends Tests {
    *
    * @return The raw output from the RSpec JSON formatter.
    */
-  initTests = async () => new Promise<string>((resolve, reject) => {
+  initTests = async (/*testFilePath: string | null*/) => new Promise<string>((resolve, reject) => {
     let cmd = `${this.getTestCommandWithFilePattern()} --require ${this.getCustomFormatterLocation()}`
               + ` --format CustomFormatter --order defined --dry-run`;
+
+    // TODO: Only reload single file on file changed
+    // if (testFilePath) {
+    //   cmd = cmd + ` ${testFilePath}`
+    // }
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
       cwd: this.workspace.uri.fsPath,
-      maxBuffer: 8192 * 8192
+      maxBuffer: 8192 * 8192,
     };
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
@@ -50,7 +52,7 @@ export class RspecTests extends Tests {
           "View error message"
         ).then(selection => {
           if (selection === "View error message") {
-            let outputJson = JSON.parse(Tests.getJsonFromOutput(stdout));
+            let outputJson = JSON.parse(TestRunner.getJsonFromOutput(stdout));
             let outputChannel = vscode.window.createOutputChannel('Ruby Test Explorer Error Message');
 
             if (outputJson.messages.length > 0) {

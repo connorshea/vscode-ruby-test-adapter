@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { IVSCodeExtLogger } from '@vscode-logging/logger';
-import { Tests } from './tests';
-import { RspecTests } from './rspec/rspecTests';
-import { MinitestTests } from './minitest/minitestTests';
+import { TestRunner } from './testRunner';
+import { RspecTestRunner } from './rspec/rspecTestRunner';
+import { MinitestTestRunner } from './minitest/minitestTestRunner';
 
 export abstract class TestLoader implements vscode.Disposable {
   protected _disposables: { dispose(): void }[] = [];
@@ -13,7 +13,7 @@ export abstract class TestLoader implements vscode.Disposable {
     protected readonly context: vscode.ExtensionContext,
     protected readonly workspace: vscode.WorkspaceFolder | null,
     protected readonly controller: vscode.TestController,
-    protected readonly testRunner: RspecTests | MinitestTests
+    protected readonly testRunner: RspecTestRunner | MinitestTestRunner
   ) {
     this._disposables.push(this.createWatcher());
     this._disposables.push(this.configWatcher());
@@ -47,7 +47,7 @@ export abstract class TestLoader implements vscode.Disposable {
     let output = await this.testRunner.initTests();
     this.log.debug('Passing raw output from dry-run into getJsonFromOutput.');
     this.log.debug(`${output}`);
-    output = Tests.getJsonFromOutput(output);
+    output = TestRunner.getJsonFromOutput(output);
     this.log.debug('Parsing the below JSON:');
     this.log.debug(`${output}`);
     let testMetadata;
