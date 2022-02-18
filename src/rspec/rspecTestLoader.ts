@@ -8,7 +8,7 @@ export class RspecTestLoader extends TestLoader {
   }
 
   protected getFrameworkTestDirectory(): string {
-    return (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string)
-      || path.join('.', 'spec');
+    let configDir = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string
+    return configDir ?? path.join('.', 'spec');
   }
 }

@@ -64,6 +64,8 @@ export abstract class TestLoader implements vscode.Disposable {
         let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
         let test_location_string: string = test_location_array.join('');
         test.location = parseInt(test_location_string);
+        test.id = test.id.replace(this.getFrameworkTestDirectory(), '')
+        test.file_path = test.file_path.replace(this.getFrameworkTestDirectory(), '')
         tests.push(test);
       }
     );
@@ -100,6 +102,10 @@ export abstract class TestLoader implements vscode.Disposable {
       return undefined;
     }
 
+    if (testDirectory.startsWith("./")) {
+      testDirectory = testDirectory.substring(2)
+    }
+
     return path.join(this.workspace.uri.fsPath, testDirectory);
   }
 
@@ -121,7 +127,7 @@ export abstract class TestLoader implements vscode.Disposable {
 
     // Remove the spec/ directory from all the file path.
     uniqueFiles.forEach((file) => {
-      splitFilesArray.push(file.replace(`${this.getTestDirectory()}`, "").split('/'));
+      splitFilesArray.push(file.split('/'));
     });
 
     // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
@@ -157,7 +163,7 @@ export abstract class TestLoader implements vscode.Disposable {
 
     // Get files that are direct descendants of the spec/ directory.
     let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-      return filePath.replace(`${this.getTestDirectory()}`, "").split('/').length === 1;
+      return filePath.split('/').length === 1;
     });
 
     topDirectoryFiles.forEach((currentFile) => {
@@ -187,8 +193,8 @@ export abstract class TestLoader implements vscode.Disposable {
     });
 
     let currentFileLabel = directory
-      ? currentFile.replace(`${this.getTestDirectory()}${directory}/`, '')
-      : currentFile.replace(`${this.getTestDirectory()}`, '');
+      ? currentFile.replace(`${this.getFrameworkTestDirectory()}${directory}/`, '')
+      : currentFile.replace(this.getFrameworkTestDirectory(), '');
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
 
