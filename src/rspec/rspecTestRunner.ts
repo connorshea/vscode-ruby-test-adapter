@@ -1,26 +1,9 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
 import { TestRunner } from '../testRunner';
+import { TestRunContext } from '../testRunContext';
 
 export class RspecTestRunner extends TestRunner {
-  /**
-   * Representation of the RSpec test suite as a TestSuiteInfo object.
-   *
-   * @return The RSpec test suite as a TestSuiteInfo object.
-   */
-  tests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
-    try {
-      // If test suite already exists, use testSuite. Otherwise, load them.
-      let rspecTests = this.testSuite ? this.testSuite : this.loadTests();
-      return resolve(rspecTests);
-    } catch (err) {
-      if (err instanceof Error) {
-        this.log.error(`Error while attempting to load RSpec tests: ${err.message}`);
-        return reject(err);
-      }
-    }
-  });
-
   /**
    * Perform a dry-run of the test suite to get information about every test.
    *
@@ -39,7 +22,7 @@ export class RspecTestRunner extends TestRunner {
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
-      cwd: this.workspace.uri.fsPath,
+      cwd: this.workspace?.uri.fsPath,
       maxBuffer: 8192 * 8192,
     };
 
@@ -157,91 +140,28 @@ export class RspecTestRunner extends TestRunner {
     });
   }
 
-  /**
-   * Runs a single test.
-   *
-   * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The raw output from running the test.
-   */
-  runSingleTest = async (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running single test: ${testLocation}`);
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: this.workspace.uri.fsPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
+  protected getSingleTestCommand(testLocation: string, context: TestRunContext): string {
+    return `${this.testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testLocation}'`
+  };
 
-    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testLocation}'`;
-    this.log.info(`Running command: ${testCommand}`);
+  protected getTestFileCommand(testFile: string, context: TestRunContext): string {
+    return `${this.testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testFile}'`
+  };
 
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
-
-  /**
-   * Runs tests in a given file.
-   *
-   * @param testFile The test file's file path, e.g. `/path/to/spec.rb`.
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The raw output from running the tests.
-   */
-  runTestFile = async (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running test file: ${testFile}`);
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: this.workspace.uri.fsPath,
-      shell: true
-    };
-
-    // Run tests for a given file at once with a single command.
-    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testFile}'`;
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
-
-  /**
-   * Runs the full test suite for the current workspace.
-   *
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The raw output from running the test suite.
-   */
-  runFullTestSuite = async (debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running full test suite.`);
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: this.workspace.uri.fsPath,
-      shell: true
-    };
-
-    let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
+  protected getFullTestSuiteCommand(context: TestRunContext): string {
+    return this.testCommandWithFormatterAndDebugger(context.debuggerConfig)
+  };
 
   /**
    * Handles test state based on the output returned by the custom RSpec formatter.
    *
    * @param test The test that we want to handle.
+   * @param context Test run context
    */
-  handleStatus(test: any): void {
+  handleStatus(test: any, context: TestRunContext): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     if (test.status === "passed") {
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
+      context.passed(test.id)
     } else if (test.status === "failed" && test.pending_message === null) {
       // Remove linebreaks from error message.
       let errorMessageNoLinebreaks = test.exception.message.replace(/(\r\n|\n|\r)/, ' ');
@@ -272,20 +192,20 @@ export class RspecTestRunner extends TestRunner {
         });
       }
 
-      this.testStatesEmitter.fire(<TestEvent>{
-        type: 'test',
-        test: test.id,
-        state: 'failed',
-        message: errorMessage,
-        decorations: [{
-          // Strip line breaks from the message.
-          message: errorMessageNoLinebreaks,
-          line: (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1
-        }]
-      });
+      context.failed(
+        test.id,
+        errorMessage,
+        filePath,
+        (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
+      )
     } else if (test.status === "failed" && test.pending_message !== null) {
       // Handle pending test cases.
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'skipped', message: test.pending_message });
+      context.errored(
+        test.id,
+        test.pending_message,
+        test.file_path.replace('./', ''),
+        test.line_number
+      )
     }
   };
 }

@@ -1,27 +1,10 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
 import { TestRunner } from '../testRunner';
+import { TestRunContext } from '../testRunContext';
 
 export class MinitestTestRunner extends TestRunner {
   testFrameworkName = 'Minitest';
-
-  /**
-   * Representation of the Minitest test suite as a TestSuiteInfo object.
-   *
-   * @return The Minitest test suite as a TestSuiteInfo object.
-   */
-  tests = async () => new Promise<TestSuiteInfo>((resolve, reject) => {
-    try {
-      // If test suite already exists, use testSuite. Otherwise, load them.
-      let minitestTests = this.testSuite ? this.testSuite : this.loadTests();
-      return resolve(minitestTests);
-    } catch (err) {
-      if (err instanceof Error) {
-        this.log.error(`Error while attempting to load Minitest tests: ${err.message}`);
-        return reject(err);
-      }
-    }
-  });
 
   /**
    * Perform a dry-run of the test suite to get information about every test.
@@ -33,7 +16,7 @@ export class MinitestTestRunner extends TestRunner {
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
-      cwd: this.workspace.uri.fsPath,
+      cwd: this.workspace?.uri.fsPath,
       maxBuffer: 8192 * 8192,
       env: this.getProcessEnv()
     };
@@ -126,98 +109,32 @@ export class MinitestTestRunner extends TestRunner {
     return cmd;
   }
 
-  /**
-   * Runs a single test.
-   *
-   * @param testLocation A file path with a line number, e.g. `/path/to/spec.rb:12`.
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The raw output from running the test.
-   */
-  runSingleTest = async (testLocation: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running single test: ${testLocation}`);
+  protected getSingleTestCommand(testLocation: string, context: TestRunContext): string {
     let line = testLocation.split(':').pop();
-    let relativeLocation = testLocation.split(/:\d+$/)[0].replace(`${this.workspace.uri.fsPath}/`, "")
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: this.workspace.uri.fsPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
+    let relativeLocation = testLocation.split(/:\d+$/)[0].replace(`${this.workspace?.uri.fsPath || "."}/`, "")
+    return `${this.testCommandWithDebugger(context.debuggerConfig)} '${relativeLocation}:${line}'`
+  };
 
-    let testCommand = `${this.testCommandWithDebugger(debuggerConfig)} '${relativeLocation}:${line}'`;
-    this.log.info(`Running command: ${testCommand}`);
+  protected getTestFileCommand(testFile: string, context: TestRunContext): string {
+    let relativeFile = testFile.replace(`${this.workspace?.uri.fsPath || '.'}/`, "").replace(`./`, "")
+    return `${this.testCommandWithDebugger(context.debuggerConfig)} '${relativeFile}'`
+  };
 
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
-
-  /**
-   * Runs tests in a given file.
-   *
-   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The raw output from running the tests.
-   */
-  runTestFile = async (testFile: string, debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running test file: ${testFile}`);
-    let relativeFile = testFile.replace(`${this.workspace.uri.fsPath}/`, "").replace(`./`, "")
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: this.workspace.uri.fsPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
-
-    // Run tests for a given file at once with a single command.
-    let testCommand = `${this.testCommandWithDebugger(debuggerConfig)} '${relativeFile}'`;
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
-
-  /**
-   * Runs the full test suite for the current workspace.
-   *
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The raw output from running the test suite.
-   */
-  runFullTestSuite = async (debuggerConfig?: vscode.DebugConfiguration) => new Promise<string>(async (resolve, reject) => {
-    this.log.info(`Running full test suite.`);
-    const spawnArgs: childProcess.SpawnOptions = {
-      cwd: this.workspace.uri.fsPath,
-      shell: true,
-      env: this.getProcessEnv()
-    };
-
-    let testCommand = this.testCommandWithDebugger(debuggerConfig);
-    this.log.info(`Running command: ${testCommand}`);
-
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
-
-    resolve(await this.handleChildProcess(testProcess));
-  });
+  protected getFullTestSuiteCommand(context: TestRunContext): string {
+    return this.testCommandWithDebugger(context.debuggerConfig)
+  };
 
   /**
    * Handles test state based on the output returned by the Minitest Rake task.
    *
    * @param test The test that we want to handle.
+   * @param context Test run context
    */
-  handleStatus(test: any): void {
+  handleStatus(test: any, context: TestRunContext): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     if (test.status === "passed") {
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'passed' });
+      context.passed(test.id)
     } else if (test.status === "failed" && test.pending_message === null) {
-      let errorMessageShort: string = test.exception.message;
       let errorMessageLine: number = test.line_number;
       let errorMessage: string = test.exception.message;
 
@@ -237,19 +154,20 @@ export class MinitestTestRunner extends TestRunner {
         });
       }
 
-      this.testStatesEmitter.fire(<TestEvent>{
-        type: 'test',
-        test: test.id,
-        state: 'failed',
-        message: errorMessage,
-        decorations: [{
-          message: errorMessageShort,
-          line: errorMessageLine - 1
-        }]
-      });
+      context.failed(
+        test.id,
+        errorMessage,
+        test.file_path.replace('./', ''),
+        errorMessageLine - 1
+      )
     } else if (test.status === "failed" && test.pending_message !== null) {
       // Handle pending test cases.
-      this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: test.id, state: 'skipped', message: test.pending_message });
+      context.errored(
+        test.id,
+        test.pending_message,
+        test.file_path.replace('./', ''),
+        test.line_number
+      )
     }
   };
 }

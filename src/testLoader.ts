@@ -6,7 +6,7 @@ import { RspecTestRunner } from './rspec/rspecTestRunner';
 import { MinitestTestRunner } from './minitest/minitestTestRunner';
 
 export abstract class TestLoader implements vscode.Disposable {
-  protected _disposables: { dispose(): void }[] = [];
+  protected disposables: { dispose(): void }[] = [];
 
   constructor(
     protected readonly log: IVSCodeExtLogger,
@@ -15,15 +15,15 @@ export abstract class TestLoader implements vscode.Disposable {
     protected readonly controller: vscode.TestController,
     protected readonly testRunner: RspecTestRunner | MinitestTestRunner
   ) {
-    this._disposables.push(this.createWatcher());
-    this._disposables.push(this.configWatcher());
+    this.disposables.push(this.createWatcher());
+    this.disposables.push(this.configWatcher());
   }
 
   dispose(): void {
-    for (const disposable of this._disposables) {
+    for (const disposable of this.disposables) {
       disposable.dispose();
     }
-    this._disposables = [];
+    this.disposables = [];
   }
 
   /**
