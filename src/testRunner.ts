@@ -190,34 +190,105 @@ export abstract class TestRunner implements vscode.Disposable {
       this.controller,
       debuggerConfig
     )
-    const queue: vscode.TestItem[] = [];
-  
-    // Loop through all included tests, or all known tests, and add them to our queue
-    if (request.include) {
-      request.include.forEach(test => queue.push(test));
-      
-      // For every test that was queued, try to run it. Call run.passed() or run.failed()
-      while (queue.length > 0 && !token.isCancellationRequested) {
-        const test = queue.pop()!;
+    try {
+      const queue: vscode.TestItem[] = [];
 
-        // Skip tests the user asked to exclude
-        if (request.exclude?.includes(test)) {
-          continue;
+      if (debuggerConfig) {
+        this.log.info(`Debugging test(s) ${JSON.stringify(request.include)}`);
+    
+        if (!this.workspace) {
+          this.log.error("Cannot debug without a folder opened")
+          context.testRun.end()
+          return
         }
 
-        await this.runNode(test, context);
+        this.log.info('Starting the debug session');
+        let debugSession: any;
+        try {
+          await this.debugCommandStarted()
+          debugSession = await this.startDebugging(debuggerConfig);
+        } catch (err) {
+          this.log.error('Failed starting the debug session - aborting', err);
+          this.killChild();
+          return;
+        }
+    
+        const subscription = this.onDidTerminateDebugSession((session) => {
+          if (debugSession != session) return;
+          this.log.info('Debug session ended');
+          this.killChild(); // terminate the test run
+          subscription.dispose();
+        });
+      }
+      else {
+        this.log.info(`Running test(s) ${JSON.stringify(request.include)}`);
+      }
+    
+      // Loop through all included tests, or all known tests, and add them to our queue
+      if (request.include) {
+        request.include.forEach(test => queue.push(test));
+        
+        // For every test that was queued, try to run it. Call run.passed() or run.failed()
+        while (queue.length > 0 && !token.isCancellationRequested) {
+          const test = queue.pop()!;
 
-        test.children.forEach(test => queue.push(test));
+          // Skip tests the user asked to exclude
+          if (request.exclude?.includes(test)) {
+            continue;
+          }
+
+          await this.runNode(test, context);
+
+          test.children.forEach(test => queue.push(test));
+        }
+        if (token.isCancellationRequested) {
+          this.log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
+        }
+      } else {
+        await this.runNode(null, context);
       }
-      if (token.isCancellationRequested) {
-        this.log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
-      }
-    } else {
-      await this.runNode(null, context);
     }
-  
-    // Make sure to end the run after all tests have been executed:
-    context.testRun.end();
+    finally {
+      // Make sure to end the run after all tests have been executed:
+      context.testRun.end();
+    }
+  }
+
+  private async startDebugging(debuggerConfig: vscode.DebugConfiguration): Promise<vscode.DebugSession> {
+    const debugSessionPromise = new Promise<vscode.DebugSession>((resolve, reject) => {
+
+      let subscription: vscode.Disposable | undefined;
+      subscription = vscode.debug.onDidStartDebugSession(debugSession => {
+        if ((debugSession.name === debuggerConfig.name) && subscription) {
+          resolve(debugSession);
+          subscription.dispose();
+          subscription = undefined;
+        }
+      });
+
+      setTimeout(() => {
+        if (subscription) {
+          reject(new Error('Debug session failed to start within 5 seconds'));
+          subscription.dispose();
+          subscription = undefined;
+        }
+      }, 5000);
+    });
+
+    if (!this.workspace) {
+      throw new Error("Cannot debug without a folder open")
+    }
+
+    const started = await vscode.debug.startDebugging(this.workspace, debuggerConfig);
+    if (started) {
+      return await debugSessionPromise;
+    } else {
+      throw new Error('Debug session couldn\'t be started');
+    }
+  }
+
+  private onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
+    return vscode.debug.onDidTerminateDebugSession(cb);
   }
 
   /**
@@ -233,7 +304,6 @@ export abstract class TestRunner implements vscode.Disposable {
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     if (node == null) {
-      //this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: node.id, state: 'running' });
       this.controller.items.forEach((testSuite) => {
         this.enqueTestAndChildren(testSuite, context)
       })
