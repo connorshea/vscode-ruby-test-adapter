@@ -12,5 +12,5 @@
     "noUnusedLocals": true,
     "removeComments": true,
     "skipLibCheck": true
-  },
+  }
 }
