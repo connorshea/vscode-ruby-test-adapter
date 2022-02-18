@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
+import * as path from 'path';
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
 
@@ -111,7 +112,7 @@ export class RspecTestRunner extends TestRunner {
    * @return The spec directory
    */
   protected getCustomFormatterLocation(): string {
-    return this.context.asAbsolutePath('./custom_formatter.rb');
+    return path.join(this.rubyScriptPath, '/custom_formatter.rb');
   }
 
   /**
@@ -136,7 +137,7 @@ export class RspecTestRunner extends TestRunner {
    */
   protected getProcessEnv(): any {
     return Object.assign({}, process.env, {
-      "EXT_DIR": this.getRubyScriptsLocation(),
+      "EXT_DIR": this.rubyScriptPath,
     });
   }
 

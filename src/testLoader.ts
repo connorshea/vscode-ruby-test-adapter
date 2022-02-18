@@ -10,8 +10,7 @@ export abstract class TestLoader implements vscode.Disposable {
 
   constructor(
     protected readonly log: IVSCodeExtLogger,
-    protected readonly context: vscode.ExtensionContext,
-    protected readonly workspace: vscode.WorkspaceFolder | null,
+    protected readonly workspace: vscode.WorkspaceFolder | undefined,
     protected readonly controller: vscode.TestController,
     protected readonly testRunner: RspecTestRunner | MinitestTestRunner
   ) {
@@ -200,7 +199,12 @@ export abstract class TestLoader implements vscode.Disposable {
 
     // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
     // but with the latter's first character stripped.
-    let currentFileAsAbsolutePath = `${this.workspace?.uri.fsPath}${currentFile.substring(1)}`;
+    let testDir = this.getTestDirectory()
+    if (!testDir) {
+      this.log.fatal("No test folder configured or workspace folder open")
+      throw new Error("Missing test folders")
+    }
+    let currentFileAsAbsolutePath = path.join(testDir, currentFile);
 
     let currentFileTestSuite: vscode.TestItem = this.controller.createTestItem(
       currentFile,

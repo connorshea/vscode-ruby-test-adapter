@@ -73,15 +73,6 @@ export class MinitestTestRunner extends TestRunner {
   }
 
   /**
-   * Get the absolute path of the custom_formatter.rb file.
-   *
-   * @return The spec directory
-   */
-  protected getRubyScriptsLocation(): string {
-    return this.context.asAbsolutePath('./ruby');
-  }
-
-  /**
    * Get the env vars to run the subprocess with.
    *
    * @return The env
@@ -89,7 +80,7 @@ export class MinitestTestRunner extends TestRunner {
   protected getProcessEnv(): any {
     return Object.assign({}, process.env, {
       "RAILS_ENV": "test",
-      "EXT_DIR": this.getRubyScriptsLocation(),
+      "EXT_DIR": this.rubyScriptPath,
       "TESTS_DIR": this.getTestDirectory(),
       "TESTS_PATTERN": this.getFilePattern().join(',')
     });

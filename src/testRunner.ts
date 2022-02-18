@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
-import * as split2 from 'split2';
+import split2 from 'split2';
 import { IVSCodeExtLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
@@ -17,10 +17,10 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param log The Test Adapter logger, for logging.
    */
   constructor(
-    protected context: vscode.ExtensionContext,
+    protected rubyScriptPath: string,
     protected log: IVSCodeExtLogger,
-    protected workspace: vscode.WorkspaceFolder | null,
-    protected controller: vscode.TestController
+    protected workspace: vscode.WorkspaceFolder | undefined,
+    protected controller: vscode.TestController,
   ) {}
 
   /**
@@ -195,7 +195,7 @@ export abstract class TestRunner implements vscode.Disposable {
 
       if (debuggerConfig) {
         this.log.info(`Debugging test(s) ${JSON.stringify(request.include)}`);
-    
+
         if (!this.workspace) {
           this.log.error("Cannot debug without a folder opened")
           context.testRun.end()
@@ -212,7 +212,7 @@ export abstract class TestRunner implements vscode.Disposable {
           this.killChild();
           return;
         }
-    
+
         const subscription = this.onDidTerminateDebugSession((session) => {
           if (debugSession != session) return;
           this.log.info('Debug session ended');
@@ -223,11 +223,11 @@ export abstract class TestRunner implements vscode.Disposable {
       else {
         this.log.info(`Running test(s) ${JSON.stringify(request.include)}`);
       }
-    
+
       // Loop through all included tests, or all known tests, and add them to our queue
       if (request.include) {
         request.include.forEach(test => queue.push(test));
-        
+
         // For every test that was queued, try to run it. Call run.passed() or run.failed()
         while (queue.length > 0 && !token.isCancellationRequested) {
           const test = queue.pop()!;
@@ -369,15 +369,6 @@ export abstract class TestRunner implements vscode.Disposable {
       this.debugCommandStartedResolver = resolve;
       setTimeout(() => { reject("debugCommandStarted timed out") }, 10000)
     })
-  }
-
-  /**
-   * Get the absolute path of the custom_formatter.rb file.
-   *
-   * @return The spec directory
-   */
-  protected getRubyScriptsLocation(): string {
-    return vscode.Uri.joinPath(this.context.extensionUri, 'ruby').fsPath;
   }
 
   /**

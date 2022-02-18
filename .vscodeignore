@@ -1,9 +1,12 @@
-src/**
-test/**
+src/
+test/
+out/
+node_modules
 **/*.map
 package-lock.json
 tsconfig.json
-.vscode/**
+.vscode/
+.github/
 .gitignore
 *.vsix
-out/test/**
+webpack.config.js

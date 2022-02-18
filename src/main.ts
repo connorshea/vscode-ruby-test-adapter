@@ -3,9 +3,30 @@ import { getExtensionLogger } from "@vscode-logging/logger";
 import { getTestFramework } from './frameworkDetector';
 import { TestFactory } from './testFactory';
 
+export const guessWorkspaceFolder = async () => {
+  if (!vscode.workspace.workspaceFolders) {
+    return undefined;
+  }
+
+  if (vscode.workspace.workspaceFolders.length < 2) {
+    return vscode.workspace.workspaceFolders[0];
+  }
+
+  for (const folder of vscode.workspace.workspaceFolders) {
+    try {
+      await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder.uri, 'src/vs/loader.js'));
+      return folder;
+    } catch {
+      // ignored
+    }
+  }
+
+  return undefined;
+};
+
 export async function activate(context: vscode.ExtensionContext) {
   let config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
-    
+
   const log = getExtensionLogger({
     extName: "RubyTestExplorer",
     level: "info", // See LogLevel type in @vscode-logging/types for possible logLevels
@@ -18,9 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
     log.error("No workspace opened")
   }
 
-  const workspace: vscode.WorkspaceFolder | null = vscode.workspace.workspaceFolders
-    ? vscode.workspace.workspaceFolders[0]
-    : null;
+  const workspace: vscode.WorkspaceFolder | undefined = await guessWorkspaceFolder();
   let testFramework: string = getTestFramework(log);
 
   const debuggerConfig: vscode.DebugConfiguration = {
