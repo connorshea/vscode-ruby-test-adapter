@@ -28,6 +28,7 @@
     "test explorer",
     "test adapter"
   ],
+  "type": "commonjs",
   "main": "out/src/main.js",
   "scripts": {
     "clean": "rimraf out *.vsix",
@@ -36,29 +37,35 @@
     "rebuild": "npm run clean && npm run build",
     "package": "vsce package",
     "publish": "vsce publish",
-    "test:minitest": "npm run build && node ./out/test/runMinitestTests.js",
-    "test:rspec": "npm run build && node ./out/test/runRspecTests.js"
+    "pretest": "npm run rebuild && npm run package",
+    "test": "node ./out/test/runFrameworkTests.js",
+    "test:minitest": "npm run test minitest",
+    "test:rspec": "npm run test rspec",
+    "test:unit": "npm run test unitTests"
   },
   "dependencies": {
     "@vscode-logging/logger": "^1.2.3",
     "split2": "^4.1.0",
-    "tslib": "^2.2.0"
+    "ts-mutex": "^1.0.0",
+    "tslib": "^2.3.1"
   },
   "devDependencies": {
-    "@types/glob": "^7.1.3",
-    "@types/mocha": "^9.0.0",
+    "@types/chai": "^4.3.0",
+    "@types/glob": "^7.2.0",
+    "@types/mocha": "^9.1.0",
     "@types/split2": "^3.2.1",
-    "@types/vscode": "^1.54.0",
-    "glob": "^7.1.6",
-    "jsmockito": "^1.0.5",
-    "mocha": "^9.1.3",
-    "rimraf": "^3.0.0",
-    "typescript": "^4.2.4",
-    "vsce": "^1.87.1",
-    "vscode-test": "^1.5.2"
+    "@types/vscode": "^1.64.0",
+    "@vscode/test-electron": "^2.1.2",
+    "chai": "^4.3.6",
+    "glob": "^7.2.0",
+    "mocha": "^9.2.0",
+    "rimraf": "^3.0.2",
+    "ts-mockito": "^2.6.1",
+    "typescript": "^4.5.5",
+    "vsce": "^2.6.7"
   },
   "engines": {
-    "vscode": "^1.54.0"
+    "vscode": "^1.64.0"
   },
   "extensionDependencies": [],
   "activationEvents": [

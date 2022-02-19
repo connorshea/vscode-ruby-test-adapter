@@ -12,6 +12,7 @@
     "noUnusedLocals": true,
     "removeComments": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": "./",
   }
 }
