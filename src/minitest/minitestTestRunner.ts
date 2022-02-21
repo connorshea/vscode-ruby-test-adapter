@@ -18,7 +18,7 @@ export class MinitestTestRunner extends TestRunner {
     const execArgs: childProcess.ExecOptions = {
       cwd: this.workspace?.uri.fsPath,
       maxBuffer: 8192 * 8192,
-      env: this.getProcessEnv()
+      env: this.config.getProcessEnv()
     };
 
     this.log.info(`Getting a list of Minitest tests in suite with the following command: ${cmd}`);
@@ -60,30 +60,6 @@ export class MinitestTestRunner extends TestRunner {
       `${command}  --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
       ` -- ${process.platform == 'win32' ? '%EXT_DIR%' : '$EXT_DIR'}/debug_minitest.rb`
     );
-  }
-
-  /**
-   * Get the user-configured test directory, if there is one.
-   *
-   * @return The test directory
-   */
-  getTestDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string);
-    return directory || './test/';
-  }
-
-  /**
-   * Get the env vars to run the subprocess with.
-   *
-   * @return The env
-   */
-  protected getProcessEnv(): any {
-    return Object.assign({}, process.env, {
-      "RAILS_ENV": "test",
-      "EXT_DIR": this.rubyScriptPath,
-      "TESTS_DIR": this.getTestDirectory(),
-      "TESTS_PATTERN": this.getFilePattern().join(',')
-    });
   }
 
   /**

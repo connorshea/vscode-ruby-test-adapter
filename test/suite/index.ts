@@ -7,12 +7,16 @@ export function run(): Promise<void> {
   const mocha = new Mocha({
     ui: 'tdd',
     color: true,
-    diff: true
+    diff: true,
+    bail: false,
+    fullTrace: true
   });
 
   const suite = process.env['TEST_SUITE'] ?? ''
 
   return new Promise((success, error) => {
+    console.log(`cwd: ${__dirname}`)
+    console.log(`Test suite path: ${suite}`)
     let testGlob = path.join(suite, '**.test.js')
     glob(testGlob, { cwd: __dirname }, (err, files) => {
       if (err) {

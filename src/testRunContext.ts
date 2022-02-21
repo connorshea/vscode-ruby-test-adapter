@@ -1,9 +1,10 @@
 import * as vscode from 'vscode'
-import { IVSCodeExtLogger } from '@vscode-logging/logger'
+import { IChildLogger } from '@vscode-logging/logger'
+import { Config } from './config'
 
 /**
  * Test run context
- * 
+ *
  * Contains all objects used for interacting with VS Test API while tests are running
  */
 export class TestRunContext {
@@ -19,10 +20,11 @@ export class TestRunContext {
    * @param debuggerConfig A VS Code debugger configuration.
    */
   constructor(
-    public readonly log: IVSCodeExtLogger,
+    public readonly log: IChildLogger,
     public readonly token: vscode.CancellationToken,
     request: vscode.TestRunRequest,
     private readonly controller: vscode.TestController,
+    public readonly config: Config,
     public readonly debuggerConfig?: vscode.DebugConfiguration
   ) {
     this.testRun = controller.createTestRun(request)
@@ -46,7 +48,7 @@ export class TestRunContext {
 
   /**
    * Indicates a test has errored.
-   * 
+   *
    * This differs from the "failed" state in that it indicates a test that couldn't be executed at all, from a compilation error for example
    *
    * @param testId ID of the test item to update.

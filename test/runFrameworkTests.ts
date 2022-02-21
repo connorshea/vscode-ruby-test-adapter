@@ -1,9 +1,7 @@
 import * as path from 'path'
 import { runTests, downloadAndUnzipVSCode } from '@vscode/test-electron';
 
-//require('module-alias/register')
-
-const extensionDevelopmentPath = path.resolve(__dirname, '../');
+const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 const allowedSuiteArguments = ["rspec", "minitest", "unitTests"]
 
 async function main(framework: string) {
@@ -22,7 +20,7 @@ async function main(framework: string) {
  *   the extension test will download the latest stable VS code to run the tests with
  */
 async function runTestSuite(vscodeExecutablePath: string, suite: string) {
-  let testsPath = path.resolve(extensionDevelopmentPath, `test/suite`)
+  let testsPath = path.resolve(__dirname, `suite`)
   let fixturesPath = path.resolve(extensionDevelopmentPath, `test/fixtures/${suite}`)
 
   console.debug(`testsPath: ${testsPath}`)
@@ -32,7 +30,7 @@ async function runTestSuite(vscodeExecutablePath: string, suite: string) {
     extensionDevelopmentPath,
     extensionTestsPath: testsPath,
     extensionTestsEnv: { "TEST_SUITE": suite },
-    launchArgs: suite == "unitTests" ? [] : [fixturesPath],
+    launchArgs: [fixturesPath],
     vscodeExecutablePath: vscodeExecutablePath
   }).catch((error: any) => {
     console.error(error);

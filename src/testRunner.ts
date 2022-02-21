@@ -1,34 +1,33 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
 import split2 from 'split2';
-import { IVSCodeExtLogger } from '@vscode-logging/logger';
+import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
+import { Config } from './config';
+import { RspecConfig } from './rspec/rspecConfig';
+import { MinitestConfig } from './minitest/minitestConfig';
 
 export abstract class TestRunner implements vscode.Disposable {
   protected currentChildProcess: childProcess.ChildProcess | undefined;
   protected testSuite: vscode.TestItem[] | undefined;
   protected debugCommandStartedResolver: Function | undefined;
   protected disposables: { dispose(): void }[] = [];
+  protected readonly log: IChildLogger;
 
   /**
-   * @param context Extension context provided by vscode.
-   * @param testStatesEmitter An emitter for the test suite's state.
    * @param log The Test Adapter logger, for logging.
+   * @param workspace Open workspace folder
+   * @param controller Test controller that holds the test suite
    */
   constructor(
-    protected rubyScriptPath: string,
-    protected log: IVSCodeExtLogger,
+    rootLog: IChildLogger,
     protected workspace: vscode.WorkspaceFolder | undefined,
     protected controller: vscode.TestController,
-  ) {}
-
-  /**
-   * Get the env vars to run the subprocess with.
-   *
-   * @return The env
-   */
-  protected abstract getProcessEnv(): any
+    protected config: RspecConfig | MinitestConfig
+  ) {
+    this.log = rootLog.getChildLogger({label: "TestRunner"})
+  }
 
   /**
    * Initialise the test framework, parse tests (without executing) and retrieve the output
@@ -52,23 +51,6 @@ export abstract class TestRunner implements vscode.Disposable {
       this.currentChildProcess.kill();
     }
   }
-
-  /**
-  * Get the user-configured test file pattern.
-  *
-  * @return The file pattern
-  */
-  getFilePattern(): Array<string> {
-    let pattern: Array<string> = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('filePattern') as Array<string>);
-    return pattern || ['*_test.rb', 'test_*.rb'];
-  }
-
-  /**
-   * Get the user-configured test directory, if there is one.
-   *
-   * @return The test directory
-   */
-  abstract getTestDirectory(): string;
 
   /**
    * Pull JSON out of the test framework output.
@@ -181,6 +163,7 @@ export abstract class TestRunner implements vscode.Disposable {
   public async runHandler(
     request: vscode.TestRunRequest,
     token: vscode.CancellationToken,
+    config: Config,
     debuggerConfig?: vscode.DebugConfiguration
   ) {
     const context = new TestRunContext(
@@ -188,6 +171,7 @@ export abstract class TestRunner implements vscode.Disposable {
       token,
       request,
       this.controller,
+      config,
       debuggerConfig
     )
     try {
@@ -416,7 +400,7 @@ export abstract class TestRunner implements vscode.Disposable {
       const spawnArgs: childProcess.SpawnOptions = {
         cwd: this.workspace?.uri.fsPath,
         shell: true,
-        env: this.getProcessEnv()
+        env: context.config.getProcessEnv()
       };
 
       this.log.info(`Running command: ${testCommand}`);
@@ -484,24 +468,24 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the test.
    */
-  protected abstract getSingleTestCommand(testLocation: string, context: TestRunContext): string;
+   protected abstract getSingleTestCommand(testLocation: string, context: TestRunContext): string;
 
-  /**
-   * Gets the command to run tests in a given file.
-   *
-   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
-   * @param context Test run context
-   * @return The raw output from running the tests.
-   */
-  protected abstract getTestFileCommand(testFile: string, context: TestRunContext): string;
+   /**
+    * Gets the command to run tests in a given file.
+    *
+    * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
+    * @param context Test run context
+    * @return The raw output from running the tests.
+    */
+   protected abstract getTestFileCommand(testFile: string, context: TestRunContext): string;
 
-  /**
-   * Gets the command to run the full test suite for the current workspace.
-   *
-   * @param context Test run context
-   * @return The raw output from running the test suite.
-   */
-  protected abstract getFullTestSuiteCommand(context: TestRunContext): string;
+   /**
+    * Gets the command to run the full test suite for the current workspace.
+    *
+    * @param context Test run context
+    * @return The raw output from running the test suite.
+    */
+   protected abstract getFullTestSuiteCommand(context: TestRunContext): string;
 
   /**
    * Handles test state based on the output returned by the test command.
@@ -509,5 +493,5 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param test The test that we want to handle.
    * @param context Test run context
    */
-  protected abstract handleStatus(test: any, context: TestRunContext): void;
+   protected abstract handleStatus(test: any, context: TestRunContext): void;
 }

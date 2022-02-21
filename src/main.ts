@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import { getExtensionLogger } from "@vscode-logging/logger";
-import { getTestFramework } from './frameworkDetector';
 import { TestFactory } from './testFactory';
+import { RspecConfig } from './rspec/rspecConfig';
+import { MinitestConfig } from './minitest/minitestConfig';
+import { Config } from './config';
 
 export const guessWorkspaceFolder = async () => {
   if (!vscode.workspace.workspaceFolders) {
@@ -25,35 +27,39 @@ export const guessWorkspaceFolder = async () => {
 };
 
 export async function activate(context: vscode.ExtensionContext) {
-  let config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
+  let extensionConfig = vscode.workspace.getConfiguration('rubyTestExplorer', null)
 
   const log = getExtensionLogger({
     extName: "RubyTestExplorer",
-    level: "info", // See LogLevel type in @vscode-logging/types for possible logLevels
+    level: "debug", // See LogLevel type in @vscode-logging/types for possible logLevels
     logPath: context.logUri.fsPath, // The logPath is only available from the `vscode.ExtensionContext`
     logOutputChannel: vscode.window.createOutputChannel("Ruby Test Explorer log"), // OutputChannel for the logger
-    sourceLocationTracking: false,
-    logConsole: (config.get('logPanel') as boolean) // define if messages should be logged to the consol
+    sourceLocationTracking: true,
+    logConsole: (extensionConfig.get('logPanel') as boolean) // define if messages should be logged to the consol
   });
   if (vscode.workspace.workspaceFolders == undefined) {
     log.error("No workspace opened")
   }
 
   const workspace: vscode.WorkspaceFolder | undefined = await guessWorkspaceFolder();
-  let testFramework: string = getTestFramework(log);
+  let testFramework: string = Config.getTestFramework(log);
+
+  let testConfig = testFramework == "rspec"
+    ? new RspecConfig(context)
+    : new MinitestConfig(context)
 
   const debuggerConfig: vscode.DebugConfiguration = {
     name: "Debug Ruby Tests",
     type: "Ruby",
     request: "attach",
-    remoteHost: config.get('debuggerHost') || "127.0.0.1",
-    remotePort: config.get('debuggerPort') || "1234",
+    remoteHost: extensionConfig.get('debuggerHost') || "127.0.0.1",
+    remotePort: extensionConfig.get('debuggerPort') || "1234",
     remoteWorkspaceRoot: "${workspaceRoot}"
   }
 
   if (testFramework !== "none") {
     const controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
-    const testLoaderFactory = new TestFactory(log, context, workspace, controller);
+    const testLoaderFactory = new TestFactory(log, workspace, controller, testConfig);
     context.subscriptions.push(controller);
 
     testLoaderFactory.getLoader().loadAllTests();
@@ -70,13 +76,13 @@ export async function activate(context: vscode.ExtensionContext) {
     controller.createRunProfile(
       'Run',
       vscode.TestRunProfileKind.Run,
-      (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
+      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, testConfig),
       true // Default run profile
     );
     controller.createRunProfile(
       'Debug',
       vscode.TestRunProfileKind.Debug,
-      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, debuggerConfig)
+      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, testConfig, debuggerConfig)
     );
   }
   else {

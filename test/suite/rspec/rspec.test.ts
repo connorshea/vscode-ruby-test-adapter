@@ -1,86 +1,83 @@
 import * as assert from 'assert';
-import { instance, mock/*, reset, spy, when*/ } from 'ts-mockito'
-//import * as path from 'path';
 import * as vscode from 'vscode';
-import { NOOP_LOGGER } from '../../stubs/noopLogger';
-import { RspecTestLoader } from '../../../src/rspec/rspecTestLoader';
+import * as path from 'path'
+import { instance, reset } from 'ts-mockito'
+import { setupMockTestController, stdout_logger, testItemCollectionMatches } from '../helpers';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
+import { TestLoader } from '../../../src/testLoader';
+import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
 suite('Extension Test for RSpec', function() {
-  let mockTestController = mock<vscode.TestController>()
+  let mockTestController: vscode.TestController
+  let testController: vscode.TestController
+  let workspaceFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders![0]
 
-  let workspaceFolder: vscode.WorkspaceFolder | undefined = undefined; // stub this
-  let testController: vscode.TestController = instance(mockTestController);
   let testRunner: RspecTestRunner;
-  let testLoader: RspecTestLoader;
+  let testLoader: TestLoader;
 
-  //let getTestRunner = () => new RspecTestRunner("", NOOP_LOGGER, workspaceFolder, testController)
-  let getTestLoader = () => new RspecTestLoader(NOOP_LOGGER, workspaceFolder, testController, testRunner)
+  this.beforeEach(async function() {
+    mockTestController = setupMockTestController()
+    testController = instance(mockTestController)
+    let config = new RspecConfig(path.resolve("./ruby"))
+    testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config)
+    testLoader = new TestLoader(stdout_logger(), workspaceFolder, testController, testRunner, config);
+  })
+
+  this.afterEach(function () {
+    reset(mockTestController)
+  })
 
   test('Load all tests', async function() {
-    testLoader = getTestLoader();
-    //const dirPath = vscode.workspace.workspaceFolders![0].uri.path
-
     await testLoader.loadAllTests()
 
-    assert.fail("Not yet fixed for new API")
-    // assert.notDeepEqual(
-    //   testController.items,
-    //   [
-    //       {
-    //         file: path.resolve(dirPath, "spec/abs_spec.rb"),
-    //         id: "./spec/abs_spec.rb",
-    //         label: "abs_spec.rb",
-    //         type: "suite",
-    //         children: [
-    //           {
-    //             file: path.resolve(dirPath, "spec/abs_spec.rb"),
-    //             id: "./spec/abs_spec.rb[1:1]",
-    //             label: "finds the absolute value of 1",
-    //             line: 3,
-    //             type: "test"
-    //           },
-    //           {
-    //             file: path.resolve(dirPath, "spec/abs_spec.rb"),
-    //             id: "./spec/abs_spec.rb[1:2]",
-    //             label: "finds the absolute value of 0",
-    //             line: 7,
-    //             type: "test"
-    //           },
-    //           {
-    //             file: path.resolve(dirPath, "spec/abs_spec.rb"),
-    //             id: "./spec/abs_spec.rb[1:3]",
-    //             label: "finds the absolute value of -1",
-    //             line: 11,
-    //             type: "test"
-    //           }
-    //         ]
-    //       },
-    //       {
-    //         file: path.resolve(dirPath, "spec/square_spec.rb"),
-    //         id: "./spec/square_spec.rb",
-    //         label: "square_spec.rb",
-    //         type: "suite",
-    //         children: [
-    //           {
-    //             file: path.resolve(dirPath, "spec/square_spec.rb"),
-    //             id: "./spec/square_spec.rb[1:1]",
-    //             label: "finds the square of 2",
-    //             line: 3,
-    //             type: "test"
-    //           },
-    //           {
-    //             file: path.resolve(dirPath, "spec/square_spec.rb"),
-    //             id: "./spec/square_spec.rb[1:2]",
-    //             label: "finds the square of 3",
-    //             line: 7,
-    //             type: "test"
-    //           }
-    //         ]
-    //       }
-    //     ]
-    //   } as TestSuiteInfo
-    // )
+    const testSuite = testController.items
+    testItemCollectionMatches(testSuite, [
+        {
+          file: "spec/abs_spec.rb",
+          id: "abs_spec.rb",
+          label: "abs_spec.rb",
+          children: [
+            {
+              file: "spec/abs_spec.rb",
+              id: "abs_spec.rb[1:1]",
+              label: "finds the absolute value of 1",
+              line: 3,
+            },
+            {
+              file: "spec/abs_spec.rb",
+              id: "abs_spec.rb[1:2]",
+              label: "finds the absolute value of 0",
+              line: 7,
+            },
+            {
+              file: "spec/abs_spec.rb",
+              id: "abs_spec.rb[1:3]",
+              label: "finds the absolute value of -1",
+              line: 11,
+            }
+          ]
+        },
+        {
+          file: "spec/square_spec.rb",
+          id: "square_spec.rb",
+          label: "square_spec.rb",
+          children: [
+            {
+              file: "spec/square_spec.rb",
+              id: "square_spec.rb[1:1]",
+              label: "finds the square of 2",
+              line: 3,
+            },
+            {
+              file: "spec/square_spec.rb",
+              id: "square_spec.rb[1:2]",
+              label: "finds the square of 3",
+              line: 7,
+            }
+          ]
+        }
+      ]
+    )
   })
 
   test('run test success', async function() {

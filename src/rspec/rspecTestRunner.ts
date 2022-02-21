@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
-import * as path from 'path';
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
+import { RspecConfig } from './rspecConfig';
 
 export class RspecTestRunner extends TestRunner {
   /**
@@ -10,8 +10,9 @@ export class RspecTestRunner extends TestRunner {
    *
    * @return The raw output from the RSpec JSON formatter.
    */
-  initTests = async (/*testFilePath: string | null*/) => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getTestCommandWithFilePattern()} --require ${this.getCustomFormatterLocation()}`
+  initTests = async () => new Promise<string>((resolve, reject) => {
+    let cfg = this.config as RspecConfig
+    let cmd = `${cfg.getTestCommandWithFilePattern()} --require ${cfg.getCustomFormatterLocation()}`
               + ` --format CustomFormatter --order defined --dry-run`;
 
     // TODO: Only reload single file on file changed
@@ -20,6 +21,8 @@ export class RspecTestRunner extends TestRunner {
     // }
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
+    this.log.debug(`cwd: ${__dirname}`)
+    this.log.debug(`child process cwd: ${this.workspace?.uri.fsPath}`)
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
@@ -57,101 +60,6 @@ export class RspecTestRunner extends TestRunner {
       resolve(stdout);
     });
   });
-
-  /**
-   * Get the user-configured RSpec command, if there is one.
-   *
-   * @return The RSpec command
-   */
-  protected getTestCommand(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
-    return command || `bundle exec rspec`
-  }
-
-  /**
-   * Get the user-configured rdebug-ide command, if there is one.
-   *
-   * @return The rdebug-ide command
-   */
-  protected getDebugCommand(debuggerConfig: vscode.DebugConfiguration, args: string): string {
-    let command: string =
-      (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
-      'rdebug-ide';
-
-    return (
-      `${command} --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
-      ` -- ${process.platform == 'win32' ? '%EXT_DIR%' : '$EXT_DIR'}/debug_rspec.rb ${args}`
-    );
-  }
-  /**
-   * Get the user-configured RSpec command and add file pattern detection.
-   *
-   * @return The RSpec command
-   */
-  protected getTestCommandWithFilePattern(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
-    const dir = this.getTestDirectory();
-    let pattern = this.getFilePattern().map(p => `${dir}/**/${p}`).join(',')
-    command = command || `bundle exec rspec`
-    return `${command} --pattern '${pattern}'`;
-  }
-
-  /**
-   * Get the user-configured test directory, if there is one.
-   *
-   * @return The spec directory
-   */
-  getTestDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string);
-    return directory || './spec/';
-  }
-
-  /**
-   * Get the absolute path of the custom_formatter.rb file.
-   *
-   * @return The spec directory
-   */
-  protected getCustomFormatterLocation(): string {
-    return path.join(this.rubyScriptPath, '/custom_formatter.rb');
-  }
-
-  /**
-   * Get test command with formatter and debugger arguments
-   *
-   * @param debuggerConfig A VS Code debugger configuration.
-   * @return The test command
-   */
-  protected testCommandWithFormatterAndDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
-    let args = `--require ${this.getCustomFormatterLocation()} --format CustomFormatter`
-    let cmd = `${this.getTestCommand()} ${args}`
-    if (debuggerConfig) {
-      cmd = this.getDebugCommand(debuggerConfig, args);
-    }
-    return cmd
-  }
-
-  /**
-   * Get the env vars to run the subprocess with.
-   *
-   * @return The env
-   */
-  protected getProcessEnv(): any {
-    return Object.assign({}, process.env, {
-      "EXT_DIR": this.rubyScriptPath,
-    });
-  }
-
-  protected getSingleTestCommand(testLocation: string, context: TestRunContext): string {
-    return `${this.testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testLocation}'`
-  };
-
-  protected getTestFileCommand(testFile: string, context: TestRunContext): string {
-    return `${this.testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testFile}'`
-  };
-
-  protected getFullTestSuiteCommand(context: TestRunContext): string {
-    return this.testCommandWithFormatterAndDebugger(context.debuggerConfig)
-  };
 
   /**
    * Handles test state based on the output returned by the custom RSpec formatter.
@@ -208,5 +116,17 @@ export class RspecTestRunner extends TestRunner {
         test.line_number
       )
     }
+  };
+
+  protected getSingleTestCommand(testLocation: string, context: TestRunContext): string {
+    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testLocation}'`
+  };
+
+  protected getTestFileCommand(testFile: string, context: TestRunContext): string {
+    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testFile}'`
+  };
+
+  protected getFullTestSuiteCommand(context: TestRunContext): string {
+    return (this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)
   };
 }
