@@ -282,7 +282,7 @@ export class TestLoader implements vscode.Disposable {
         return
 
       const filename = document.uri.fsPath;
-      this.log.info(`${filename} was saved - checking if this effects ${this.workspace.uri.fsPath}`);
+      this.log.info(`${filename} was saved - checking if this affects ${this.workspace.uri.fsPath}`);
       if (filename.startsWith(this.workspace.uri.fsPath)) {
         let testDirectory = this.getTestDirectory();
 

@@ -8,7 +8,6 @@ import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 //import { expect } from 'chai';
 import { StubTestController } from '../../stubs/stubTestController';
-import { StubCancellationToken } from '../../stubs/stubCancellationToken';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
@@ -82,8 +81,8 @@ suite('Extension Test for RSpec', function() {
 
     let mockRequest = setupMockRequest(testController, "square_spec.rb")
     let request = instance(mockRequest)
-    let token = new StubCancellationToken()
-    await testRunner.runHandler(request, token)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 

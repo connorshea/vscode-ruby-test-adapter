@@ -387,11 +387,10 @@ export abstract class TestRunner implements vscode.Disposable {
    * @returns Raw output from process
    */
   protected async spawnCancellableChild (testCommand: string, context: TestRunContext): Promise<string> {
-    context.token.onCancellationRequested = () => {
+    context.token.onCancellationRequested(() => {
       this.log.debug("Cancellation requested")
       this.killChild()
-      return {dispose: () => {}}
-    }
+    })
 
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,

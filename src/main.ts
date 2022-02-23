@@ -34,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext) {
     level: "debug", // See LogLevel type in @vscode-logging/types for possible logLevels
     logPath: context.logUri.fsPath, // The logPath is only available from the `vscode.ExtensionContext`
     logOutputChannel: vscode.window.createOutputChannel("Ruby Test Explorer log"), // OutputChannel for the logger
-    sourceLocationTracking: true,
+    sourceLocationTracking: false,
     logConsole: (extensionConfig.get('logPanel') as boolean) // define if messages should be logged to the consol
   });
   if (vscode.workspace.workspaceFolders == undefined) {
