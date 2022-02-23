@@ -4,3 +4,5 @@ out/
 ruby/Gemfile.lock
 /.vscode-test
 *.vsix
+.rbenv-gemsets
+.ruby-version

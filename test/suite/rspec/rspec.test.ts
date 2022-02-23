@@ -6,7 +6,6 @@ import { setupMockRequest, stdout_logger, testItemCollectionMatches, TestItemExp
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
-//import { expect } from 'chai';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {
@@ -15,6 +14,8 @@ suite('Extension Test for RSpec', function() {
 
   let testRunner: RspecTestRunner;
   let testLoader: TestLoader;
+
+  const dirPath = vscode.workspace.workspaceFolders![0].uri.path
 
   this.beforeEach(async function() {
     testController = new StubTestController()
@@ -29,24 +30,24 @@ suite('Extension Test for RSpec', function() {
     const testSuite = testController.items
     testItemCollectionMatches(testSuite, [
         {
-          file: "spec/abs_spec.rb",
+          file: path.resolve(dirPath, "spec/abs_spec.rb"),
           id: "abs_spec.rb",
           label: "abs_spec.rb",
           children: [
             {
-              file: "spec/abs_spec.rb",
+              file: path.resolve(dirPath, "spec/abs_spec.rb"),
               id: "abs_spec.rb[1:1]",
               label: "finds the absolute value of 1",
               line: 3,
             },
             {
-              file: "spec/abs_spec.rb",
+              file: path.resolve(dirPath, "spec/abs_spec.rb"),
               id: "abs_spec.rb[1:2]",
               label: "finds the absolute value of 0",
               line: 7,
             },
             {
-              file: "spec/abs_spec.rb",
+              file: path.resolve(dirPath, "spec/abs_spec.rb"),
               id: "abs_spec.rb[1:3]",
               label: "finds the absolute value of -1",
               line: 11,
@@ -54,18 +55,18 @@ suite('Extension Test for RSpec', function() {
           ]
         },
         {
-          file: "spec/square_spec.rb",
+          file: path.resolve(dirPath, "spec/square_spec.rb"),
           id: "square_spec.rb",
           label: "square_spec.rb",
           children: [
             {
-              file: "spec/square_spec.rb",
+              file: path.resolve(dirPath, "spec/square_spec.rb"),
               id: "square_spec.rb[1:1]",
               label: "finds the square of 2",
               line: 3,
             },
             {
-              file: "spec/square_spec.rb",
+              file: path.resolve(dirPath, "spec/square_spec.rb"),
               id: "square_spec.rb[1:2]",
               label: "finds the square of 3",
               line: 7,
@@ -88,7 +89,7 @@ suite('Extension Test for RSpec', function() {
 
     let expectation: TestItemExpectation = {
       id: "square_spec.rb[1:1]",
-      file: "./spec/square_spec.rb",
+      file: path.resolve(dirPath, "./spec/square_spec.rb"),
       label: "finds the square of 2",
       line: 3
     }

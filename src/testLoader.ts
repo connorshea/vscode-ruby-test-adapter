@@ -58,7 +58,7 @@ export class TestLoader implements vscode.Disposable {
         this.log.error('JSON parsing failed', error);
       }
 
-      let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
+      let tests: Array<ParsedTest> = [];
 
       testMetadata.examples.forEach(
         (test: ParsedTest) => {
@@ -128,6 +128,8 @@ export class TestLoader implements vscode.Disposable {
    */
   private async getBaseTestSuite(tests: ParsedTest[]): Promise<vscode.TestItem[]> {
     let testSuite: vscode.TestItem[] = []
+    let testCount = 0
+    let dirPath = this.getTestDirectory() ?? '.'
 
     // Create an array of all test files and then abuse Sets to make it unique.
     let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
@@ -138,6 +140,9 @@ export class TestLoader implements vscode.Disposable {
 
     // Remove the spec/ directory from all the file path.
     uniqueFiles.forEach((file) => {
+      if (file.startsWith(path.sep)) {
+        file = file.substring(1)
+      }
       splitFilesArray.push(file.split('/'));
     });
 
@@ -154,23 +159,26 @@ export class TestLoader implements vscode.Disposable {
     // A nested loop to iterate through the direct subdirectories of spec/ and then
     // organize the files under those subdirectories.
     subdirectories.forEach((directory) => {
-      let dirPath = path.join(this.getTestDirectory() ?? '', directory)
-      this.log.debug(`dirPath: ${dirPath}`)
+      let subDirPath = path.join(dirPath, directory)
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        return file.startsWith(dirPath);
+        let fullFilePath = path.resolve(subDirPath, file)
+        this.log.debug(`Checking to see if ${fullFilePath} is in dir ${subDirPath}`)
+        return fullFilePath.startsWith(subDirPath);
       });
       this.log.debug(`Files in subdirectory (${directory}):`, uniqueFilesInDirectory)
 
-      let directoryTestSuite: vscode.TestItem = this.controller.createTestItem(directory, directory, vscode.Uri.file(dirPath));
+      let directoryTestSuite: vscode.TestItem = this.controller.createTestItem(directory, directory, vscode.Uri.file(subDirPath));
       //directoryTestSuite.description = directory
 
       // Get the sets of tests for each file in the current directory.
       uniqueFilesInDirectory.forEach((currentFile: string) => {
-        let currentFileTestSuite = this.getTestSuiteForFile({ tests, currentFile, directory });
+        let currentFileTestSuite = this.getTestSuiteForFile(tests, currentFile, dirPath);
         directoryTestSuite.children.add(currentFileTestSuite);
+        testCount += currentFileTestSuite.children.size + 1
       });
 
       testSuite.push(directoryTestSuite);
+      testCount++
     });
 
     // Sort test suite types alphabetically.
@@ -183,45 +191,39 @@ export class TestLoader implements vscode.Disposable {
     this.log.debug(`Files in top directory:`, topDirectoryFiles)
 
     topDirectoryFiles.forEach((currentFile) => {
-      let currentFileTestSuite = this.getTestSuiteForFile({ tests, currentFile });
+      let currentFileTestSuite = this.getTestSuiteForFile(tests, currentFile, dirPath);
       testSuite.push(currentFileTestSuite);
+      testCount += currentFileTestSuite.children.size + 1
     });
 
+    this.log.debug(`Returning ${testCount} test cases`)
     return testSuite;
   }
 
   /**
    * Get the tests in a given file.
+   *
+   * @param tests Parsed output from framework
+   * @param currentFile Name of the file we're checking for tests
+   * @param dirPath Full path to the root test folder
    */
-   public getTestSuiteForFile(
-    { tests, currentFile, directory }: {
-      tests: Array<{
-        id: string;
-        full_description: string;
-        description: string;
-        file_path: string;
-        line_number: number;
-        location: number;
-      }>; currentFile: string; directory?: string;
-    }): vscode.TestItem {
+  public getTestSuiteForFile(tests: Array<ParsedTest>, currentFile: string, dirPath: string): vscode.TestItem {
     let currentFileTests = tests.filter(test => {
       return test.file_path === currentFile
     });
 
-    let currentFileLabel = directory
-      ? currentFile.replace(`${this.config.getFrameworkTestDirectory()}${directory}/`, '')
-      : currentFile.replace(this.config.getFrameworkTestDirectory(), '');
+    let currentFileSplitName = currentFile.split(path.sep);
+    let currentFileLabel = currentFileSplitName[currentFileSplitName.length - 1]
+    this.log.debug(`currentFileLabel: ${currentFileLabel}`)
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
 
-    // Concatenation of "/Users/username/whatever/project_dir" and "./spec/path/here.rb",
-    // but with the latter's first character stripped.
     let testDir = this.getTestDirectory()
     if (!testDir) {
       this.log.fatal("No test folder configured or workspace folder open")
       throw new Error("Missing test folders")
     }
-    let currentFileAsAbsolutePath = path.join(testDir, currentFile);
+    let currentFileAsAbsolutePath = path.resolve(dirPath, currentFile);
 
     let currentFileTestSuite: vscode.TestItem = this.controller.createTestItem(
       currentFile,

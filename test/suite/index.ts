@@ -36,11 +36,11 @@ export function run(): Promise<void> {
         mocha.run(failures => {
           if (failures > 0) {
             printFailureCount(failures)
-
-            // Failed tests doesn't mean we failed to _run_ the tests :)
-            success();
+            error(`${failures} test failures`)
+          } else {
+            success()
           }
-        });
+        })
       } catch (err) {
         error(err);
       }

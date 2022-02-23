@@ -1,13 +1,8 @@
 import * as vscode from 'vscode'
-import * as path from 'path';
 import { expect } from 'chai'
 import { IVSCodeExtLogger, IChildLogger } from "@vscode-logging/types";
 import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
 import { anyString, anything, instance, mock, when } from 'ts-mockito';
-
-const dirPath = vscode.workspace.workspaceFolders
-  ? vscode.workspace.workspaceFolders[0].uri
-  : vscode.Uri.file(path.resolve('./'))
 
 export function noop() {}
 
@@ -86,7 +81,7 @@ export function testItemMatches(testItem: vscode.TestItem, expectation: TestItem
 
   expect(testItem.id).to.eq(expectation.id, `id mismatch (expected: ${expectation.id})`)
   expect(testItem.uri).to.not.be.undefined
-  expect(testItem.uri?.path).to.eql(vscode.Uri.joinPath(dirPath, expectation.file).path, `uri mismatch (id: ${expectation.id})`)
+  expect(testItem.uri?.path).to.eql(expectation.file, `uri mismatch (id: ${expectation.id})`)
   if (expectation.children && expectation.children.length > 0) {
     expect(testItem.children.size).to.eq(expectation.children.length, `wrong number of children (id: ${expectation.id})`)
     let i = 0;
