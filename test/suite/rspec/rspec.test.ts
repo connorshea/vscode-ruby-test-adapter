@@ -11,15 +11,25 @@ import { StubTestController } from '../../stubs/stubTestController';
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
   let workspaceFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders![0]
-
+  let config: RspecConfig
   let testRunner: RspecTestRunner;
   let testLoader: TestLoader;
 
-  const dirPath = vscode.workspace.workspaceFolders![0].uri.path
+  const dirPath = path.resolve("ruby")
+  let expectedPath = (file: string): string => {
+    return path.resolve(
+      dirPath,
+      '..',
+      'test',
+      'fixtures',
+      'rspec',
+      'spec',
+      file)
+  }
 
   this.beforeEach(async function() {
     testController = new StubTestController()
-    let config = new RspecConfig(path.resolve("./ruby"))
+    config = new RspecConfig(dirPath)
     testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config)
     testLoader = new TestLoader(stdout_logger(), workspaceFolder, testController, testRunner, config);
   })
@@ -28,26 +38,50 @@ suite('Extension Test for RSpec', function() {
     await testLoader.loadAllTests()
 
     const testSuite = testController.items
-    testItemCollectionMatches(testSuite, [
+
+    console.log(`testSuite: ${JSON.stringify(testSuite)}`)
+
+    testItemCollectionMatches(testSuite,
+      [
         {
-          file: path.resolve(dirPath, "spec/abs_spec.rb"),
+          file: expectedPath("subfolder"),
+          id: "subfolder",
+          label: "subfolder",
+          children: [
+            {
+              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+              id: "subfolder/foo_spec.rb",
+              label: "foo_spec.rb",
+              children: [
+                {
+                  file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+                  id: "subfolder/foo_spec.rb[1:1]",
+                  label: "wibbles and wobbles",
+                  line: 3,
+                }
+              ]
+            }
+          ]
+        },
+        {
+          file: expectedPath("abs_spec.rb"),
           id: "abs_spec.rb",
           label: "abs_spec.rb",
           children: [
             {
-              file: path.resolve(dirPath, "spec/abs_spec.rb"),
+              file: expectedPath("abs_spec.rb"),
               id: "abs_spec.rb[1:1]",
               label: "finds the absolute value of 1",
               line: 3,
             },
             {
-              file: path.resolve(dirPath, "spec/abs_spec.rb"),
+              file: expectedPath("abs_spec.rb"),
               id: "abs_spec.rb[1:2]",
               label: "finds the absolute value of 0",
               line: 7,
             },
             {
-              file: path.resolve(dirPath, "spec/abs_spec.rb"),
+              file: expectedPath("abs_spec.rb"),
               id: "abs_spec.rb[1:3]",
               label: "finds the absolute value of -1",
               line: 11,
@@ -55,24 +89,24 @@ suite('Extension Test for RSpec', function() {
           ]
         },
         {
-          file: path.resolve(dirPath, "spec/square_spec.rb"),
+          file: expectedPath("square_spec.rb"),
           id: "square_spec.rb",
           label: "square_spec.rb",
           children: [
             {
-              file: path.resolve(dirPath, "spec/square_spec.rb"),
+              file: expectedPath("square_spec.rb"),
               id: "square_spec.rb[1:1]",
               label: "finds the square of 2",
               line: 3,
             },
             {
-              file: path.resolve(dirPath, "spec/square_spec.rb"),
+              file: expectedPath("square_spec.rb"),
               id: "square_spec.rb[1:2]",
               label: "finds the square of 3",
               line: 7,
             }
           ]
-        }
+        },
       ]
     )
   })
@@ -89,7 +123,7 @@ suite('Extension Test for RSpec', function() {
 
     let expectation: TestItemExpectation = {
       id: "square_spec.rb[1:1]",
-      file: path.resolve(dirPath, "./spec/square_spec.rb"),
+      file: expectedPath("square_spec.rb"),
       label: "finds the square of 2",
       line: 3
     }

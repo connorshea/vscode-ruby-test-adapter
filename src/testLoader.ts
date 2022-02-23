@@ -161,7 +161,7 @@ export class TestLoader implements vscode.Disposable {
     subdirectories.forEach((directory) => {
       let subDirPath = path.join(dirPath, directory)
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        let fullFilePath = path.resolve(subDirPath, file)
+        let fullFilePath = path.resolve(dirPath, file)
         this.log.debug(`Checking to see if ${fullFilePath} is in dir ${subDirPath}`)
         return fullFilePath.startsWith(subDirPath);
       });

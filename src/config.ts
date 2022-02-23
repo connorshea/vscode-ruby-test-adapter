@@ -17,12 +17,12 @@ export abstract class Config {
   /**
    * Printable name of the test framework
    */
-   public abstract frameworkName(): string
+  public abstract frameworkName(): string
 
-   /**
-    * Path in which to look for test files for the test framework in use
-    */
-   public abstract getFrameworkTestDirectory(): string
+  /**
+   * Path in which to look for test files for the test framework in use
+   */
+  public abstract getFrameworkTestDirectory(): string
 
   /**
    * Get the user-configured test file pattern.
@@ -46,9 +46,9 @@ export abstract class Config {
    *
    * @return The env
    */
-   public abstract getProcessEnv(): any
+  public abstract getProcessEnv(): any
 
-   public static getTestFramework(log: IVSCodeExtLogger): string {
+  public static getTestFramework(log: IVSCodeExtLogger): string {
     let testFramework: string = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testFramework') || '';
     // If the test framework is something other than auto, return the value.
     if (['rspec', 'minitest', 'none'].includes(testFramework)) {
