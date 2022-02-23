@@ -18,7 +18,7 @@ export class StubTestItem implements vscode.TestItem {
     this.id = id
     this.label = label
     this.uri = uri
-    this.children = new StubTestItemCollection
+    this.children = new StubTestItemCollection()
     this.tags = []
     this.canResolveChildren = false
     this.busy = false

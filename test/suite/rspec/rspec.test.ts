@@ -1,14 +1,16 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path'
-import { instance, reset } from 'ts-mockito'
-import { setupMockTestController, stdout_logger, testItemCollectionMatches } from '../helpers';
+import { capture, instance } from 'ts-mockito'
+import { setupMockRequest, stdout_logger, testItemCollectionMatches, TestItemExpectation, testItemMatches } from '../helpers';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
+//import { expect } from 'chai';
+import { StubTestController } from '../../stubs/stubTestController';
+import { StubCancellationToken } from '../../stubs/stubCancellationToken';
 
 suite('Extension Test for RSpec', function() {
-  let mockTestController: vscode.TestController
   let testController: vscode.TestController
   let workspaceFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders![0]
 
@@ -16,15 +18,10 @@ suite('Extension Test for RSpec', function() {
   let testLoader: TestLoader;
 
   this.beforeEach(async function() {
-    mockTestController = setupMockTestController()
-    testController = instance(mockTestController)
+    testController = new StubTestController()
     let config = new RspecConfig(path.resolve("./ruby"))
     testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config)
     testLoader = new TestLoader(stdout_logger(), workspaceFolder, testController, testRunner, config);
-  })
-
-  this.afterEach(function () {
-    reset(mockTestController)
   })
 
   test('Load all tests', async function() {
@@ -81,17 +78,25 @@ suite('Extension Test for RSpec', function() {
   })
 
   test('run test success', async function() {
-    assert.fail("Not yet fixed for new API")
-    // await controller.load()
-    // await controller.runTest('./spec/square_spec.rb')
+    await testLoader.loadAllTests()
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./spec/square_spec.rb[1:1]'],
-    //   [
-    //     { state: "passed", test: "./spec/square_spec.rb[1:1]", type: "test" },
-    //     { state: "passed", test: "./spec/square_spec.rb[1:1]", type: "test" }
-    //   ]
-    // )
+    let mockRequest = setupMockRequest(testController, "square_spec.rb")
+    let request = instance(mockRequest)
+    let token = new StubCancellationToken()
+    await testRunner.runHandler(request, token)
+
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
+
+    let expectation: TestItemExpectation = {
+      id: "square_spec.rb[1:1]",
+      file: "./spec/square_spec.rb",
+      label: "finds the square of 2",
+      line: 3
+    }
+    testItemMatches(
+      capture(mockTestRun.passed).first()[0],
+      expectation
+    )
   })
 
   test('run test failure', async function() {

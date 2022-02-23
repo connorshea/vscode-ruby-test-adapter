@@ -9,7 +9,8 @@ export function run(): Promise<void> {
     color: true,
     diff: true,
     bail: false,
-    fullTrace: true
+    fullTrace: true,
+    timeout: 10000,
   });
 
   const suite = process.env['TEST_SUITE'] ?? ''

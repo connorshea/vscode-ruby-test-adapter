@@ -76,13 +76,13 @@ export async function activate(context: vscode.ExtensionContext) {
     controller.createRunProfile(
       'Run',
       vscode.TestRunProfileKind.Run,
-      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, testConfig),
+      (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
       true // Default run profile
     );
     controller.createRunProfile(
       'Debug',
       vscode.TestRunProfileKind.Debug,
-      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, testConfig, debuggerConfig)
+      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, debuggerConfig)
     );
   }
   else {

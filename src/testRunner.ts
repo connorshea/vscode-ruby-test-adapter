@@ -4,7 +4,6 @@ import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
-import { Config } from './config';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
 
@@ -163,7 +162,6 @@ export abstract class TestRunner implements vscode.Disposable {
   public async runHandler(
     request: vscode.TestRunRequest,
     token: vscode.CancellationToken,
-    config: Config,
     debuggerConfig?: vscode.DebugConfiguration
   ) {
     const context = new TestRunContext(
@@ -171,7 +169,7 @@ export abstract class TestRunner implements vscode.Disposable {
       token,
       request,
       this.controller,
-      config,
+      this.config,
       debuggerConfig
     )
     try {
@@ -389,32 +387,26 @@ export abstract class TestRunner implements vscode.Disposable {
    * @returns Raw output from process
    */
   protected async spawnCancellableChild (testCommand: string, context: TestRunContext): Promise<string> {
-    let cancelUnsubscriber = context.token.onCancellationRequested(
-      (e: any) => {
-        this.log.debug("Cancellation requested")
-        this.killChild()
-      },
-      this
-    )
-    try {
-      const spawnArgs: childProcess.SpawnOptions = {
-        cwd: this.workspace?.uri.fsPath,
-        shell: true,
-        env: context.config.getProcessEnv()
-      };
-
-      this.log.info(`Running command: ${testCommand}`);
-
-      let testProcess = childProcess.spawn(
-        testCommand,
-        spawnArgs
-      );
-
-      return await this.handleChildProcess(testProcess, context);
+    context.token.onCancellationRequested = () => {
+      this.log.debug("Cancellation requested")
+      this.killChild()
+      return {dispose: () => {}}
     }
-    finally {
-      cancelUnsubscriber.dispose()
-    }
+
+    const spawnArgs: childProcess.SpawnOptions = {
+      cwd: this.workspace?.uri.fsPath,
+      shell: true,
+      env: context.config.getProcessEnv()
+    };
+
+    this.log.info(`Running command: ${testCommand}`);
+
+    let testProcess = childProcess.spawn(
+      testCommand,
+      spawnArgs
+    );
+
+    return await this.handleChildProcess(testProcess, context);
   }
 
   /**

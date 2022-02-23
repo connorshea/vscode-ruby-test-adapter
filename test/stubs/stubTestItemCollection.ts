@@ -36,6 +36,19 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   }
 
   get(itemId: string): vscode.TestItem | undefined {
-    return this.data[this.testIds[itemId]]
+    let item: vscode.TestItem | undefined = undefined
+    this.data.forEach((child) => {
+      if (!item) {
+        if (child.id === itemId) {
+          item = child
+        } else {
+          let result = child.children.get(itemId)
+          if (result) {
+            item = result
+          }
+        }
+      }
+    })
+    return item
   }
 }

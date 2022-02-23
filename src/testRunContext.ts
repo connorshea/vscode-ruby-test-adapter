@@ -151,6 +151,7 @@ export class TestRunContext {
    * @throws if test item could not be found
    */
   public getTestItem(testId: string): vscode.TestItem {
+    testId = testId.replace(/^\.\/spec\//, '')
     let testItem = this.controller.items.get(testId)
     if (!testItem) {
       throw `Test not found on controller: ${testId}`
