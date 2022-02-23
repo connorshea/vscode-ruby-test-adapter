@@ -45,52 +45,58 @@ export class TestLoader implements vscode.Disposable {
    */
   public async loadAllTests(): Promise<void> {
     this.log.info(`Loading Ruby tests (${this.config.frameworkName()})...`);
-    let output = await this.testRunner.initTests();
-    this.log.debug('Passing raw output from dry-run into getJsonFromOutput', output);
-    output = TestRunner.getJsonFromOutput(output);
-    this.log.debug('Parsing the returnd JSON', output);
-    let testMetadata;
     try {
-      testMetadata = JSON.parse(output);
-    } catch (error) {
-      this.log.error(`JSON parsing failed`, error);
-    }
+      let output = await this.testRunner.initTests();
 
-    let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
-
-    testMetadata.examples.forEach(
-      (test: ParsedTest) => {
-        let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-        let test_location_string: string = test_location_array.join('');
-        test.location = parseInt(test_location_string);
-        test.id = test.id.replace(this.config.getFrameworkTestDirectory(), '')
-        test.file_path = test.file_path.replace(this.config.getFrameworkTestDirectory(), '')
-        tests.push(test);
-        this.log.debug("Parsed test", test)
+      this.log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
+      output = TestRunner.getJsonFromOutput(output);
+      this.log.debug(`Parsing the returnd JSON: ${output}`);
+      let testMetadata;
+      try {
+        testMetadata = JSON.parse(output);
+      } catch (error) {
+        this.log.error('JSON parsing failed', error);
       }
-    );
 
-    this.log.debug("Test output parsed. Building test suite", tests)
-    let testSuite: vscode.TestItem[] = await this.getBaseTestSuite(tests);
+      let tests: Array<{ id: string; full_description: string; description: string; file_path: string; line_number: number; location: number; }> = [];
 
-    // // Sort the children of each test suite based on their location in the test tree.
-    // testSuite.forEach((suite: vscode.TestItem) => {
-    //   // NOTE: This will only sort correctly if everything is nested at the same
-    //   // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
-    //   // introduced, the location is generated as e.g. 1231, which won't
-    //   // sort properly relative to everything else.
-    //   (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
-    //     if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
-    //       let aLocation: number = this.getTestLocation(a as TestInfo);
-    //       let bLocation: number = this.getTestLocation(b as TestInfo);
-    //       return aLocation - bLocation;
-    //     } else {
-    //       return 0;
-    //     }
-    //   })
-    // });
+      testMetadata.examples.forEach(
+        (test: ParsedTest) => {
+          let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
+          let test_location_string: string = test_location_array.join('');
+          test.location = parseInt(test_location_string);
+          test.id = test.id.replace(this.config.getFrameworkTestDirectory(), '')
+          test.file_path = test.file_path.replace(this.config.getFrameworkTestDirectory(), '')
+          tests.push(test);
+          this.log.debug("Parsed test", test)
+        }
+      );
 
-    this.controller.items.replace(testSuite);
+      this.log.debug("Test output parsed. Building test suite", tests)
+      let testSuite: vscode.TestItem[] = await this.getBaseTestSuite(tests);
+
+      // // Sort the children of each test suite based on their location in the test tree.
+      // testSuite.forEach((suite: vscode.TestItem) => {
+      //   // NOTE: This will only sort correctly if everything is nested at the same
+      //   // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
+      //   // introduced, the location is generated as e.g. 1231, which won't
+      //   // sort properly relative to everything else.
+      //   (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
+      //     if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
+      //       let aLocation: number = this.getTestLocation(a as TestInfo);
+      //       let bLocation: number = this.getTestLocation(b as TestInfo);
+      //       return aLocation - bLocation;
+      //     } else {
+      //       return 0;
+      //     }
+      //   })
+      // });
+
+      this.controller.items.replace(testSuite);
+    } catch (e: any) {
+      this.log.error("Failed to load tests", e)
+      return
+    }
   }
 
   /**
@@ -149,11 +155,11 @@ export class TestLoader implements vscode.Disposable {
     // organize the files under those subdirectories.
     subdirectories.forEach((directory) => {
       let dirPath = path.join(this.getTestDirectory() ?? '', directory)
-      this.log.debug("dirPath", dirPath)
+      this.log.debug(`dirPath: ${dirPath}`)
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
         return file.startsWith(dirPath);
       });
-      this.log.debug(`Files in subdirectory:`, directory, uniqueFilesInDirectory)
+      this.log.debug(`Files in subdirectory (${directory}):`, uniqueFilesInDirectory)
 
       let directoryTestSuite: vscode.TestItem = this.controller.createTestItem(directory, directory, vscode.Uri.file(dirPath));
       //directoryTestSuite.description = directory
@@ -225,7 +231,7 @@ export class TestLoader implements vscode.Disposable {
 
     this.log.debug("Building tests for file", currentFile)
     currentFileTests.forEach((test) => {
-      this.log.debug("Building test", test.id)
+      this.log.debug(`Building test: ${test.id}`)
       // RSpec provides test ids like "file_name.rb[1:2:3]".
       // This uses the digits at the end of the id to create
       // an array of numbers representing the location of the
