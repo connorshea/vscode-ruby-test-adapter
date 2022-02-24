@@ -58,10 +58,10 @@ suite('Config', function() {
         .eq("bundle exec rspec --pattern './spec/**/*_test.rb,./spec/**/test_*.rb'")
     })
 
-    suite("#getFrameworkTestDirectory()", function() {
+    suite("#getTestDirectory()", function() {
       test("with no config set, it returns ./spec", function() {
         let config = new RspecConfig("../../../ruby")
-        expect(config.getFrameworkTestDirectory()).to.eq("./spec")
+        expect(config.getTestDirectory()).to.eq("./spec")
       })
     })
   })

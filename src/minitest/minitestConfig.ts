@@ -7,19 +7,14 @@ export class MinitestConfig extends Config {
       return "Minitest"
   }
 
-  public getFrameworkTestDirectory(): string {
-    return (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string)
-      || path.join('.', 'test');
-  }
-
   /**
    * Get the user-configured test directory, if there is one.
    *
    * @return The test directory
    */
   public getTestDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string);
-    return directory || './test/';
+    return (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string)
+      || path.join('.', 'test');
   }
 
   /**

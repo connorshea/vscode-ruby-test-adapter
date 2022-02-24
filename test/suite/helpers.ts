@@ -7,6 +7,9 @@ import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCa
 
 export function noop() {}
 
+/**
+ * Noop logger for use in testing where logs are usually unnecessary
+ */
 const NOOP_LOGGER: IVSCodeExtLogger = {
   changeLevel: noop,
   changeSourceLocationTracking: noop,
@@ -43,6 +46,9 @@ function createChildLogger(parent: IVSCodeExtLogger, label: string): IChildLogge
   }
 }
 
+/**
+ * Logger that logs to stdout - not terribly pretty but useful for seeing what failing tests are doing
+ */
 const STDOUT_LOGGER: IVSCodeExtLogger = {
   changeLevel: noop,
   changeSourceLocationTracking: noop,
@@ -58,7 +64,15 @@ const STDOUT_LOGGER: IVSCodeExtLogger = {
 }
 Object.freeze(STDOUT_LOGGER)
 
+/**
+ * Get a noop logger for use in testing where logs are usually unnecessary
+ */
 export function noop_logger(): IVSCodeExtLogger { return NOOP_LOGGER }
+/**
+ * Get a logger that logs to stdout.
+ *
+ * Not terribly pretty but useful for seeing what failing tests are doing
+ */
 export function stdout_logger(): IVSCodeExtLogger { return STDOUT_LOGGER }
 
 /**
@@ -66,8 +80,8 @@ export function stdout_logger(): IVSCodeExtLogger { return STDOUT_LOGGER }
  */
 export type TestItemExpectation = {
   id: string,
-  file: string,
   label: string,
+  file?: string,
   line?: number,
   children?: TestItemExpectation[]
 }
@@ -81,8 +95,12 @@ export function testItemMatches(testItem: vscode.TestItem, expectation: TestItem
   if (!expectation) expect.fail("No expectation given")
 
   expect(testItem.id).to.eq(expectation.id, `id mismatch (expected: ${expectation.id})`)
-  expect(testItem.uri).to.not.be.undefined
-  expect(testItem.uri?.path).to.eql(expectation.file, `uri mismatch (id: ${expectation.id})`)
+  if (expectation.file) {
+    expect(testItem.uri).to.not.be.undefined
+    expect(testItem.uri?.path).to.eql(expectation.file, `uri mismatch (id: ${expectation.id})`)
+  } else {
+    expect(testItem.uri).to.be.undefined
+  }
   if (expectation.children && expectation.children.length > 0) {
     expect(testItem.children.size).to.eq(expectation.children.length, `wrong number of children (id: ${expectation.id})`)
     let i = 0;
@@ -132,7 +150,7 @@ export function testItemArrayMatches(testItems: readonly vscode.TestItem[], expe
 
 export function setupMockTestController(): vscode.TestController {
   let mockTestController = mock<vscode.TestController>()
-  let createTestItem = (id: string, label: string, uri: vscode.Uri | undefined) => {
+  let createTestItem = (id: string, label: string, uri?: vscode.Uri | undefined) => {
     return {
       id: id,
       label: label,
@@ -146,19 +164,24 @@ export function setupMockTestController(): vscode.TestController {
       children: new StubTestItemCollection(),
     }
   }
+  when(mockTestController.createTestItem(anyString(), anyString())).thenCall(createTestItem)
   when(mockTestController.createTestItem(anyString(), anyString(), anything())).thenCall(createTestItem)
   let testItems = new StubTestItemCollection()
   when(mockTestController.items).thenReturn(testItems)
   return mockTestController
 }
 
-export function setupMockRequest(testController: vscode.TestController, testId: string): vscode.TestRunRequest {
+export function setupMockRequest(testController: vscode.TestController, testId?: string): vscode.TestRunRequest {
   let mockRequest = mock<vscode.TestRunRequest>()
-  let testItem = testController.items.get(testId)
-  if (testItem === undefined) {
-    throw new Error("Couldn't find test")
+  if (testId) {
+    let testItem = testController.items.get(testId)
+    if (testItem === undefined) {
+      throw new Error("Couldn't find test")
+    }
+    when(mockRequest.include).thenReturn([testItem])
+  } else {
+    when(mockRequest.include).thenReturn([])
   }
-  when(mockRequest.include).thenReturn([testItem])
   when(mockRequest.exclude).thenReturn([])
   return mockRequest
 }
@@ -175,7 +198,7 @@ export function getMockCancellationToken(): vscode.CancellationToken {
  * Argument captors for test state reporting functions
  *
  * @param mockTestRun mock/spy of the vscode.TestRun used to report test states
- * @returns
+ * @returns A map of argument captors for test state reporting functions
  */
 export function testStateCaptors(mockTestRun: vscode.TestRun) {
   let invocationArgs1 = (args: ArgCaptor1<vscode.TestItem>, index: number): vscode.TestItem => args.byCallIndex(index)[0]

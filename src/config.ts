@@ -20,11 +20,6 @@ export abstract class Config {
   public abstract frameworkName(): string
 
   /**
-   * Path in which to look for test files for the test framework in use
-   */
-  public abstract getFrameworkTestDirectory(): string
-
-  /**
    * Get the user-configured test file pattern.
    *
    * @return The file pattern

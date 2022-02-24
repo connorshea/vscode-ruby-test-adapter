@@ -39,21 +39,10 @@ export class RspecConfig extends Config {
    * @return The RSpec command
    */
   public getTestCommandWithFilePattern(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
+    let command: string = this.getTestCommand()
     const dir = this.getTestDirectory().replace(/\/$/, "");
     let pattern = this.getFilePattern().map(p => `${dir}/**/${p}`).join(',')
-    command = command || `bundle exec rspec`
     return `${command} --pattern '${pattern}'`;
-  }
-
-  /**
-   * Get the user-configured test directory, if there is one.
-   *
-   * @return The spec directory
-   */
-  getTestDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string);
-    return directory || './spec/';
   }
 
   /**
@@ -91,7 +80,7 @@ export class RspecConfig extends Config {
     });
   }
 
-  public getFrameworkTestDirectory(): string {
+  public getTestDirectory(): string {
     let configDir = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string
     return configDir ?? `.${path.sep}spec`;
   }

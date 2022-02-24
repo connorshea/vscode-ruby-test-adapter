@@ -23,7 +23,6 @@ suite('TestLoader', function() {
     getCustomFormatterLocation: config.getCustomFormatterLocation,
     testCommandWithFormatterAndDebugger: config.testCommandWithFormatterAndDebugger,
     getProcessEnv: config.getProcessEnv,
-    getFrameworkTestDirectory: config.getFrameworkTestDirectory,
     rubyScriptPath: config.rubyScriptPath,
     getFilePattern: config.getFilePattern
   }

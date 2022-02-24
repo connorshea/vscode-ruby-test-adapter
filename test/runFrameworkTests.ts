@@ -3,11 +3,23 @@ import { runTests, downloadAndUnzipVSCode } from '@vscode/test-electron';
 
 const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 const allowedSuiteArguments = ["rspec", "minitest", "unitTests"]
+const maxDownloadRetries = 5;
 
 async function main(framework: string) {
-  let vscodeExecutablePath = await downloadAndUnzipVSCode('stable')
-
-  await runTestSuite(vscodeExecutablePath, framework)
+  let vscodeExecutablePath: string | undefined
+  for (let retries = 0; retries < maxDownloadRetries; retries++) {
+    try {
+      vscodeExecutablePath = await downloadAndUnzipVSCode('stable')
+      break
+    } catch (error) {
+      console.warn(`Failed to download Visual Studio Code (attempt ${retries} of ${maxDownloadRetries}): ${error}`)
+    }
+  }
+  if (vscodeExecutablePath) {
+    await runTestSuite(vscodeExecutablePath, framework)
+  } else {
+    console.error("crap")
+  }
 }
 
 /**

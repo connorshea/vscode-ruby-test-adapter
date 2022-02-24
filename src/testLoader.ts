@@ -44,18 +44,19 @@ export class TestLoader implements vscode.Disposable {
    * @return The full test suite.
    */
   public async loadAllTests(): Promise<void> {
-    this.log.info(`Loading Ruby tests (${this.config.frameworkName()})...`);
+    let log = this.log.getChildLogger({label:"loadAddTests"})
+    log.info(`Loading Ruby tests (${this.config.frameworkName()})...`);
     try {
       let output = await this.testRunner.initTests();
 
-      this.log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
+      log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
       output = TestRunner.getJsonFromOutput(output);
-      this.log.debug(`Parsing the returnd JSON: ${output}`);
+      log.debug(`Parsing the returnd JSON: ${output}`);
       let testMetadata;
       try {
         testMetadata = JSON.parse(output);
       } catch (error) {
-        this.log.error('JSON parsing failed', error);
+        log.error('JSON parsing failed', error);
       }
 
       let tests: Array<ParsedTest> = [];
@@ -65,14 +66,14 @@ export class TestLoader implements vscode.Disposable {
           let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
           let test_location_string: string = test_location_array.join('');
           test.location = parseInt(test_location_string);
-          test.id = test.id.replace(this.config.getFrameworkTestDirectory(), '')
-          test.file_path = test.file_path.replace(this.config.getFrameworkTestDirectory(), '')
+          test.id = test.id.replace(this.config.getTestDirectory(), '')
+          test.file_path = test.file_path.replace(this.config.getTestDirectory(), '')
           tests.push(test);
-          this.log.debug("Parsed test", test)
+          log.debug("Parsed test", test)
         }
       );
 
-      this.log.debug("Test output parsed. Building test suite", tests)
+      log.debug("Test output parsed. Building test suite", tests)
       let testSuite: vscode.TestItem[] = await this.getBaseTestSuite(tests);
 
       // // Sort the children of each test suite based on their location in the test tree.
@@ -94,7 +95,7 @@ export class TestLoader implements vscode.Disposable {
 
       this.controller.items.replace(testSuite);
     } catch (e: any) {
-      this.log.error("Failed to load tests", e)
+      log.error("Failed to load tests", e)
       return
     }
   }
@@ -103,9 +104,7 @@ export class TestLoader implements vscode.Disposable {
    * Get the test directory based on the configuration value if there's a configured test framework.
    */
   private getTestDirectory(): string | undefined {
-    let testDirectory = this.config.getFrameworkTestDirectory();
-
-    this.log.debug("testDirectory", testDirectory)
+    let testDirectory = this.config.getTestDirectory();
 
     if (testDirectory === '' || !this.workspace) {
       return undefined;
@@ -127,6 +126,7 @@ export class TestLoader implements vscode.Disposable {
    * @return The test suite root with its children.
    */
   private async getBaseTestSuite(tests: ParsedTest[]): Promise<vscode.TestItem[]> {
+    let log = this.log.getChildLogger({ label: "getBaseTestSuite" })
     let testSuite: vscode.TestItem[] = []
     let testCount = 0
     let dirPath = this.getTestDirectory() ?? '.'
@@ -136,10 +136,13 @@ export class TestLoader implements vscode.Disposable {
 
     let splitFilesArray: Array<string[]> = [];
 
-    this.log.debug("Building base test suite from files", uniqueFiles)
+    log.debug("Building base test suite from files", uniqueFiles)
 
     // Remove the spec/ directory from all the file path.
     uniqueFiles.forEach((file) => {
+      if (file.startsWith('.')) {
+        file = file.substring(1)
+      }
       if (file.startsWith(path.sep)) {
         file = file.substring(1)
       }
@@ -153,8 +156,11 @@ export class TestLoader implements vscode.Disposable {
         subdirectories.push(splitFile[0]);
       }
     });
+    if (subdirectories[0] === ".") {
+      subdirectories = subdirectories.slice(1)
+    }
     subdirectories = [...new Set(subdirectories)];
-    this.log.debug("Found subdirectories:", subdirectories)
+    log.debug("Found subdirectories:", subdirectories)
 
     // A nested loop to iterate through the direct subdirectories of spec/ and then
     // organize the files under those subdirectories.
@@ -162,10 +168,10 @@ export class TestLoader implements vscode.Disposable {
       let subDirPath = path.join(dirPath, directory)
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
         let fullFilePath = path.resolve(dirPath, file)
-        this.log.debug(`Checking to see if ${fullFilePath} is in dir ${subDirPath}`)
-        return fullFilePath.startsWith(subDirPath);
+        log.debug(`Checking to see if ${fullFilePath} is in dir ${subDirPath}`)
+        return subDirPath === fullFilePath.substring(0, fullFilePath.lastIndexOf(path.sep))
       });
-      this.log.debug(`Files in subdirectory (${directory}):`, uniqueFilesInDirectory)
+      log.debug(`Files in subdirectory (${directory}):`, uniqueFilesInDirectory)
 
       let directoryTestSuite: vscode.TestItem = this.controller.createTestItem(directory, directory, vscode.Uri.file(subDirPath));
       //directoryTestSuite.description = directory
@@ -188,7 +194,7 @@ export class TestLoader implements vscode.Disposable {
     let topDirectoryFiles = uniqueFiles.filter((filePath) => {
       return filePath.split('/').length === 1;
     });
-    this.log.debug(`Files in top directory:`, topDirectoryFiles)
+    log.debug(`Files in top directory:`, topDirectoryFiles)
 
     topDirectoryFiles.forEach((currentFile) => {
       let currentFileTestSuite = this.getTestSuiteForFile(tests, currentFile, dirPath);
@@ -196,7 +202,7 @@ export class TestLoader implements vscode.Disposable {
       testCount += currentFileTestSuite.children.size + 1
     });
 
-    this.log.debug(`Returning ${testCount} test cases`)
+    log.debug(`Returning ${testCount} test cases`)
     return testSuite;
   }
 
@@ -208,19 +214,19 @@ export class TestLoader implements vscode.Disposable {
    * @param dirPath Full path to the root test folder
    */
   public getTestSuiteForFile(tests: Array<ParsedTest>, currentFile: string, dirPath: string): vscode.TestItem {
+    let log = this.log.getChildLogger({ label: `getTestSuiteForFile(${currentFile})` })
     let currentFileTests = tests.filter(test => {
       return test.file_path === currentFile
     });
 
     let currentFileSplitName = currentFile.split(path.sep);
     let currentFileLabel = currentFileSplitName[currentFileSplitName.length - 1]
-    this.log.debug(`currentFileLabel: ${currentFileLabel}`)
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
 
     let testDir = this.getTestDirectory()
     if (!testDir) {
-      this.log.fatal("No test folder configured or workspace folder open")
+      log.fatal("No test folder configured or workspace folder open")
       throw new Error("Missing test folders")
     }
     let currentFileAsAbsolutePath = path.resolve(dirPath, currentFile);
@@ -231,9 +237,8 @@ export class TestLoader implements vscode.Disposable {
       vscode.Uri.file(currentFileAsAbsolutePath)
     );
 
-    this.log.debug("Building tests for file", currentFile)
     currentFileTests.forEach((test) => {
-      this.log.debug(`Building test: ${test.id}`)
+      log.debug(`Building test: ${test.id}`)
       // RSpec provides test ids like "file_name.rb[1:2:3]".
       // This uses the digits at the end of the id to create
       // an array of numbers representing the location of the
@@ -276,7 +281,7 @@ export class TestLoader implements vscode.Disposable {
    * @param string The string to convert to PascalCase.
    * @return The converted string.
    */
-   private snakeToPascalCase(string: string): string {
+  private snakeToPascalCase(string: string): string {
     if (string.includes('/')) { return string }
     return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
   }
