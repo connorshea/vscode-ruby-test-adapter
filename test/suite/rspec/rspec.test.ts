@@ -1,12 +1,13 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path'
-import { capture, instance } from 'ts-mockito'
-import { setupMockRequest, stdout_logger, testItemCollectionMatches, TestItemExpectation, testItemMatches } from '../helpers';
+import { anything, capture, instance, verify } from 'ts-mockito'
+import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches } from '../helpers';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 import { StubTestController } from '../../stubs/stubTestController';
+//import { expect } from 'chai';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
@@ -121,16 +122,20 @@ suite('Extension Test for RSpec', function() {
 
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    let expectation: TestItemExpectation = {
+    let invocationArgs = capture(mockTestRun.passed)
+    let expectation = {
       id: "square_spec.rb[1:1]",
       file: expectedPath("square_spec.rb"),
       label: "finds the square of 2",
       line: 3
     }
-    testItemMatches(
-      capture(mockTestRun.passed).first()[0],
-      expectation
-    )
+    let invocationArg = (index: number): vscode.TestItem => (invocationArgs.byCallIndex(index)[0] as vscode.TestItem)
+    testItemMatches(invocationArg(0), expectation)
+    testItemMatches(invocationArg(1), expectation)
+    testItemMatches(invocationArg(2), expectation)
+    testItemMatches(invocationArg(3), expectation)
+    verify(mockTestRun.passed(anything(), undefined)).times(4)
+    // TODO: Why 4 times??
   })
 
   test('run test failure', async function() {

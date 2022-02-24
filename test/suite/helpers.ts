@@ -109,6 +109,7 @@ export function testItemMatches(testItem: vscode.TestItem, expectation: TestItem
  * @param expectation Array of {@link TestItemExpectation}s to compare to
  */
 export function testItemArrayMatches(testItems: readonly vscode.TestItem[], expectation: TestItemExpectation[]) {
+  expect(testItems.length).to.eq(expectation.length)
   testItems.forEach((testItem: vscode.TestItem, i: number) => {
     testItemMatches(testItem, expectation[i])
   })
