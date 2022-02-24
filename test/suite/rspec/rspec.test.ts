@@ -1,13 +1,12 @@
-import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path'
-import { anything, capture, instance, verify } from 'ts-mockito'
-import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches } from '../helpers';
+import { anything, instance, verify } from 'ts-mockito'
+import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 import { StubTestController } from '../../stubs/stubTestController';
-//import { expect } from 'chai';
+import { expect } from 'chai';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
@@ -122,90 +121,99 @@ suite('Extension Test for RSpec', function() {
 
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    let invocationArgs = capture(mockTestRun.passed)
+    let args = testStateCaptors(mockTestRun)
     let expectation = {
       id: "square_spec.rb[1:1]",
       file: expectedPath("square_spec.rb"),
       label: "finds the square of 2",
       line: 3
     }
-    let invocationArg = (index: number): vscode.TestItem => (invocationArgs.byCallIndex(index)[0] as vscode.TestItem)
-    testItemMatches(invocationArg(0), expectation)
-    testItemMatches(invocationArg(1), expectation)
-    testItemMatches(invocationArg(2), expectation)
-    testItemMatches(invocationArg(3), expectation)
+    testItemMatches(args.passedArg(0)["testItem"], expectation)
+    testItemMatches(args.passedArg(1)["testItem"], expectation)
+    testItemMatches(args.passedArg(2)["testItem"], expectation)
+    testItemMatches(args.passedArg(3)["testItem"], expectation)
     verify(mockTestRun.passed(anything(), undefined)).times(4)
     // TODO: Why 4 times??
   })
 
   test('run test failure', async function() {
-    assert.fail("Not yet fixed for new API")
-    // await controller.load()
-    // await controller.runTest('./spec/square_spec.rb')
+    await testLoader.loadAllTests()
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./spec/square_spec.rb[1:2]'][0],
-    //   { state: "failed", test: "./spec/square_spec.rb[1:2]", type: "test" }
-    // )
+    let mockRequest = setupMockRequest(testController, "square_spec.rb")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    // const lastEvent = controller.testEvents['./spec/square_spec.rb[1:2]'][1]
-    // assert.strictEqual(lastEvent.state, "failed")
-    // assert.strictEqual(lastEvent.line, undefined)
-    // assert.strictEqual(lastEvent.tooltip, undefined)
-    // assert.strictEqual(lastEvent.description, undefined)
-    // assert.ok(lastEvent.message?.startsWith("RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n"))
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    // assert.strictEqual(lastEvent.decorations!.length, 1)
-    // const decoration = lastEvent.decorations![0]
-    // assert.strictEqual(decoration.line, 8)
-    // assert.strictEqual(decoration.file, undefined)
-    // assert.strictEqual(decoration.hover, undefined)
-    // assert.strictEqual(decoration.message, " expected: 9\n     got: 6\n\n(compared using ==)\n")
+    let args = testStateCaptors(mockTestRun)
+    let expectation = {
+      id: "square_spec.rb[1:2]",
+      file: expectedPath("square_spec.rb"),
+      label: "finds the square of 3",
+      line: 7
+    }
+    let failedArg = args.failedArg(0)
+    testItemMatches(failedArg["testItem"], expectation)
+
+    expect(failedArg["message"].message).to.contain("RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n")
+    expect(failedArg["message"].actualOutput).to.be.undefined
+    expect(failedArg["message"].expectedOutput).to.be.undefined
+    expect(failedArg["message"].location?.range.start).to.eq(8) // line number
+    expect(failedArg["message"].location?.uri.fsPath).to.eq(expectation.file)
+    verify(mockTestRun.started(anything())).times(3)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
   })
 
   test('run test error', async function() {
-    assert.fail("Not yet fixed for new API")
-    // await controller.load()
-    // await controller.runTest('./spec/abs_spec.rb[1:2]')
+    await testLoader.loadAllTests()
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./spec/abs_spec.rb[1:2]'][0],
-    //   { state: "running", test: "./spec/abs_spec.rb[1:2]", type: "test" }
-    // )
+    let mockRequest = setupMockRequest(testController, "abs_spec.rb[1:2]")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./spec/abs_spec.rb[1:2]'][1],
-    //   { state: "failed", test: "./spec/abs_spec.rb[1:2]", type: "test" }
-    // )
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    // const lastEvent = controller.testEvents['./spec/abs_spec.rb[1:2]'][2]
-    // assert.strictEqual(lastEvent.state, "failed")
-    // assert.strictEqual(lastEvent.line, undefined)
-    // assert.strictEqual(lastEvent.tooltip, undefined)
-    // assert.strictEqual(lastEvent.description, undefined)
-    // assert.ok(lastEvent.message?.startsWith("RuntimeError:\nAbs for zero is not supported"))
+    let args = testStateCaptors(mockTestRun)
+    let expectation = {
+      id: "abs_spec.rb[1:2]",
+      file: expectedPath("abs_spec.rb"),
+      label: "finds the absolute value of 0",
+      line: 7,
+    }
+    let erroredArg = args.erroredArg(0)
+    testItemMatches(erroredArg["testItem"], expectation)
 
-    // assert.strictEqual(lastEvent.decorations!.length, 1)
-    // const decoration = lastEvent.decorations![0]
-    // assert.strictEqual(decoration.line, 8)
-    // assert.strictEqual(decoration.file, undefined)
-    // assert.strictEqual(decoration.hover, undefined)
-    // assert.ok(decoration.message?.startsWith("Abs for zero is not supported"))
+    expect(erroredArg["message"].message).to.contain("RuntimeError:\nAbs for zero is not supported")
+    expect(erroredArg["message"].actualOutput).to.be.undefined
+    expect(erroredArg["message"].expectedOutput).to.be.undefined
+    expect(erroredArg["message"].location?.range.start).to.eq(8) // line number
+    expect(erroredArg["message"].location?.uri.fsPath).to.eq(expectation.file)
+    verify(mockTestRun.started(anything())).times(1)
+    verify(mockTestRun.errored(anything(), anything(), undefined)).times(1)
   })
 
   test('run test skip', async function() {
-    assert.fail("Not yet fixed for new API")
-    // await controller.load()
-    // await controller.runTest('./spec/abs_spec.rb[1:3]')
+    await testLoader.loadAllTests()
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./spec/abs_spec.rb[1:3]'][0],
-    //   { state: "running", test: "./spec/abs_spec.rb[1:3]", type: "test" }
-    // )
+    let mockRequest = setupMockRequest(testController, "abs_spec.rb[1:3]")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./spec/abs_spec.rb[1:3]'][1],
-    //   { state: "skipped", test: "./spec/abs_spec.rb[1:3]", type: "test" }
-    // )
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
+
+    let args = testStateCaptors(mockTestRun)
+    let expectation = {
+      id: "abs_spec.rb[1:3]",
+      file: expectedPath("abs_spec.rb"),
+      label: "finds the absolute value of -1",
+      line: 11
+    }
+    testItemMatches(args.startedArg(0), expectation)
+    testItemMatches(args.skippedArg(0), expectation)
+    verify(mockTestRun.started(anything())).times(1)
+    verify(mockTestRun.skipped(anything())).times(1)
   })
 });

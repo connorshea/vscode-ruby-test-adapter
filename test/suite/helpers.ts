@@ -2,7 +2,8 @@ import * as vscode from 'vscode'
 import { expect } from 'chai'
 import { IVSCodeExtLogger, IChildLogger } from "@vscode-logging/types";
 import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
-import { anyString, anything, instance, mock, when } from 'ts-mockito';
+import { anyString, anything, capture, instance, mock, when } from 'ts-mockito';
+import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCaptor';
 
 export function noop() {}
 
@@ -168,4 +169,33 @@ export function getMockCancellationToken(): vscode.CancellationToken {
   when(mockToken.onCancellationRequested(anything(), anything(), undefined)).thenReturn({ dispose: () => {} })
   when(mockToken.onCancellationRequested(anything(), anything(), anything())).thenReturn({ dispose: () => {} })
   return instance(mockToken)
+}
+
+/**
+ * Argument captors for test state reporting functions
+ *
+ * @param mockTestRun mock/spy of the vscode.TestRun used to report test states
+ * @returns
+ */
+export function testStateCaptors(mockTestRun: vscode.TestRun) {
+  let invocationArgs1 = (args: ArgCaptor1<vscode.TestItem>, index: number): vscode.TestItem => args.byCallIndex(index)[0]
+  let invocationArgs2 = (args: ArgCaptor2<vscode.TestItem, number | undefined>, index: number): { testItem: vscode.TestItem, duration: number | undefined } => { let abci = args.byCallIndex(index); return {testItem: abci[0], duration: abci[1]}}
+  let invocationArgs3 = (args: ArgCaptor3<vscode.TestItem, vscode.TestMessage, number | undefined>, index: number): { testItem: vscode.TestItem, message: vscode.TestMessage, duration: number | undefined } => { let abci = args.byCallIndex(index); return {testItem: abci[0], message: abci[1], duration: abci[2]}}
+  let captors = {
+    enqueuedArgs: capture<vscode.TestItem>(mockTestRun.enqueued),
+    erroredArgs: capture<vscode.TestItem, vscode.TestMessage, number | undefined>(mockTestRun.errored),
+    failedArgs: capture<vscode.TestItem, vscode.TestMessage, number | undefined>(mockTestRun.failed),
+    passedArgs: capture<vscode.TestItem, number | undefined>(mockTestRun.passed),
+    startedArgs: capture<vscode.TestItem>(mockTestRun.started),
+    skippedArgs: capture<vscode.TestItem>(mockTestRun.skipped)
+  }
+  return {
+    ...captors,
+    enqueuedArg: (index: number) => invocationArgs1(captors.enqueuedArgs, index),
+    erroredArg: (index: number) => invocationArgs3(captors.erroredArgs, index),
+    failedArg: (index: number) => invocationArgs3(captors.failedArgs, index),
+    passedArg: (index: number) => invocationArgs2(captors.passedArgs, index),
+    startedArg: (index: number) => invocationArgs1(captors.startedArgs, index),
+    skippedArg: (index: number) => invocationArgs1(captors.skippedArgs, index),
+  }
 }
