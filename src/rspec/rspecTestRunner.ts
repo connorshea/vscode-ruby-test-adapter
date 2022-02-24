@@ -107,14 +107,9 @@ export class RspecTestRunner extends TestRunner {
         filePath,
         (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
       )
-    } else if (test.status === "failed" && test.pending_message !== null) {
+    } else if ((test.status === "pending" || test.status === "failed") && test.pending_message !== null) {
       // Handle pending test cases.
-      context.errored(
-        test.id,
-        test.pending_message,
-        test.file_path.replace('./', ''),
-        test.line_number
-      )
+      context.skipped(test.id)
     }
   };
 

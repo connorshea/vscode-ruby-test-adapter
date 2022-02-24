@@ -62,7 +62,7 @@ export class TestRunContext {
     line: number,
     duration?: number | undefined
   ): void {
-    this.log.debug(`Errored: ${testId} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''}`)
+    this.log.debug(`Errored: ${testId} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
     let testMessage = new vscode.TestMessage(message)
     let testItem = this.getTestItem(testId)
     testMessage.location = new vscode.Location(
@@ -88,7 +88,7 @@ export class TestRunContext {
     line: number,
     duration?: number | undefined
   ): void {
-    this.log.debug(`Failed: ${testId} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''}`)
+    this.log.debug(`Failed: ${testId} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
     let testMessage = new vscode.TestMessage(message)
     let testItem = this.getTestItem(testId)
     testMessage.location = new vscode.Location(

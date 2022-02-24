@@ -133,7 +133,6 @@ suite('Extension Test for RSpec', function() {
     testItemMatches(args.passedArg(2)["testItem"], expectation)
     testItemMatches(args.passedArg(3)["testItem"], expectation)
     verify(mockTestRun.passed(anything(), undefined)).times(4)
-    // TODO: Why 4 times??
   })
 
   test('run test failure', async function() {
@@ -147,22 +146,31 @@ suite('Extension Test for RSpec', function() {
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
     let args = testStateCaptors(mockTestRun)
+
+    // Initial failure event with no details
+    let firstCallArgs = args.failedArg(0)
+    expect(firstCallArgs.testItem).to.have.property("id", "square_spec.rb[1:2]")
+    expect(firstCallArgs.testItem).to.have.property("label", "finds the square of 3")
+    expect(firstCallArgs.message.location?.uri.fsPath).to.eq(expectedPath("square_spec.rb"))
+
+    // Actual failure report
     let expectation = {
       id: "square_spec.rb[1:2]",
       file: expectedPath("square_spec.rb"),
       label: "finds the square of 3",
       line: 7
     }
-    let failedArg = args.failedArg(0)
+    let failedArg = args.failedArg(1)
     testItemMatches(failedArg["testItem"], expectation)
 
     expect(failedArg["message"].message).to.contain("RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n")
     expect(failedArg["message"].actualOutput).to.be.undefined
     expect(failedArg["message"].expectedOutput).to.be.undefined
-    expect(failedArg["message"].location?.range.start).to.eq(8) // line number
+    expect(failedArg["message"].location?.range.start.line).to.eq(8)
     expect(failedArg["message"].location?.uri.fsPath).to.eq(expectation.file)
+
     verify(mockTestRun.started(anything())).times(3)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(4)
   })
 
   test('run test error', async function() {
@@ -176,22 +184,30 @@ suite('Extension Test for RSpec', function() {
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
     let args = testStateCaptors(mockTestRun)
+
+    // Initial failure event with no details
+    let firstCallArgs = args.failedArg(0)
+    expect(firstCallArgs.testItem).to.have.property("id", "abs_spec.rb[1:2]")
+    expect(firstCallArgs.testItem).to.have.property("label", "finds the absolute value of 0")
+    expect(firstCallArgs.message.location?.uri.fsPath).to.eq(expectedPath("abs_spec.rb"))
+
+    // Actual failure report
     let expectation = {
       id: "abs_spec.rb[1:2]",
       file: expectedPath("abs_spec.rb"),
       label: "finds the absolute value of 0",
       line: 7,
     }
-    let erroredArg = args.erroredArg(0)
-    testItemMatches(erroredArg["testItem"], expectation)
+    let failedArg = args.failedArg(1)
+    testItemMatches(failedArg["testItem"], expectation)
 
-    expect(erroredArg["message"].message).to.contain("RuntimeError:\nAbs for zero is not supported")
-    expect(erroredArg["message"].actualOutput).to.be.undefined
-    expect(erroredArg["message"].expectedOutput).to.be.undefined
-    expect(erroredArg["message"].location?.range.start).to.eq(8) // line number
-    expect(erroredArg["message"].location?.uri.fsPath).to.eq(expectation.file)
+    expect(failedArg["message"].message).to.match(/RuntimeError:\nAbs for zero is not supported/)
+    expect(failedArg["message"].actualOutput).to.be.undefined
+    expect(failedArg["message"].expectedOutput).to.be.undefined
+    expect(failedArg["message"].location?.range.start.line).to.eq(8)
+    expect(failedArg["message"].location?.uri.fsPath).to.eq(expectation.file)
     verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.errored(anything(), anything(), undefined)).times(1)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(2)
   })
 
   test('run test skip', async function() {

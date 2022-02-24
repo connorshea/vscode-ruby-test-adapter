@@ -112,9 +112,10 @@ export abstract class TestRunner implements vscode.Disposable {
    */
   handleChildProcess = async (process: childProcess.ChildProcess, context: TestRunContext) => new Promise<string>((resolve, reject) => {
     this.currentChildProcess = process;
+    let childProcessLogger = this.log.getChildLogger({ label: `ChildProcess(${context.config.frameworkName()})` })
 
     this.currentChildProcess.on('exit', () => {
-      this.log.info('Child process has exited. Sending test run finish event.');
+      childProcessLogger.info('Child process has exited. Sending test run finish event.');
       this.currentChildProcess = undefined;
       context.testRun.end()
       resolve('{}');
@@ -122,7 +123,7 @@ export abstract class TestRunner implements vscode.Disposable {
 
     this.currentChildProcess.stderr!.pipe(split2()).on('data', (data) => {
       data = data.toString();
-      this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
+      childProcessLogger.debug(data);
       if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
         this.debugCommandStartedResolver()
       }
@@ -131,7 +132,7 @@ export abstract class TestRunner implements vscode.Disposable {
     // TODO: Parse test IDs, durations, and failure message(s) from data
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
-      this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
+      childProcessLogger.debug(data);
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
         context.passed(data)
@@ -325,8 +326,6 @@ export abstract class TestRunner implements vscode.Disposable {
         this.log.debug(`Test count mismatch {${node.label}}. Expected ${node.children.size + 1}, ran ${tests.length}`)
       }
 
-      //this.testStatesEmitter.fire(<TestSuiteEvent>{ type: 'suite', suite: node.id, state: 'completed' });
-
     } else {
       if (node.uri !== undefined && node.range !== undefined) {
         context.started(node)
@@ -371,12 +370,12 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the test suite.
    */
-   runTestFramework = async (testCommand: string, type: string, context: TestRunContext) =>
-   new Promise<string>(async (resolve, reject) => {
-     this.log.info(`Running test suite: ${type}`);
+  runTestFramework = async (testCommand: string, type: string, context: TestRunContext) =>
+  new Promise<string>(async (resolve, reject) => {
+    this.log.info(`Running test suite: ${type}`);
 
-     resolve(await this.spawnCancellableChild(testCommand, context))
-   });
+    resolve(await this.spawnCancellableChild(testCommand, context))
+  });
 
   /**
    * Spawns a child process to run a command, that will be killed
@@ -459,24 +458,24 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the test.
    */
-   protected abstract getSingleTestCommand(testLocation: string, context: TestRunContext): string;
+  protected abstract getSingleTestCommand(testLocation: string, context: TestRunContext): string;
 
-   /**
-    * Gets the command to run tests in a given file.
-    *
-    * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
-    * @param context Test run context
-    * @return The raw output from running the tests.
-    */
-   protected abstract getTestFileCommand(testFile: string, context: TestRunContext): string;
+  /**
+   * Gets the command to run tests in a given file.
+   *
+   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
+   * @param context Test run context
+   * @return The raw output from running the tests.
+   */
+  protected abstract getTestFileCommand(testFile: string, context: TestRunContext): string;
 
-   /**
-    * Gets the command to run the full test suite for the current workspace.
-    *
-    * @param context Test run context
-    * @return The raw output from running the test suite.
-    */
-   protected abstract getFullTestSuiteCommand(context: TestRunContext): string;
+  /**
+   * Gets the command to run the full test suite for the current workspace.
+   *
+   * @param context Test run context
+   * @return The raw output from running the test suite.
+   */
+  protected abstract getFullTestSuiteCommand(context: TestRunContext): string;
 
   /**
    * Handles test state based on the output returned by the test command.
@@ -484,5 +483,5 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param test The test that we want to handle.
    * @param context Test run context
    */
-   protected abstract handleStatus(test: any, context: TestRunContext): void;
+  protected abstract handleStatus(test: any, context: TestRunContext): void;
 }
