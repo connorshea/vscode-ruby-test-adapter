@@ -62,15 +62,15 @@ export async function activate(context: vscode.ExtensionContext) {
     const testLoaderFactory = new TestFactory(log, workspace, controller, testConfig);
     context.subscriptions.push(controller);
 
-    testLoaderFactory.getLoader().loadAllTests();
+    testLoaderFactory.getLoader().buildInitialTestItems();
 
     // TODO: Allow lazy-loading of child tests - below is taken from example in docs
     // Custom handler for loading tests. The "test" argument here is undefined,
     // but if we supported lazy-loading child test then this could be called with
     // the test whose children VS Code wanted to load.
-    // controller.resolveHandler = test => {
-    //   controller.items.replace([]);
-    // };
+    controller.resolveHandler = test => {
+      log.debug('resolveHandler called', test)
+    };
 
     // TODO: (?) Add a "Profile" profile for profiling tests
     controller.createRunProfile(

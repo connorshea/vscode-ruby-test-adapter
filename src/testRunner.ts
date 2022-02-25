@@ -117,7 +117,6 @@ export abstract class TestRunner implements vscode.Disposable {
     this.currentChildProcess.on('exit', () => {
       childProcessLogger.info('Child process has exited. Sending test run finish event.');
       this.currentChildProcess = undefined;
-      context.testRun.end()
       resolve('{}');
     });
 
@@ -286,62 +285,66 @@ export abstract class TestRunner implements vscode.Disposable {
   ): Promise<void> {
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
-    if (node == null) {
-      this.controller.items.forEach((testSuite) => {
-        this.enqueTestAndChildren(testSuite, context)
-      })
-      let testOutput = await this.runFullTestSuite(context);
-      testOutput = TestRunner.getJsonFromOutput(testOutput);
-      this.log.debug('Parsing the below JSON:');
-      this.log.debug(`${testOutput}`);
-      let testMetadata = JSON.parse(testOutput);
-      let tests: Array<any> = testMetadata.examples;
+    try {
+      if (node == null) {
+        this.controller.items.forEach((testSuite) => {
+          this.enqueTestAndChildren(testSuite, context)
+        })
+        let testOutput = await this.runFullTestSuite(context);
+        testOutput = TestRunner.getJsonFromOutput(testOutput);
+        this.log.debug('Parsing the below JSON:');
+        this.log.debug(`${testOutput}`);
+        let testMetadata = JSON.parse(testOutput);
+        let tests: Array<any> = testMetadata.examples;
 
-      if (tests && tests.length > 0) {
-        tests.forEach((test: { id: string; }) => {
-          this.handleStatus(test, context);
-        });
-      }
-      // If the suite is a file, run the tests as a file rather than as separate tests.
-    } else if (node.label.endsWith('.rb')) {
-      // Mark selected tests as enqueued
-      this.enqueTestAndChildren(node, context)
+        if (tests && tests.length > 0) {
+          tests.forEach((test: { id: string; }) => {
+            this.handleStatus(test, context);
+          });
+        }
+        // If the suite is a file, run the tests as a file rather than as separate tests.
+      } else if (node.label.endsWith('.rb')) {
+        // Mark selected tests as enqueued
+        this.enqueTestAndChildren(node, context)
 
-      context.started(node)
-      let testOutput = await this.runTestFile(`${node.uri?.fsPath}`, context);
-
-      testOutput = TestRunner.getJsonFromOutput(testOutput);
-      this.log.debug('Parsing the below JSON:');
-      this.log.debug(`${testOutput}`);
-      let testMetadata = JSON.parse(testOutput);
-      let tests: Array<any> = testMetadata.examples;
-
-      if (tests && tests.length > 0) {
-        tests.forEach((test: { id: string }) => {
-          this.handleStatus(test, context);
-        });
-      }
-
-      if (tests.length != node.children.size + 1) {
-        this.log.debug(`Test count mismatch {${node.label}}. Expected ${node.children.size + 1}, ran ${tests.length}`)
-      }
-
-    } else {
-      if (node.uri !== undefined && node.range !== undefined) {
         context.started(node)
-
-        // Run the test at the given line, add one since the line is 0-indexed in
-        // VS Code and 1-indexed for RSpec/Minitest.
-        let testOutput = await this.runSingleTest(`${node.uri.fsPath}:${node.range?.end.line}`, context);
+        let testOutput = await this.runTestFile(`${node.uri?.fsPath}`, context);
 
         testOutput = TestRunner.getJsonFromOutput(testOutput);
         this.log.debug('Parsing the below JSON:');
         this.log.debug(`${testOutput}`);
         let testMetadata = JSON.parse(testOutput);
-        let currentTest = testMetadata.examples[0];
+        let tests: Array<any> = testMetadata.examples;
 
-        this.handleStatus(currentTest, context);
+        if (tests && tests.length > 0) {
+          tests.forEach((test: { id: string }) => {
+            this.handleStatus(test, context);
+          });
+        }
+
+        if (tests.length != node.children.size + 1) {
+          this.log.debug(`Test count mismatch {${node.label}}. Expected ${node.children.size + 1}, ran ${tests.length}`)
+        }
+
+      } else {
+        if (node.uri !== undefined && node.range !== undefined) {
+          context.started(node)
+
+          // Run the test at the given line, add one since the line is 0-indexed in
+          // VS Code and 1-indexed for RSpec/Minitest.
+          let testOutput = await this.runSingleTest(`${node.uri.fsPath}:${node.range?.end.line}`, context);
+
+          testOutput = TestRunner.getJsonFromOutput(testOutput);
+          this.log.debug('Parsing the below JSON:');
+          this.log.debug(`${testOutput}`);
+          let testMetadata = JSON.parse(testOutput);
+          let currentTest = testMetadata.examples[0];
+
+          this.handleStatus(currentTest, context);
+        }
       }
+    } finally {
+      context.testRun.end()
     }
   }
 

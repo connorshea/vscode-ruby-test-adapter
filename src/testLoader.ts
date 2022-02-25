@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import glob from 'glob';
 import * as path from 'path';
 import { IChildLogger } from '@vscode-logging/logger';
 import { TestRunner } from './testRunner';
@@ -35,6 +36,48 @@ export class TestLoader implements vscode.Disposable {
       disposable.dispose();
     }
     this.disposables = [];
+  }
+
+  buildInitialTestItems() {
+    let log = this.log.getChildLogger({ label: `${this.buildInitialTestItems.name}` })
+    let testDir = path.resolve(this.workspace?.uri.fsPath ?? '.', this.config.getTestDirectory())
+    let testGlob = path.join('**', `+(${this.config.getFilePattern().join('|')})`)
+    log.info(`Looking for test files in ${testDir} using glob patterns`, this.config.getFilePattern())
+
+    glob(testGlob, { cwd: testDir }, (err, files) => {
+      if (err) {
+        log.error("Error searching for test files", err);
+      }
+
+      // Add files to the test suite
+      files.forEach(f => {
+        let fileSegments = f.split(path.sep)
+        let id:string = ''
+        let collection: vscode.TestItemCollection = this.controller.items
+        for (let i = 0; i < fileSegments.length; i++) {
+          id = path.join(id, fileSegments[i])
+          let testItem: vscode.TestItem | undefined = collection.get(id)
+          if (testItem) {
+            collection = testItem.children
+            continue
+          } else {
+            let fPath = path.resolve(testDir, f)
+
+            testItem = this.controller.createTestItem(id, fileSegments[i], vscode.Uri.file(fPath))
+            if(fileSegments[i].includes('.')) {
+              // If a file and not a dir, allow to resolve the tests inside
+              log.debug(`Adding test item for file ${fPath}`)
+              testItem.canResolveChildren = true
+            } else {
+              log.debug(`Adding test item for folder ${fPath}`)
+            }
+            // testItem.busy = true Maybe?
+            collection.add(testItem)
+            collection = testItem.children
+          }
+        }
+      });
+    });
   }
 
   /**
