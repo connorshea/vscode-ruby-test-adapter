@@ -11,7 +11,7 @@ export class MinitestTestRunner extends TestRunner {
    *
    * @return The raw output from the Minitest JSON formatter.
    */
-  initTests = async () => new Promise<string>((resolve, reject) => {
+  initTests = async (testItems: vscode.TestItem[]) => new Promise<string>((resolve, reject) => {
     let cmd = `${this.getTestCommand()} vscode:minitest:list`;
 
     // Allow a buffer of 64MB.
@@ -20,6 +20,10 @@ export class MinitestTestRunner extends TestRunner {
       maxBuffer: 8192 * 8192,
       env: this.config.getProcessEnv()
     };
+
+    testItems.forEach((item) => {
+      cmd = `${cmd} ${item.id}`
+    })
 
     this.log.info(`Getting a list of Minitest tests in suite with the following command: ${cmd}`);
 
@@ -99,8 +103,9 @@ export class MinitestTestRunner extends TestRunner {
    */
   handleStatus(test: any, context: TestRunContext): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
+    let testItem = this.testSuite.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
-      context.passed(test.id)
+      context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {
       let errorMessageLine: number = test.line_number;
       let errorMessage: string = test.exception.message;
@@ -122,7 +127,7 @@ export class MinitestTestRunner extends TestRunner {
       }
 
       context.failed(
-        test.id,
+        testItem,
         errorMessage,
         test.file_path.replace('./', ''),
         errorMessageLine - 1
@@ -130,7 +135,7 @@ export class MinitestTestRunner extends TestRunner {
     } else if (test.status === "failed" && test.pending_message !== null) {
       // Handle pending test cases.
       context.errored(
-        test.id,
+        testItem,
         test.pending_message,
         test.file_path.replace('./', ''),
         test.line_number

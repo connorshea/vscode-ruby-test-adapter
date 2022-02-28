@@ -6,12 +6,14 @@ import { Config } from './config';
 import { TestLoader } from './testLoader';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
+import { TestSuite } from './testSuite';
 
 export class TestFactory implements vscode.Disposable {
   private loader: TestLoader | null = null;
   private runner: RspecTestRunner | MinitestTestRunner | null = null;
   protected disposables: { dispose(): void }[] = [];
   protected framework: string;
+  private testSuite: TestSuite
 
   constructor(
     private readonly log: IVSCodeExtLogger,
@@ -21,6 +23,7 @@ export class TestFactory implements vscode.Disposable {
   ) {
     this.disposables.push(this.configWatcher());
     this.framework = Config.getTestFramework(this.log);
+    this.testSuite = new TestSuite(this.log, this.controller, this.config)
   }
 
   dispose(): void {
@@ -37,13 +40,15 @@ export class TestFactory implements vscode.Disposable {
             this.log,
             this.workspace,
             this.controller,
-            this.config
+            this.config,
+            this.testSuite
           )
         : new MinitestTestRunner(
             this.log,
             this.workspace,
             this.controller,
-            this.config
+            this.config,
+            this.testSuite
           )
       this.disposables.push(this.runner);
     }
@@ -57,7 +62,8 @@ export class TestFactory implements vscode.Disposable {
         this.workspace,
         this.controller,
         this.getRunner(),
-        this.config
+        this.config,
+        this.testSuite
       )
       this.disposables.push(this.loader)
     }

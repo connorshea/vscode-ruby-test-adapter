@@ -6,10 +6,10 @@ import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
+import { TestSuite } from './testSuite';
 
 export abstract class TestRunner implements vscode.Disposable {
   protected currentChildProcess: childProcess.ChildProcess | undefined;
-  protected testSuite: vscode.TestItem[] | undefined;
   protected debugCommandStartedResolver: Function | undefined;
   protected disposables: { dispose(): void }[] = [];
   protected readonly log: IChildLogger;
@@ -23,7 +23,8 @@ export abstract class TestRunner implements vscode.Disposable {
     rootLog: IChildLogger,
     protected workspace: vscode.WorkspaceFolder | undefined,
     protected controller: vscode.TestController,
-    protected config: RspecConfig | MinitestConfig
+    protected config: RspecConfig | MinitestConfig,
+    protected testSuite: TestSuite,
   ) {
     this.log = rootLog.getChildLogger({label: "TestRunner"})
   }
@@ -32,7 +33,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * Initialise the test framework, parse tests (without executing) and retrieve the output
    * @return Stdout outpu from framework initialisation
    */
-  abstract initTests: () => Promise<string>;
+  abstract initTests: (testItems: vscode.TestItem[]) => Promise<string>;
 
   public dispose() {
     this.killChild();
@@ -134,16 +135,20 @@ export abstract class TestRunner implements vscode.Disposable {
       childProcessLogger.debug(data);
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
-        context.passed(data)
+        let test = this.testSuite.getOrCreateTestItem(data)
+        context.passed(test)
       } else if (data.startsWith('FAILED:')) {
         data = data.replace('FAILED: ', '');
-        context.failed(data, "", "", 0)
+        let test = this.testSuite.getOrCreateTestItem(data)
+        context.failed(test, "", "", 0)
       } else if (data.startsWith('RUNNING:')) {
         data = data.replace('RUNNING: ', '');
-        context.started(data)
+        let test = this.testSuite.getOrCreateTestItem(data)
+        context.started(test)
       } else if (data.startsWith('PENDING:')) {
         data = data.replace('PENDING: ', '');
-        context.enqueued(data)
+        let test = this.testSuite.getOrCreateTestItem(data)
+        context.enqueued(test)
       }
       if (data.includes('START_OF_TEST_JSON')) {
         resolve(data);

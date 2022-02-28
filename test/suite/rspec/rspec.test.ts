@@ -7,6 +7,7 @@ import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 import { StubTestController } from '../../stubs/stubTestController';
 import { expect } from 'chai';
+import { TestSuite } from 'src/testSuite';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
@@ -29,13 +30,111 @@ suite('Extension Test for RSpec', function() {
 
   this.beforeEach(async function() {
     testController = new StubTestController()
+
+    // Populate controller with test files. This would be done by the filesystem globs in the watchers
+    let createTest = (id: string) => testController.createTestItem(id, id, vscode.Uri.file(expectedPath(id)))
+    testController.items.add(createTest("abs_spec.rb"))
+    testController.items.add(createTest("square_spec.rb"))
+    let subfolderItem = createTest("subfolder")
+    testController.items.add(subfolderItem)
+    subfolderItem.children.add(createTest("subfolder/foo_spec.rb"))
+
     config = new RspecConfig(dirPath)
-    testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config)
-    testLoader = new TestLoader(stdout_logger(), workspaceFolder, testController, testRunner, config);
+    let testSuite = new TestSuite(stdout_logger(), testController, config)
+    testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
+    testLoader = new TestLoader(stdout_logger(), workspaceFolder, testController, testRunner, config, testSuite);
+  })
+
+  test('Load tests on file resolve request', async function () {
+    // No tests in suite initially, only test files and folders
+    testItemCollectionMatches(testController.items,
+      [
+        {
+          file: expectedPath("subfolder"),
+          id: "subfolder",
+          label: "subfolder",
+          children: [
+            {
+              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+              id: "subfolder/foo_spec.rb",
+              label: "foo_spec.rb",
+              children: []
+            }
+          ]
+        },
+        {
+          file: expectedPath("abs_spec.rb"),
+          id: "abs_spec.rb",
+          label: "abs_spec.rb",
+          children: []
+        },
+        {
+          file: expectedPath("square_spec.rb"),
+          id: "square_spec.rb",
+          label: "square_spec.rb",
+          children: []
+        },
+      ]
+    )
+
+    // Resolve a file (e.g. by clicking on it in the test explorer)
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
+
+    // Tests in that file have now been added to suite
+    testItemCollectionMatches(testController.items,
+      [
+        {
+          file: expectedPath("subfolder"),
+          id: "subfolder",
+          label: "subfolder",
+          children: [
+            {
+              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+              id: "subfolder/foo_spec.rb",
+              label: "foo_spec.rb",
+              children: []
+            }
+          ]
+        },
+        {
+          file: expectedPath("abs_spec.rb"),
+          id: "abs_spec.rb",
+          label: "abs_spec.rb",
+          children: [
+            {
+              file: expectedPath("abs_spec.rb"),
+              id: "abs_spec.rb[1:1]",
+              label: "finds the absolute value of 1",
+              line: 3,
+            },
+            {
+              file: expectedPath("abs_spec.rb"),
+              id: "abs_spec.rb[1:2]",
+              label: "finds the absolute value of 0",
+              line: 7,
+            },
+            {
+              file: expectedPath("abs_spec.rb"),
+              id: "abs_spec.rb[1:3]",
+              label: "finds the absolute value of -1",
+              line: 11,
+            }
+          ]
+        },
+        {
+          file: expectedPath("square_spec.rb"),
+          id: "square_spec.rb",
+          label: "square_spec.rb",
+          children: []
+        },
+      ]
+    )
   })
 
   test('Load all tests', async function() {
-    await testLoader.loadAllTests()
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("subfolder/foo_spec.rb")))
 
     const testSuite = testController.items
 
@@ -112,7 +211,7 @@ suite('Extension Test for RSpec', function() {
   })
 
   test('run test success', async function() {
-    await testLoader.loadAllTests()
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
 
     let mockRequest = setupMockRequest(testController, "square_spec.rb")
     let request = instance(mockRequest)
@@ -136,7 +235,7 @@ suite('Extension Test for RSpec', function() {
   })
 
   test('run test failure', async function() {
-    await testLoader.loadAllTests()
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
 
     let mockRequest = setupMockRequest(testController, "square_spec.rb")
     let request = instance(mockRequest)
@@ -174,7 +273,7 @@ suite('Extension Test for RSpec', function() {
   })
 
   test('run test error', async function() {
-    await testLoader.loadAllTests()
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
 
     let mockRequest = setupMockRequest(testController, "abs_spec.rb[1:2]")
     let request = instance(mockRequest)
@@ -211,7 +310,7 @@ suite('Extension Test for RSpec', function() {
   })
 
   test('run test skip', async function() {
-    await testLoader.loadAllTests()
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
 
     let mockRequest = setupMockRequest(testController, "abs_spec.rb[1:3]")
     let request = instance(mockRequest)

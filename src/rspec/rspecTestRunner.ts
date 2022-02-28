@@ -10,15 +10,14 @@ export class RspecTestRunner extends TestRunner {
    *
    * @return The raw output from the RSpec JSON formatter.
    */
-  initTests = async () => new Promise<string>((resolve, reject) => {
+  initTests = async (testItems: vscode.TestItem[]) => new Promise<string>((resolve, reject) => {
     let cfg = this.config as RspecConfig
     let cmd = `${cfg.getTestCommandWithFilePattern()} --require ${cfg.getCustomFormatterLocation()}`
               + ` --format CustomFormatter --order defined --dry-run`;
 
-    // TODO: Only reload single file on file changed
-    // if (testFilePath) {
-    //   cmd = cmd + ` ${testFilePath}`
-    // }
+    testItems.forEach((item) => {
+      cmd = `${cmd} ${item.id}`
+    })
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
     this.log.debug(`cwd: ${__dirname}`)
@@ -69,8 +68,9 @@ export class RspecTestRunner extends TestRunner {
    */
   handleStatus(test: any, context: TestRunContext): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
+    let testItem = this.testSuite.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
-      context.passed(test.id)
+      context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {
       // Remove linebreaks from error message.
       let errorMessageNoLinebreaks = test.exception.message.replace(/(\r\n|\n|\r)/, ' ');
@@ -102,14 +102,14 @@ export class RspecTestRunner extends TestRunner {
       }
 
       context.failed(
-        test.id,
+        testItem,
         errorMessage,
         filePath,
         (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
       )
     } else if ((test.status === "pending" || test.status === "failed") && test.pending_message !== null) {
       // Handle pending test cases.
-      context.skipped(test.id)
+      context.skipped(testItem)
     }
   };
 

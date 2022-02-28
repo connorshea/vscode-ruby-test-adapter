@@ -1,5 +1,4 @@
 import * as vscode from 'vscode'
-import path from 'path'
 import { IChildLogger } from '@vscode-logging/logger'
 import { Config } from './config'
 
@@ -23,8 +22,8 @@ export class TestRunContext {
   constructor(
     public readonly log: IChildLogger,
     public readonly token: vscode.CancellationToken,
-    request: vscode.TestRunRequest,
-    private readonly controller: vscode.TestController,
+    readonly request: vscode.TestRunRequest,
+    readonly controller: vscode.TestController,
     public readonly config: Config,
     public readonly debuggerConfig?: vscode.DebugConfiguration
   ) {
@@ -36,19 +35,9 @@ export class TestRunContext {
    *
    * @param testId ID of the test item to update.
    */
-  public enqueued(test: string | vscode.TestItem): void {
-    if (typeof test === "string") {
-        try {
-          this.testRun.enqueued(this.getTestItem(test))
-          this.log.debug(`Enqueued: ${test}`)
-        } catch (e: any) {
-          this.log.error(`Failed to set test ${test} as Enqueued`, e)
-        }
-      }
-      else {
-        this.testRun.enqueued(test)
-        this.log.debug(`Enqueued: ${test.id}`)
-      }
+  public enqueued(test: vscode.TestItem): void {
+    this.testRun.enqueued(test)
+    this.log.debug(`Enqueued: ${test.id}`)
   }
 
   /**
@@ -61,7 +50,7 @@ export class TestRunContext {
    * @param duration How long the test took to execute, in milliseconds.
    */
   public errored(
-    testId: string,
+    test: vscode.TestItem,
     message: string,
     file: string,
     line: number,
@@ -69,13 +58,13 @@ export class TestRunContext {
   ): void {
     let testMessage = new vscode.TestMessage(message)
     try {
-      let testItem = this.getTestItem(testId)
+      let testItem = test
       testMessage.location = new vscode.Location(
         testItem.uri ?? vscode.Uri.file(file),
         new vscode.Position(line, 0)
       )
       this.testRun.errored(testItem, testMessage, duration)
-      this.log.debug(`Errored: ${testId} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
+      this.log.debug(`Errored: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
     } catch (e: any) {
       this.log.error(`Failed to set test ${test} as Errored`, e)
     }
@@ -91,24 +80,19 @@ export class TestRunContext {
    * @param duration How long the test took to execute, in milliseconds.
    */
   public failed(
-    testId: string,
+    test: vscode.TestItem,
     message: string,
     file: string,
     line: number,
     duration?: number | undefined
   ): void {
-    try {
-      let testMessage = new vscode.TestMessage(message)
-      let testItem = this.getTestItem(testId)
-      testMessage.location = new vscode.Location(
-        testItem.uri ?? vscode.Uri.file(file),
-        new vscode.Position(line, 0)
-      )
-      this.testRun.failed(testItem, testMessage, duration)
-      this.log.debug(`Failed: ${testId} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
-    } catch (e: any) {
-      this.log.error(`Failed to set test ${test} as Failed`, e)
-    }
+    let testMessage = new vscode.TestMessage(message)
+    testMessage.location = new vscode.Location(
+      test.uri ?? vscode.Uri.file(file),
+      new vscode.Position(line, 0)
+    )
+    this.testRun.failed(test, testMessage, duration)
+    this.log.debug(`Failed: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
   }
 
   /**
@@ -117,16 +101,11 @@ export class TestRunContext {
    * @param testId ID of the test item to update.
    * @param duration How long the test took to execute, in milliseconds.
    */
-  public passed(
-    testId: string,
+  public passed(test: vscode.TestItem,
     duration?: number | undefined
   ): void {
-    try {
-      this.testRun.passed(this.getTestItem(testId), duration)
-      this.log.debug(`Passed: ${testId}${duration ? `, duration: ${duration}ms` : ''}`)
-    } catch (e: any) {
-      this.log.error(`Failed to set test ${test} as Passed`, e)
-    }
+    this.testRun.passed(test, duration)
+    this.log.debug(`Passed: ${test.id}${duration ? `, duration: ${duration}ms` : ''}`)
   }
 
   /**
@@ -134,19 +113,9 @@ export class TestRunContext {
    *
    * @param test ID of the test item to update, or the test item.
    */
-  public skipped(test: string | vscode.TestItem): void {
-    if (typeof test === "string") {
-      try {
-        this.testRun.skipped(this.getTestItem(test))
-        this.log.debug(`Skipped: ${test}`)
-      } catch (e: any) {
-        this.log.error(`Failed to set test ${test} as Skipped`, e)
-      }
-    }
-    else {
-      this.testRun.skipped(test)
-      this.log.debug(`Skipped: ${test.id}`)
-    }
+  public skipped(test: vscode.TestItem): void {
+    this.testRun.skipped(test)
+    this.log.debug(`Skipped: ${test.id}`)
   }
 
   /**
@@ -154,60 +123,8 @@ export class TestRunContext {
    *
    * @param testId ID of the test item to update, or the test item.
    */
-  public started(test: string | vscode.TestItem): void {
-    if (typeof test === "string") {
-      try {
-        this.testRun.started(this.getTestItem(test))
-        this.log.debug(`Started: ${test}`)
-      } catch (e: any) {
-        this.log.error(`Failed to set test ${test} as Started`, e)
-      }
-    }
-    else {
-      this.testRun.started(test)
-      this.log.debug(`Started: ${test.id}`)
-    }
-  }
-
-  /**
-   * Get the {@link vscode.TestItem} for a test ID
-   * @param testId Test ID to lookup
-   * @returns The test item for the ID
-   * @throws if test item could not be found
-   */
-  public getTestItem(testId: string): vscode.TestItem {
-    let log = this.log.getChildLogger({label: `${this.getTestItem.name}(${testId})`})
-    testId = testId.replace(/^\.\/spec\//, '')
-    let idSegments = testId.split(path.sep)
-    let collection: vscode.TestItemCollection = this.controller.items
-
-    // Walk the test hierarchy to find the collection containing our test file
-    for (let i = 0; i < idSegments.length - 1; i++) {
-      let collectionId = (i == 0)
-        ? idSegments[0]
-        : idSegments.slice(0,i).join(path.sep)
-      let childCollection = collection.get(collectionId)?.children
-      if (!childCollection) {
-        throw `Test collection not found: ${collectionId}`
-      }
-      collection = childCollection
-    }
-
-    // Need to make sure we strip locations from file id to get final collection
-    let fileId = testId.replace(/\[[0-9](?::[0-9])*\]$/, '')
-    let childCollection = collection.get(fileId)?.children
-    if (!childCollection) {
-      throw `Test collection not found: ${fileId}`
-    }
-    collection = childCollection
-    log.debug("Got parent collection, looking for test")
-
-    let testItem = collection.get(testId)
-    if (!testItem) {
-      // Create a basic test item with what little info we have to be filled in later
-      testItem = this.controller.createTestItem(testId, idSegments[idSegments.length - 1], vscode.Uri.file(path.resolve(this.config.getTestDirectory(), testId)));
-      collection.add(testItem);
-    }
-    return testItem
+  public started(test: vscode.TestItem): void {
+    this.testRun.started(test)
+    this.log.debug(`Started: ${test.id}`)
   }
 }

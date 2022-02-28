@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import glob from 'glob';
 import * as path from 'path';
 import { IChildLogger } from '@vscode-logging/logger';
 import { TestRunner } from './testRunner';
 import { RspecTestRunner } from './rspec/rspecTestRunner';
 import { MinitestTestRunner } from './minitest/minitestTestRunner';
 import { Config } from './config';
+import { TestSuite } from './testSuite';
 
 export type ParsedTest = {
   id: string,
@@ -24,10 +24,10 @@ export class TestLoader implements vscode.Disposable {
     private readonly workspace: vscode.WorkspaceFolder | undefined,
     private readonly controller: vscode.TestController,
     private readonly testRunner: RspecTestRunner | MinitestTestRunner,
-    private readonly config: Config
+    private readonly config: Config,
+    private readonly testSuite: TestSuite,
   ) {
     this.log = rootLog.getChildLogger({label: "TestLoader"});
-    this.disposables.push(this.createWatcher());
     this.disposables.push(this.configWatcher());
   }
 
@@ -38,46 +38,41 @@ export class TestLoader implements vscode.Disposable {
     this.disposables = [];
   }
 
-  buildInitialTestItems() {
-    let log = this.log.getChildLogger({ label: `${this.buildInitialTestItems.name}` })
+  async createWatcher(pattern: vscode.GlobPattern): Promise<vscode.FileSystemWatcher> {
+    const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+
+    // When files are created, make sure there's a corresponding "file" node in the tree
+    watcher.onDidCreate(uri => this.testSuite.getOrCreateTestItem(uri));
+    // When files change, re-parse them. Note that you could optimize this so
+    // that you only re-parse children that have been resolved in the past.
+    watcher.onDidChange(uri => this.parseTestsInFile(uri));
+    // And, finally, delete TestItems for removed files. This is simple, since
+    // we use the URI as the TestItem's ID.
+    watcher.onDidDelete(uri => this.testSuite.deleteTestItem(uri));
+
+    for (const file of await vscode.workspace.findFiles(pattern)) {
+      this.testSuite.getOrCreateTestItem(file);
+    }
+
+    return watcher;
+  }
+
+  discoverAllFilesInWorkspace() {
+    let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
     let testDir = path.resolve(this.workspace?.uri.fsPath ?? '.', this.config.getTestDirectory())
-    let testGlob = path.join('**', `+(${this.config.getFilePattern().join('|')})`)
-    log.info(`Looking for test files in ${testDir} using glob patterns`, this.config.getFilePattern())
 
-    glob(testGlob, { cwd: testDir }, (err, files) => {
-      if (err) {
-        log.error("Error searching for test files", err);
+    let patterns: Array<vscode.GlobPattern> = []
+    this.config.getFilePattern().forEach(pattern => {
+      if (vscode.workspace.workspaceFolders) {
+        vscode.workspace.workspaceFolders!.forEach(async (workspaceFolder) => {
+          patterns.push(new vscode.RelativePattern(workspaceFolder, pattern))
+        })
       }
+      patterns.push(new vscode.RelativePattern(testDir, pattern))
+    })
 
-      // Add files to the test suite
-      files.forEach(f => {
-        let fileSegments = f.split(path.sep)
-        let id:string = ''
-        let collection: vscode.TestItemCollection = this.controller.items
-        for (let i = 0; i < fileSegments.length; i++) {
-          id = path.join(id, fileSegments[i])
-          let testItem: vscode.TestItem | undefined = collection.get(id)
-          if (testItem) {
-            collection = testItem.children
-            continue
-          } else {
-            let fPath = path.resolve(testDir, f)
-
-            testItem = this.controller.createTestItem(id, fileSegments[i], vscode.Uri.file(fPath))
-            if(fileSegments[i].includes('.')) {
-              // If a file and not a dir, allow to resolve the tests inside
-              log.debug(`Adding test item for file ${fPath}`)
-              testItem.canResolveChildren = true
-            } else {
-              log.debug(`Adding test item for folder ${fPath}`)
-            }
-            // testItem.busy = true Maybe?
-            collection.add(testItem)
-            collection = testItem.children
-          }
-        }
-      });
-    });
+    log.debug("Setting up watchers with the following test patterns", patterns)
+    return Promise.all(patterns.map(async (pattern) => await this.createWatcher(pattern)))
   }
 
   /**
@@ -86,11 +81,11 @@ export class TestLoader implements vscode.Disposable {
    *
    * @return The full test suite.
    */
-  public async loadAllTests(): Promise<void> {
-    let log = this.log.getChildLogger({label:"loadAddTests"})
-    log.info(`Loading Ruby tests (${this.config.frameworkName()})...`);
+  public async loadTests(testItem: vscode.TestItem): Promise<void> {
+    let log = this.log.getChildLogger({label:"loadTests"})
+    log.info(`Loading tests for ${testItem} (${this.config.frameworkName()})...`);
     try {
-      let output = await this.testRunner.initTests();
+      let output = await this.testRunner.initTests([testItem]);
 
       log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
       output = TestRunner.getJsonFromOutput(output);
@@ -116,137 +111,12 @@ export class TestLoader implements vscode.Disposable {
         }
       );
 
-      log.debug("Test output parsed. Building test suite", tests)
-      let testSuite: vscode.TestItem[] = await this.getBaseTestSuite(tests);
-
-      // // Sort the children of each test suite based on their location in the test tree.
-      // testSuite.forEach((suite: vscode.TestItem) => {
-      //   // NOTE: This will only sort correctly if everything is nested at the same
-      //   // level, e.g. 111, 112, 121, etc. Once a fourth level of indentation is
-      //   // introduced, the location is generated as e.g. 1231, which won't
-      //   // sort properly relative to everything else.
-      //   (suite.children as Array<TestInfo>).sort((a: TestInfo, b: TestInfo) => {
-      //     if ((a as TestInfo).type === "test" && (b as TestInfo).type === "test") {
-      //       let aLocation: number = this.getTestLocation(a as TestInfo);
-      //       let bLocation: number = this.getTestLocation(b as TestInfo);
-      //       return aLocation - bLocation;
-      //     } else {
-      //       return 0;
-      //     }
-      //   })
-      // });
-
-      this.controller.items.replace(testSuite);
+      log.debug("Test output parsed. Adding tests to test suite", tests)
+      await this.getTestSuiteForFile(tests, testItem);
     } catch (e: any) {
       log.error("Failed to load tests", e)
       return
     }
-  }
-
-  /**
-   * Get the test directory based on the configuration value if there's a configured test framework.
-   */
-  private getTestDirectory(): string | undefined {
-    let testDirectory = this.config.getTestDirectory();
-
-    if (testDirectory === '' || !this.workspace) {
-      return undefined;
-    }
-
-    if (testDirectory.startsWith("./")) {
-      testDirectory = testDirectory.substring(2)
-    }
-
-    return path.join(this.workspace.uri.fsPath, testDirectory);
-  }
-
-  /**
-   * Create the base test suite with a root node and one layer of child nodes
-   * representing the subdirectories of spec/, and then any files under the
-   * given subdirectory.
-   *
-   * @param tests Test objects returned by our custom RSpec formatter or Minitest Rake task.
-   * @return The test suite root with its children.
-   */
-  private async getBaseTestSuite(tests: ParsedTest[]): Promise<vscode.TestItem[]> {
-    let log = this.log.getChildLogger({ label: "getBaseTestSuite" })
-    let testSuite: vscode.TestItem[] = []
-    let testCount = 0
-    let dirPath = this.getTestDirectory() ?? '.'
-
-    // Create an array of all test files and then abuse Sets to make it unique.
-    let uniqueFiles = [...new Set(tests.map((test: { file_path: string; }) => test.file_path))];
-
-    let splitFilesArray: Array<string[]> = [];
-
-    log.debug("Building base test suite from files", uniqueFiles)
-
-    // Remove the spec/ directory from all the file path.
-    uniqueFiles.forEach((file) => {
-      if (file.startsWith('.')) {
-        file = file.substring(1)
-      }
-      if (file.startsWith(path.sep)) {
-        file = file.substring(1)
-      }
-      splitFilesArray.push(file.split('/'));
-    });
-
-    // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
-    let subdirectories: Array<string> = [];
-    splitFilesArray.forEach((splitFile) => {
-      if (splitFile.length > 1) {
-        subdirectories.push(splitFile[0]);
-      }
-    });
-    if (subdirectories[0] === ".") {
-      subdirectories = subdirectories.slice(1)
-    }
-    subdirectories = [...new Set(subdirectories)];
-    log.debug("Found subdirectories:", subdirectories)
-
-    // A nested loop to iterate through the direct subdirectories of spec/ and then
-    // organize the files under those subdirectories.
-    subdirectories.forEach((directory) => {
-      let subDirPath = path.join(dirPath, directory)
-      let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        let fullFilePath = path.resolve(dirPath, file)
-        log.debug(`Checking to see if ${fullFilePath} is in dir ${subDirPath}`)
-        return subDirPath === fullFilePath.substring(0, fullFilePath.lastIndexOf(path.sep))
-      });
-      log.debug(`Files in subdirectory (${directory}):`, uniqueFilesInDirectory)
-
-      let directoryTestSuite: vscode.TestItem = this.controller.createTestItem(directory, directory, vscode.Uri.file(subDirPath));
-      //directoryTestSuite.description = directory
-
-      // Get the sets of tests for each file in the current directory.
-      uniqueFilesInDirectory.forEach((currentFile: string) => {
-        let currentFileTestSuite = this.getTestSuiteForFile(tests, currentFile, dirPath);
-        directoryTestSuite.children.add(currentFileTestSuite);
-        testCount += currentFileTestSuite.children.size + 1
-      });
-
-      testSuite.push(directoryTestSuite);
-      testCount++
-    });
-
-    // Sort test suite types alphabetically.
-    //testSuite = this.sortTestSuiteChildren(testSuite);
-
-    // Get files that are direct descendants of the spec/ directory.
-    let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-      return filePath.split('/').length === 1;
-    });
-    log.debug(`Files in top directory:`, topDirectoryFiles)
-
-    topDirectoryFiles.forEach((currentFile) => {
-      let currentFileTestSuite = this.getTestSuiteForFile(tests, currentFile, dirPath);
-      testSuite.push(currentFileTestSuite);
-      testCount += currentFileTestSuite.children.size + 1
-    });
-
-    log.debug(`Returning ${testCount} test cases`)
-    return testSuite;
   }
 
   /**
@@ -256,29 +126,16 @@ export class TestLoader implements vscode.Disposable {
    * @param currentFile Name of the file we're checking for tests
    * @param dirPath Full path to the root test folder
    */
-  public getTestSuiteForFile(tests: Array<ParsedTest>, currentFile: string, dirPath: string): vscode.TestItem {
-    let log = this.log.getChildLogger({ label: `getTestSuiteForFile(${currentFile})` })
+  public getTestSuiteForFile(tests: Array<ParsedTest>, testItem: vscode.TestItem) {
+    let log = this.log.getChildLogger({ label: `getTestSuiteForFile(${testItem.id})` })
     let currentFileTests = tests.filter(test => {
-      return test.file_path === currentFile
-    });
+      return test.file_path === testItem.uri?.fsPath
+    })
 
-    let currentFileSplitName = currentFile.split(path.sep);
-    let currentFileLabel = currentFileSplitName[currentFileSplitName.length - 1]
+    let currentFileSplitName = testItem.uri?.fsPath.split(path.sep);
+    let currentFileLabel = currentFileSplitName ? currentFileSplitName[currentFileSplitName!.length - 1] : testItem.label
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
-
-    let testDir = this.getTestDirectory()
-    if (!testDir) {
-      log.fatal("No test folder configured or workspace folder open")
-      throw new Error("Missing test folders")
-    }
-    let currentFileAsAbsolutePath = path.resolve(dirPath, currentFile);
-
-    let currentFileTestSuite: vscode.TestItem = this.controller.createTestItem(
-      currentFile,
-      currentFileLabel,
-      vscode.Uri.file(currentFileAsAbsolutePath)
-    );
 
     currentFileTests.forEach((test) => {
       log.debug(`Building test: ${test.id}`)
@@ -307,14 +164,15 @@ export class TestLoader implements vscode.Disposable {
         description = description.replace(regex, '');
       }
 
-      let testItem = this.controller.createTestItem(test.id, description, vscode.Uri.file(currentFileAsAbsolutePath));
-      testItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
+      let childTestItem = this.testSuite.getOrCreateTestItem(test.id)
+      childTestItem.label = description
+      childTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
 
-      currentFileTestSuite.children.add(testItem);
+      testItem.children.add(childTestItem);
     });
-
-    return currentFileTestSuite;
   }
+
+
 
   /**
    * Convert a string from snake_case to PascalCase.
@@ -332,32 +190,28 @@ export class TestLoader implements vscode.Disposable {
   /**
    * Create a file watcher that will reload the test tree when a relevant file is changed.
    */
-  private createWatcher(): vscode.Disposable {
-    return vscode.workspace.onDidSaveTextDocument(document => {
-      if (!this.workspace)
+  public async parseTestsInFile(uri: vscode.Uri | vscode.TestItem) {
+    let testItem: vscode.TestItem
+    if ("fsPath" in uri) {
+      let test = this.testSuite.getTestItem(uri)
+      if (!test) {
         return
-
-      const filename = document.uri.fsPath;
-      this.log.info(`${filename} was saved - checking if this affects ${this.workspace.uri.fsPath}`);
-      if (filename.startsWith(this.workspace.uri.fsPath)) {
-        let testDirectory = this.getTestDirectory();
-
-        // In the case that there's no configured test directory, we shouldn't try to reload the tests.
-        if (testDirectory !== undefined && filename.startsWith(testDirectory)) {
-          this.log.info('A test file has been edited, reloading tests.');
-
-          // TODO: Reload only single file
-          this.loadAllTests();
-        }
       }
-    })
+      testItem = test
+    } else {
+      testItem = uri
+    }
+
+    this.log.info('A test file has been edited, reloading tests.');
+    await this.loadTests(testItem)
   }
 
   private configWatcher(): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
       if (configChange.affectsConfiguration("rubyTestExplorer")) {
-        this.loadAllTests();
+        this.controller.items.replace([])
+        this.discoverAllFilesInWorkspace();
       }
     })
   }
