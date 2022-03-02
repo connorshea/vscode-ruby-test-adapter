@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
+import * as path from 'path'
 import * as childProcess from 'child_process';
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
 import { RspecConfig } from './rspecConfig';
+import { ParsedTest } from 'src/testLoader';
 
 export class RspecTestRunner extends TestRunner {
   /**
@@ -12,11 +14,11 @@ export class RspecTestRunner extends TestRunner {
    */
   initTests = async (testItems: vscode.TestItem[]) => new Promise<string>((resolve, reject) => {
     let cfg = this.config as RspecConfig
-    let cmd = `${cfg.getTestCommandWithFilePattern()} --require ${cfg.getCustomFormatterLocation()}`
-              + ` --format CustomFormatter --order defined --dry-run`;
+    let cmd = `${cfg.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
 
     testItems.forEach((item) => {
-      cmd = `${cmd} ${item.id}`
+      let testPath = `${cfg.getTestDirectory()}${path.sep}${item.id}`
+      cmd = `${cmd} ${testPath}`
     })
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
@@ -31,30 +33,34 @@ export class RspecTestRunner extends TestRunner {
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
       if (err) {
-        this.log.error(`Error while finding RSpec test suite: ${err.message}`);
-        // Show an error message.
-        vscode.window.showWarningMessage(
-          "Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.",
-          "View error message"
-        ).then(selection => {
-          if (selection === "View error message") {
-            let outputJson = JSON.parse(TestRunner.getJsonFromOutput(stdout));
-            let outputChannel = vscode.window.createOutputChannel('Ruby Test Explorer Error Message');
+        if (err.message.includes('deprecated')) {
+          this.log.warn(`Warning while finding RSpec test suite: ${err.message}`)
+        } else {
+          this.log.error(`Error while finding RSpec test suite: ${err.message}`);
+          // Show an error message.
+          vscode.window.showWarningMessage(
+            "Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.",
+            "View error message"
+          ).then(selection => {
+            if (selection === "View error message") {
+              let outputJson = JSON.parse(TestRunner.getJsonFromOutput(stdout));
+              let outputChannel = vscode.window.createOutputChannel('Ruby Test Explorer Error Message');
 
-            if (outputJson.messages.length > 0) {
-              let outputJsonString = outputJson.messages.join("\n\n");
-              let outputJsonArray = outputJsonString.split("\n");
-              outputJsonArray.forEach((line: string) => {
-                outputChannel.appendLine(line);
-              })
-            } else {
-              outputChannel.append(err.message);
+              if (outputJson.messages.length > 0) {
+                let outputJsonString = outputJson.messages.join("\n\n");
+                let outputJsonArray = outputJsonString.split("\n");
+                outputJsonArray.forEach((line: string) => {
+                  outputChannel.appendLine(line);
+                })
+              } else {
+                outputChannel.append(err.message);
+              }
+              outputChannel.show(false);
             }
-            outputChannel.show(false);
-          }
-        });
+          });
 
-        throw err;
+          throw err;
+        }
       }
       resolve(stdout);
     });
@@ -66,10 +72,11 @@ export class RspecTestRunner extends TestRunner {
    * @param test The test that we want to handle.
    * @param context Test run context
    */
-  handleStatus(test: any, context: TestRunContext): void {
+  handleStatus(test: ParsedTest, context: TestRunContext): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     let testItem = this.testSuite.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
+      // TODO: Parse additional test data
       context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {
       // Remove linebreaks from error message.
@@ -113,12 +120,12 @@ export class RspecTestRunner extends TestRunner {
     }
   };
 
-  protected getSingleTestCommand(testLocation: string, context: TestRunContext): string {
-    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testLocation}'`
+  protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
+    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getTestDirectory()}${path.sep}${testItem.id}'`
   };
 
-  protected getTestFileCommand(testFile: string, context: TestRunContext): string {
-    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${testFile}'`
+  protected getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string {
+    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getTestDirectory()}${path.sep}${testItem.id}'`
   };
 
   protected getFullTestSuiteCommand(context: TestRunContext): string {

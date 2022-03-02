@@ -62,6 +62,11 @@ export async function activate(context: vscode.ExtensionContext) {
     const testLoaderFactory = new TestFactory(log, workspace, controller, testConfig);
     context.subscriptions.push(controller);
 
+    // TODO: REMOVE THIS!
+    // Temporary kludge to clear out stale items that have bad data during development
+    // Later on will add context menus to delete test items or force a refresh of everything
+    controller.items.replace([])
+
     testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
 
     // TODO: Allow lazy-loading of child tests - below is taken from example in docs
@@ -70,11 +75,10 @@ export async function activate(context: vscode.ExtensionContext) {
     // the test whose children VS Code wanted to load.
     controller.resolveHandler = async test => {
       log.debug('resolveHandler called', test)
-      // TODO: Glob child files and folders regardless of canResolveChildren
-      // TODO: If canResolveChildren, dry run test and update TestItems with response
       if (!test) {
         await testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
-      } else {
+      } else if (test.id.endsWith(".rb")) {
+        // Only parse files
         await testLoaderFactory.getLoader().parseTestsInFile(test);
       }
     };

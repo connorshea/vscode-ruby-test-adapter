@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
+import * as path from 'path'
 import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
@@ -7,6 +8,7 @@ import { TestRunContext } from './testRunContext';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
 import { TestSuite } from './testSuite';
+import { ParsedTest } from './testLoader';
 
 export abstract class TestRunner implements vscode.Disposable {
   protected currentChildProcess: childProcess.ChildProcess | undefined;
@@ -133,22 +135,31 @@ export abstract class TestRunner implements vscode.Disposable {
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
       childProcessLogger.debug(data);
+      let markTestStatus = (fn: (test: vscode.TestItem) => void, testId: string) => {
+        if (testId.startsWith(`.${path.sep}`)) {
+          testId = testId.substring(2)
+        }
+        if (testId.startsWith(this.config.getTestDirectory())) {
+          testId = testId.replace(this.config.getTestDirectory(), '')
+          if (testId.startsWith(path.sep)) {
+            testId = testId.substring(1)
+          }
+        }
+        let test = this.testSuite.getOrCreateTestItem(testId)
+        context.passed(test)
+      }
       if (data.startsWith('PASSED:')) {
         data = data.replace('PASSED: ', '');
-        let test = this.testSuite.getOrCreateTestItem(data)
-        context.passed(test)
+        markTestStatus(test => context.passed(test), data)
       } else if (data.startsWith('FAILED:')) {
         data = data.replace('FAILED: ', '');
-        let test = this.testSuite.getOrCreateTestItem(data)
-        context.failed(test, "", "", 0)
+        markTestStatus(test => context.failed(test, "", "", 0), data)
       } else if (data.startsWith('RUNNING:')) {
         data = data.replace('RUNNING: ', '');
-        let test = this.testSuite.getOrCreateTestItem(data)
-        context.started(test)
+        markTestStatus(test => context.started(test), data)
       } else if (data.startsWith('PENDING:')) {
         data = data.replace('PENDING: ', '');
-        let test = this.testSuite.getOrCreateTestItem(data)
-        context.enqueued(test)
+        markTestStatus(test => context.enqueued(test), data)
       }
       if (data.includes('START_OF_TEST_JSON')) {
         resolve(data);
@@ -226,7 +237,12 @@ export abstract class TestRunner implements vscode.Disposable {
 
           await this.runNode(test, context);
 
-          test.children.forEach(test => queue.push(test));
+          test.children.forEach(test => {
+            if (test.id.endsWith('.rb')) {
+              // Only add files, not all the single test cases
+              queue.push(test)
+            }
+          });
         }
         if (token.isCancellationRequested) {
           this.log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
@@ -288,68 +304,57 @@ export abstract class TestRunner implements vscode.Disposable {
     node: vscode.TestItem | null,
     context: TestRunContext
   ): Promise<void> {
+    let log = this.log.getChildLogger({label: "runNode"})
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     try {
       if (node == null) {
+        log.debug("Running all tests")
         this.controller.items.forEach((testSuite) => {
           this.enqueTestAndChildren(testSuite, context)
         })
         let testOutput = await this.runFullTestSuite(context);
-        testOutput = TestRunner.getJsonFromOutput(testOutput);
-        this.log.debug('Parsing the below JSON:');
-        this.log.debug(`${testOutput}`);
-        let testMetadata = JSON.parse(testOutput);
-        let tests: Array<any> = testMetadata.examples;
-
-        if (tests && tests.length > 0) {
-          tests.forEach((test: { id: string; }) => {
-            this.handleStatus(test, context);
-          });
-        }
+        this.parseAndHandleTestOutput(testOutput, context)
         // If the suite is a file, run the tests as a file rather than as separate tests.
       } else if (node.label.endsWith('.rb')) {
+        log.debug(`Running test file: ${node.id}`)
         // Mark selected tests as enqueued
         this.enqueTestAndChildren(node, context)
 
         context.started(node)
-        let testOutput = await this.runTestFile(`${node.uri?.fsPath}`, context);
+        let testOutput = await this.runTestFile(node, context);
 
-        testOutput = TestRunner.getJsonFromOutput(testOutput);
-        this.log.debug('Parsing the below JSON:');
-        this.log.debug(`${testOutput}`);
-        let testMetadata = JSON.parse(testOutput);
-        let tests: Array<any> = testMetadata.examples;
-
-        if (tests && tests.length > 0) {
-          tests.forEach((test: { id: string }) => {
-            this.handleStatus(test, context);
-          });
-        }
-
-        if (tests.length != node.children.size + 1) {
-          this.log.debug(`Test count mismatch {${node.label}}. Expected ${node.children.size + 1}, ran ${tests.length}`)
-        }
-
+        this.parseAndHandleTestOutput(testOutput, context)
       } else {
         if (node.uri !== undefined && node.range !== undefined) {
+          log.debug(`Running single test: ${node.id}`)
           context.started(node)
 
           // Run the test at the given line, add one since the line is 0-indexed in
           // VS Code and 1-indexed for RSpec/Minitest.
-          let testOutput = await this.runSingleTest(`${node.uri.fsPath}:${node.range?.end.line}`, context);
+          let testOutput = await this.runSingleTest(node, context);
 
-          testOutput = TestRunner.getJsonFromOutput(testOutput);
-          this.log.debug('Parsing the below JSON:');
-          this.log.debug(`${testOutput}`);
-          let testMetadata = JSON.parse(testOutput);
-          let currentTest = testMetadata.examples[0];
-
-          this.handleStatus(currentTest, context);
+          this.parseAndHandleTestOutput(testOutput, context)
         }
       }
     } finally {
       context.testRun.end()
+    }
+  }
+
+  private parseAndHandleTestOutput(testOutput: string, context: TestRunContext) {
+    let log = this.log.getChildLogger({label: 'parseAndHandleTestOutput'})
+    testOutput = TestRunner.getJsonFromOutput(testOutput);
+    log.debug('Parsing the below JSON:');
+    log.debug(`${testOutput}`);
+    let testMetadata = JSON.parse(testOutput);
+    let tests: Array<ParsedTest> = testMetadata.examples;
+
+    if (tests && tests.length > 0) {
+      tests.forEach((test: ParsedTest) => {
+        test.id = this.testSuite.normaliseTestId(test.id)
+        this.handleStatus(test, context);
+      });
     }
   }
 
@@ -364,6 +369,8 @@ export abstract class TestRunner implements vscode.Disposable {
    * Mark a test node and all its children as being queued for execution
    */
   private enqueTestAndChildren(test: vscode.TestItem, context: TestRunContext) {
+    let log = this.log.getChildLogger({label: "enqueTestAndChildren"})
+    log.debug(`enqueing test ${test.id}`)
     context.enqueued(test);
     if (test.children && test.children.size > 0) {
       test.children.forEach(child => { this.enqueTestAndChildren(child, context) })
@@ -422,10 +429,10 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the test.
    */
-  protected async runSingleTest(testLocation: string, context: TestRunContext): Promise<string> {
-    this.log.info(`Running single test: ${testLocation}`);
+  protected async runSingleTest(testItem: vscode.TestItem, context: TestRunContext): Promise<string> {
+    this.log.info(`Running single test: ${testItem.id}`);
     return await this.runTestFramework(
-      this.getSingleTestCommand(testLocation, context),
+      this.getSingleTestCommand(testItem, context),
       "single test",
       context)
   }
@@ -437,10 +444,10 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the tests.
    */
-  protected async runTestFile(testFile: string, context: TestRunContext): Promise<string> {
-    this.log.info(`Running test file: ${testFile}`);
+  protected async runTestFile(testItem: vscode.TestItem, context: TestRunContext): Promise<string> {
+    this.log.info(`Running test file: ${testItem}`);
     return await this.runTestFramework(
-      this.getTestFileCommand(testFile, context),
+      this.getTestFileCommand(testItem, context),
       "test file",
       context)
   }
@@ -466,7 +473,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the test.
    */
-  protected abstract getSingleTestCommand(testLocation: string, context: TestRunContext): string;
+  protected abstract getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string;
 
   /**
    * Gets the command to run tests in a given file.
@@ -475,7 +482,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the tests.
    */
-  protected abstract getTestFileCommand(testFile: string, context: TestRunContext): string;
+  protected abstract getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string;
 
   /**
    * Gets the command to run the full test suite for the current workspace.
@@ -491,5 +498,5 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param test The test that we want to handle.
    * @param context Test run context
    */
-  protected abstract handleStatus(test: any, context: TestRunContext): void;
+  protected abstract handleStatus(test: ParsedTest, context: TestRunContext): void;
 }

@@ -13,7 +13,10 @@ export type ParsedTest = {
   description: string,
   file_path: string,
   line_number: number,
-  location: number
+  location: number,
+  status?: string,
+  pending_message?: string,
+  exception?: any,
 }
 export class TestLoader implements vscode.Disposable {
   protected disposables: { dispose(): void }[] = [];
@@ -39,16 +42,26 @@ export class TestLoader implements vscode.Disposable {
   }
 
   async createWatcher(pattern: vscode.GlobPattern): Promise<vscode.FileSystemWatcher> {
+    let log = this.log.getChildLogger({label: `createWatcher(${pattern})`})
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
     // When files are created, make sure there's a corresponding "file" node in the tree
-    watcher.onDidCreate(uri => this.testSuite.getOrCreateTestItem(uri));
+    watcher.onDidCreate(uri => {
+      log.debug(`onDidCreate ${uri.fsPath}`)
+      this.testSuite.getOrCreateTestItem(uri)
+    })
     // When files change, re-parse them. Note that you could optimize this so
     // that you only re-parse children that have been resolved in the past.
-    watcher.onDidChange(uri => this.parseTestsInFile(uri));
+    watcher.onDidChange(uri => {
+      log.debug(`onDidChange ${uri.fsPath}`)
+      this.parseTestsInFile(uri)
+    });
     // And, finally, delete TestItems for removed files. This is simple, since
     // we use the URI as the TestItem's ID.
-    watcher.onDidDelete(uri => this.testSuite.deleteTestItem(uri));
+    watcher.onDidDelete(uri => {
+      log.debug(`onDidDelete ${uri.fsPath}`)
+      this.testSuite.deleteTestItem(uri)
+    });
 
     for (const file of await vscode.workspace.findFiles(pattern)) {
       this.testSuite.getOrCreateTestItem(file);
@@ -63,12 +76,13 @@ export class TestLoader implements vscode.Disposable {
 
     let patterns: Array<vscode.GlobPattern> = []
     this.config.getFilePattern().forEach(pattern => {
-      if (vscode.workspace.workspaceFolders) {
-        vscode.workspace.workspaceFolders!.forEach(async (workspaceFolder) => {
-          patterns.push(new vscode.RelativePattern(workspaceFolder, pattern))
-        })
-      }
-      patterns.push(new vscode.RelativePattern(testDir, pattern))
+      // TODO: Search all workspace folders (needs ability to exclude folders)
+      // if (vscode.workspace.workspaceFolders) {
+      //   vscode.workspace.workspaceFolders!.forEach(async (workspaceFolder) => {
+      //     patterns.push(new vscode.RelativePattern(workspaceFolder, '**/' + pattern))
+      //   })
+      // }
+      patterns.push(new vscode.RelativePattern(testDir, '**/' + pattern))
     })
 
     log.debug("Setting up watchers with the following test patterns", patterns)
@@ -83,7 +97,7 @@ export class TestLoader implements vscode.Disposable {
    */
   public async loadTests(testItem: vscode.TestItem): Promise<void> {
     let log = this.log.getChildLogger({label:"loadTests"})
-    log.info(`Loading tests for ${testItem} (${this.config.frameworkName()})...`);
+    log.info(`Loading tests for ${testItem.id} (${this.config.frameworkName()})...`);
     try {
       let output = await this.testRunner.initTests([testItem]);
 
@@ -115,7 +129,7 @@ export class TestLoader implements vscode.Disposable {
       await this.getTestSuiteForFile(tests, testItem);
     } catch (e: any) {
       log.error("Failed to load tests", e)
-      return
+      return Promise.reject(e)
     }
   }
 
@@ -128,16 +142,13 @@ export class TestLoader implements vscode.Disposable {
    */
   public getTestSuiteForFile(tests: Array<ParsedTest>, testItem: vscode.TestItem) {
     let log = this.log.getChildLogger({ label: `getTestSuiteForFile(${testItem.id})` })
-    let currentFileTests = tests.filter(test => {
-      return test.file_path === testItem.uri?.fsPath
-    })
 
     let currentFileSplitName = testItem.uri?.fsPath.split(path.sep);
     let currentFileLabel = currentFileSplitName ? currentFileSplitName[currentFileSplitName!.length - 1] : testItem.label
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
 
-    currentFileTests.forEach((test) => {
+    tests.forEach((test) => {
       log.debug(`Building test: ${test.id}`)
       // RSpec provides test ids like "file_name.rb[1:2:3]".
       // This uses the digits at the end of the id to create
@@ -165,6 +176,7 @@ export class TestLoader implements vscode.Disposable {
       }
 
       let childTestItem = this.testSuite.getOrCreateTestItem(test.id)
+      childTestItem.canResolveChildren = false
       childTestItem.label = description
       childTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
 
@@ -191,6 +203,7 @@ export class TestLoader implements vscode.Disposable {
    * Create a file watcher that will reload the test tree when a relevant file is changed.
    */
   public async parseTestsInFile(uri: vscode.Uri | vscode.TestItem) {
+    let log = this.log.getChildLogger({label: "parseTestsInFile"})
     let testItem: vscode.TestItem
     if ("fsPath" in uri) {
       let test = this.testSuite.getTestItem(uri)
@@ -202,7 +215,7 @@ export class TestLoader implements vscode.Disposable {
       testItem = uri
     }
 
-    this.log.info('A test file has been edited, reloading tests.');
+    log.info(`${testItem.id} has been edited, reloading tests.`);
     await this.loadTests(testItem)
   }
 

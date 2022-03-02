@@ -82,6 +82,8 @@ export class RspecConfig extends Config {
 
   public getTestDirectory(): string {
     let configDir = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string
-    return configDir ?? `.${path.sep}spec`;
+    if (configDir.startsWith('./'))
+      configDir = configDir.substring(2)
+    return configDir ?? `spec`;
   }
 }

@@ -80,14 +80,14 @@ export class MinitestTestRunner extends TestRunner {
     return cmd;
   }
 
-  protected getSingleTestCommand(testLocation: string, context: TestRunContext): string {
-    let line = testLocation.split(':').pop();
-    let relativeLocation = testLocation.split(/:\d+$/)[0].replace(`${this.workspace?.uri.fsPath || "."}/`, "")
+  protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
+    let line = testItem.id.split(':').pop();
+    let relativeLocation = testItem.id.split(/:\d+$/)[0].replace(`${this.workspace?.uri.fsPath || "."}/`, "")
     return `${this.testCommandWithDebugger(context.debuggerConfig)} '${relativeLocation}:${line}'`
   };
 
-  protected getTestFileCommand(testFile: string, context: TestRunContext): string {
-    let relativeFile = testFile.replace(`${this.workspace?.uri.fsPath || '.'}/`, "").replace(`./`, "")
+  protected getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string {
+    let relativeFile = testItem.id.replace(`${this.workspace?.uri.fsPath || '.'}/`, "").replace(`./`, "")
     return `${this.testCommandWithDebugger(context.debuggerConfig)} '${relativeFile}'`
   };
 
