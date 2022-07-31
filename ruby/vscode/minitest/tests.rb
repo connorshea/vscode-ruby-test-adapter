@@ -28,8 +28,8 @@ module VSCode
       end
 
       def build_list
-        if Minitest.respond_to?(:seed) && Minitest.seed.nil?
-          Minitest.seed = (ENV['SEED'] || srand).to_i % 0xFFFF
+        if ::Minitest.respond_to?(:seed) && ::Minitest.seed.nil?
+          ::Minitest.seed = (ENV['SEED'] || srand).to_i % 0xFFFF
         end
 
         tests = []
