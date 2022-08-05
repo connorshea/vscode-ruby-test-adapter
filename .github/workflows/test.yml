@@ -30,10 +30,10 @@ jobs:
       run: |
         npm run build
         npm run package
-    - name: Run minitest tests
-      run: |
-        bundle -v
-        xvfb-run -a node ./out/test/runMinitestTests.js
+    # - name: Run minitest tests
+    #   run: |
+    #     bundle -v
+    #     xvfb-run -a node ./out/test/runMinitestTests.js
     - name: Run rspec tests
       run: |
         xvfb-run -a node ./out/test/runRspecTests.js
