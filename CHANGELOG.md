@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2022-08-04
+### Fixed
+- Fix extension failures related to the way Minitest sets up its seed (or in this case, doesn't). Thanks [@blowmage](https://github.com/blowmage), [@pnomolos](https://github.com/pnomolos), and [@SergeyBurtsev](https://github.com/SergeyBurtsev)! ([#100](https://github.com/connorshea/vscode-ruby-test-adapter/pull/100))
+
+### Internal
+- Fix CI failures due to a mistake in `bin/setup`. ([#103](https://github.com/connorshea/vscode-ruby-test-adapter/pull/103))
+
 ## [0.9.0] - 2021-05-14
 ### Added
 - Add `rubyTestExplorer.debugCommand` configuration. Allows customizing how the Ruby debugger is accessed, e.g. `bundle exec rdebug-ide`. Thanks [@Juice10](https://github.com/Juice10)! ([#72](https://github.com/connorshea/vscode-ruby-test-adapter/pull/72))
@@ -176,7 +183,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.7.1...v0.8.0
