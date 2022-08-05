@@ -32,6 +32,7 @@ jobs:
         npm run package
     - name: Run minitest tests
       run: |
+        bundle -v
         xvfb-run -a node ./out/test/runMinitestTests.js
     - name: Run rspec tests
       run: |
