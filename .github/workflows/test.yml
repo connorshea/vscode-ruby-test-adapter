@@ -26,6 +26,8 @@ jobs:
     - name: install dependencies
       run: |
         bin/setup
+        cat Gemfile.lock
+        ls
     - name: Compile extension
       run: |
         npm run build
