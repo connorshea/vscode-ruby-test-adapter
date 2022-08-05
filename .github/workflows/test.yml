@@ -1,6 +1,5 @@
 name: Test
 
-
 on:
   push:
     branches:
@@ -11,19 +10,19 @@ jobs:
   test:
     runs-on: "ubuntu-latest"
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-node@v1
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
       with:
-        node-version: 15
+        node-version: 16
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v1
+      uses: ruby/setup-ruby@v3
       with:
         ruby-version: 3.0
     - name: Update rubygems & bundler
       run: |
         ruby -v
         gem update --system
-    - name: install dependencies
+    - name: Install dependencies
       run: |
         bin/setup
     - name: Compile extension
