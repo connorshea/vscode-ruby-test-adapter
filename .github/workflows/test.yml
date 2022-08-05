@@ -15,9 +15,9 @@ jobs:
       with:
         node-version: 16
     - name: Set up Ruby
-      uses: ruby/setup-ruby@v3
+      uses: ruby/setup-ruby@v1
       with:
-        ruby-version: 3.0
+        ruby-version: '3.0'
     - name: Update rubygems & bundler
       run: |
         ruby -v
