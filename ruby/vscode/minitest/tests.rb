@@ -28,6 +28,10 @@ module VSCode
       end
 
       def build_list
+        if ::Minitest.respond_to?(:seed) && ::Minitest.seed.nil?
+          ::Minitest.seed = (ENV['SEED'] || srand).to_i % 0xFFFF
+        end
+
         tests = []
         ::Minitest::Runnable.runnables.map do |runnable|
           file_tests = runnable.runnable_methods.map do |test_name|
