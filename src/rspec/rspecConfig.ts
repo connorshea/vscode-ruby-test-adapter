@@ -3,6 +3,8 @@ import * as vscode from 'vscode'
 import * as path from 'path';
 
 export class RspecConfig extends Config {
+  readonly DEFAULT_TEST_DIRECTORY = 'spec'
+
   public frameworkName(): string {
     return "RSpec"
   }
@@ -81,9 +83,12 @@ export class RspecConfig extends Config {
   }
 
   public getTestDirectory(): string {
-    let configDir = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string
+    let configDir = vscode.workspace.getConfiguration('rubyTestExplorer').get('rspecDirectory') as string
+    if (!configDir)
+      return this.DEFAULT_TEST_DIRECTORY
+
     if (configDir.startsWith('./'))
       configDir = configDir.substring(2)
-    return configDir ?? `spec`;
+    return configDir ?? this.DEFAULT_TEST_DIRECTORY;
   }
 }

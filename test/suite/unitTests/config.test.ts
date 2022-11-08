@@ -55,13 +55,13 @@ suite('Config', function() {
 
       let config = new RspecConfig("../../../ruby")
       expect(config.getTestCommandWithFilePattern()).to
-        .eq("bundle exec rspec --pattern './spec/**/*_test.rb,./spec/**/test_*.rb'")
+        .eq("bundle exec rspec --pattern 'spec/**/*_test.rb,spec/**/test_*.rb'")
     })
 
     suite("#getTestDirectory()", function() {
-      test("with no config set, it returns ./spec", function() {
+      test("with no config set, it returns default value", function() {
         let config = new RspecConfig("../../../ruby")
-        expect(config.getTestDirectory()).to.eq("./spec")
+        expect(config.getTestDirectory()).to.eq("spec/")
       })
     })
   })
