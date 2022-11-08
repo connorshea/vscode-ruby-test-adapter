@@ -7,7 +7,7 @@ import { TestLoader } from '../../../src/testLoader';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 import { StubTestController } from '../../stubs/stubTestController';
 import { expect } from 'chai';
-import { TestSuite } from 'src/testSuite';
+import { TestSuite } from '../../../src/testSuite';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
@@ -50,19 +50,6 @@ suite('Extension Test for RSpec', function() {
     testItemCollectionMatches(testController.items,
       [
         {
-          file: expectedPath("subfolder"),
-          id: "subfolder",
-          label: "subfolder",
-          children: [
-            {
-              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
-              id: "subfolder/foo_spec.rb",
-              label: "foo_spec.rb",
-              children: []
-            }
-          ]
-        },
-        {
           file: expectedPath("abs_spec.rb"),
           id: "abs_spec.rb",
           label: "abs_spec.rb",
@@ -74,15 +61,6 @@ suite('Extension Test for RSpec', function() {
           label: "square_spec.rb",
           children: []
         },
-      ]
-    )
-
-    // Resolve a file (e.g. by clicking on it in the test explorer)
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
-
-    // Tests in that file have now been added to suite
-    testItemCollectionMatches(testController.items,
-      [
         {
           file: expectedPath("subfolder"),
           id: "subfolder",
@@ -96,6 +74,15 @@ suite('Extension Test for RSpec', function() {
             }
           ]
         },
+      ]
+    )
+
+    // Resolve a file (e.g. by clicking on it in the test explorer)
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
+
+    // Tests in that file have now been added to suite
+    testItemCollectionMatches(testController.items,
+      [
         {
           file: expectedPath("abs_spec.rb"),
           id: "abs_spec.rb",
@@ -127,6 +114,19 @@ suite('Extension Test for RSpec', function() {
           label: "square_spec.rb",
           children: []
         },
+        {
+          file: expectedPath("subfolder"),
+          id: "subfolder",
+          label: "subfolder",
+          children: [
+            {
+              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+              id: "subfolder/foo_spec.rb",
+              label: "foo_spec.rb",
+              children: []
+            }
+          ]
+        },
       ]
     )
   })
@@ -142,26 +142,6 @@ suite('Extension Test for RSpec', function() {
 
     testItemCollectionMatches(testSuite,
       [
-        {
-          file: expectedPath("subfolder"),
-          id: "subfolder",
-          label: "subfolder",
-          children: [
-            {
-              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
-              id: "subfolder/foo_spec.rb",
-              label: "foo_spec.rb",
-              children: [
-                {
-                  file: expectedPath(path.join("subfolder", "foo_spec.rb")),
-                  id: "subfolder/foo_spec.rb[1:1]",
-                  label: "wibbles and wobbles",
-                  line: 3,
-                }
-              ]
-            }
-          ]
-        },
         {
           file: expectedPath("abs_spec.rb"),
           id: "abs_spec.rb",
@@ -203,6 +183,26 @@ suite('Extension Test for RSpec', function() {
               id: "square_spec.rb[1:2]",
               label: "finds the square of 3",
               line: 7,
+            }
+          ]
+        },
+        {
+          file: expectedPath("subfolder"),
+          id: "subfolder",
+          label: "subfolder",
+          children: [
+            {
+              file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+              id: "subfolder/foo_spec.rb",
+              label: "foo_spec.rb",
+              children: [
+                {
+                  file: expectedPath(path.join("subfolder", "foo_spec.rb")),
+                  id: "subfolder/foo_spec.rb[1:1]",
+                  label: "wibbles and wobbles",
+                  line: 3,
+                }
+              ]
             }
           ]
         },

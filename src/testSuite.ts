@@ -49,6 +49,7 @@ export class TestSuite {
         label = this.getPlaceholderLabelForSingleTest(testId)
       }
       let uri = vscode.Uri.file(path.resolve(this.config.getTestDirectory(), testId.replace(this.locationPattern, '')))
+      log.debug(`Creating test item - id: ${testId}, label: ${label}, uri: ${uri}`)
       testItem = this.controller.createTestItem(testId, label, uri);
       testItem.canResolveChildren = !this.locationPattern.test(testId)
       collection.add(testItem);
@@ -69,6 +70,12 @@ export class TestSuite {
     return testItem
   }
 
+  /**
+   * Takes a test ID from the test runner output and normalises it to a consistent format
+   *
+   * - Removes leading './' if present
+   * - Removes leading test dir if present
+   */
   public normaliseTestId(testId: string): string {
     if (testId.startsWith(`.${path.sep}`)) {
       testId = testId.substring(2)
@@ -83,13 +90,19 @@ export class TestSuite {
   }
 
   private uriToTestId(uri: string | vscode.Uri): string {
-    if (typeof uri === "string")
+    let log = this.log.getChildLogger({label: `uriToTestId(${uri})`})
+    if (typeof uri === "string") {
+      log.debug("uri is string. Returning unchanged")
       return uri
-    return uri.fsPath.replace(
-      path.resolve(
-        vscode.workspace?.workspaceFolders![0].uri.fsPath,
-        this.config.getTestDirectory()) + path.sep,
-      '')
+    }
+    let fullTestDirPath = path.resolve(
+      vscode.workspace?.workspaceFolders![0].uri.fsPath,
+      this.config.getTestDirectory()
+    )
+    log.debug(`Full path to test dir: ${fullTestDirPath}`)
+    let strippedUri = uri.fsPath.replace(fullTestDirPath + path.sep, '')
+    log.debug(`Stripped URI: ${strippedUri}`)
+    return strippedUri
   }
 
   private getParentTestItemCollection(testId: string): vscode.TestItemCollection {
@@ -140,9 +153,9 @@ export class TestSuite {
       log.debug(`Getting parent collection ${collectionId}`)
       let childCollection = collection.get(collectionId)?.children
       if (!childCollection) {
-        log.debug(`${collectionId} not found, creating`)
         let label = idSegments[i]
         let uri = vscode.Uri.file(path.resolve(this.config.getTestDirectory(), collectionId))
+        log.debug(`${collectionId} not found, creating - label: ${label}, uri: ${uri}`)
         let child = this.controller.createTestItem(collectionId, label, uri)
         child.canResolveChildren = true
         collection.add(child)
@@ -161,8 +174,10 @@ export class TestSuite {
       log.debug(`Getting file collection ${fileId}`)
       let childCollection = collection.get(fileId)?.children
       if (!childCollection) {
-        log.debug(`${fileId} not found, creating`)
-        let child = this.controller.createTestItem(fileId, fileId.substring(fileId.lastIndexOf(path.sep) + 1), vscode.Uri.file(path.resolve(this.config.getTestDirectory(), fileId)))
+        let label = fileId.substring(fileId.lastIndexOf(path.sep) + 1)
+        let uri = vscode.Uri.file(path.resolve(this.config.getTestDirectory(), fileId))
+        log.debug(`${fileId} not found, creating - label: ${label}, uri: ${uri}`)
+        let child = this.controller.createTestItem(fileId, label, uri)
         child.canResolveChildren = true
         collection.add(child)
         childCollection = child.children

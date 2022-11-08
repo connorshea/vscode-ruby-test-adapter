@@ -18,6 +18,13 @@ export type ParsedTest = {
   pending_message?: string,
   exception?: any,
 }
+
+/**
+ * Responsible for finding and watching test files, and loading tests from within those
+ * files
+ *
+ * Defers to TestSuite for parsing test information
+ */
 export class TestLoader implements vscode.Disposable {
   protected disposables: { dispose(): void }[] = [];
   private readonly log: IChildLogger;
@@ -41,6 +48,12 @@ export class TestLoader implements vscode.Disposable {
     this.disposables = [];
   }
 
+  /**
+   * Create a file watcher that will update the test tree when:
+   * - A test file is created
+   * - A test file is changed
+   * - A test file is deleted
+   */
   async createWatcher(pattern: vscode.GlobPattern): Promise<vscode.FileSystemWatcher> {
     let log = this.log.getChildLogger({label: `createWatcher(${pattern})`})
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
@@ -70,6 +83,10 @@ export class TestLoader implements vscode.Disposable {
     return watcher;
   }
 
+  /**
+   * Searches the configured test directory for test files, and calls createWatcher for
+   * each one found.
+   */
   discoverAllFilesInWorkspace() {
     let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
     let testDir = path.resolve(this.workspace?.uri.fsPath ?? '.', this.config.getTestDirectory())
@@ -103,7 +120,7 @@ export class TestLoader implements vscode.Disposable {
 
       log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
       output = TestRunner.getJsonFromOutput(output);
-      log.debug(`Parsing the returnd JSON: ${output}`);
+      log.debug(`Parsing the returned JSON: ${output}`);
       let testMetadata;
       try {
         testMetadata = JSON.parse(output);
@@ -117,8 +134,8 @@ export class TestLoader implements vscode.Disposable {
         (test: ParsedTest) => {
           let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
           let test_location_string: string = test_location_array.join('');
-          test.location = parseInt(test_location_string);
-          test.id = test.id.replace(this.config.getTestDirectory(), '')
+          test.location = parseInt(test_location_string); // TODO: check this isn't RSpec specific
+          test.id = this.testSuite.normaliseTestId(test.id)
           test.file_path = test.file_path.replace(this.config.getTestDirectory(), '')
           tests.push(test);
           log.debug("Parsed test", test)
@@ -126,7 +143,7 @@ export class TestLoader implements vscode.Disposable {
       );
 
       log.debug("Test output parsed. Adding tests to test suite", tests)
-      await this.getTestSuiteForFile(tests, testItem);
+      this.getTestSuiteForFile(tests, testItem);
     } catch (e: any) {
       log.error("Failed to load tests", e)
       return Promise.reject(e)
@@ -137,14 +154,14 @@ export class TestLoader implements vscode.Disposable {
    * Get the tests in a given file.
    *
    * @param tests Parsed output from framework
-   * @param currentFile Name of the file we're checking for tests
-   * @param dirPath Full path to the root test folder
+   * @param testItem TestItem object containing file details
    */
   public getTestSuiteForFile(tests: Array<ParsedTest>, testItem: vscode.TestItem) {
     let log = this.log.getChildLogger({ label: `getTestSuiteForFile(${testItem.id})` })
 
     let currentFileSplitName = testItem.uri?.fsPath.split(path.sep);
     let currentFileLabel = currentFileSplitName ? currentFileSplitName[currentFileSplitName!.length - 1] : testItem.label
+    log.debug(`Current file label: ${currentFileLabel}`)
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
 
@@ -199,9 +216,7 @@ export class TestLoader implements vscode.Disposable {
     return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
   }
 
-  /**
-   * Create a file watcher that will reload the test tree when a relevant file is changed.
-   */
+
   public async parseTestsInFile(uri: vscode.Uri | vscode.TestItem) {
     let log = this.log.getChildLogger({label: "parseTestsInFile"})
     let testItem: vscode.TestItem
