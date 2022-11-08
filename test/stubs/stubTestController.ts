@@ -21,6 +21,8 @@ export class StubTestController implements vscode.TestController {
 
   resolveHandler?: ((item: vscode.TestItem | undefined) => void | Thenable<void>) | undefined;
 
+  refreshHandler: ((token: vscode.CancellationToken) => void | Thenable<void>) | undefined;
+
   createTestRun(
     request: vscode.TestRunRequest,
     name?: string,
