@@ -33,7 +33,7 @@ export class TestRunContext {
   /**
    * Indicates a test is queued for later execution.
    *
-   * @param testId ID of the test item to update.
+   * @param test Test item to update.
    */
   public enqueued(test: vscode.TestItem): void {
     this.testRun.enqueued(test)
@@ -45,7 +45,7 @@ export class TestRunContext {
    *
    * This differs from the "failed" state in that it indicates a test that couldn't be executed at all, from a compilation error for example
    *
-   * @param testId ID of the test item to update.
+   * @param test Test item to update.
    * @param message Message(s) associated with the test failure.
    * @param duration How long the test took to execute, in milliseconds.
    */
@@ -73,7 +73,7 @@ export class TestRunContext {
   /**
    * Indicates a test has failed.
    *
-   * @param testId ID of the test item to update.
+   * @param test Test item to update.
    * @param message Message(s) associated with the test failure.
    * @param file Path to the file containing the failed test
    * @param line Line number where the error occurred
@@ -98,7 +98,7 @@ export class TestRunContext {
   /**
    * Indicates a test has passed.
    *
-   * @param testId ID of the test item to update.
+   * @param test Test item to update.
    * @param duration How long the test took to execute, in milliseconds.
    */
   public passed(test: vscode.TestItem,
@@ -121,7 +121,7 @@ export class TestRunContext {
   /**
    * Indicates a test has started running.
    *
-   * @param testId ID of the test item to update, or the test item.
+   * @param test Test item to update, or the test item.
    */
   public started(test: vscode.TestItem): void {
     this.testRun.started(test)

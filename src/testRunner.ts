@@ -17,9 +17,11 @@ export abstract class TestRunner implements vscode.Disposable {
   protected readonly log: IChildLogger;
 
   /**
-   * @param log The Test Adapter logger, for logging.
+   * @param rootLog The Test Adapter logger, for logging.
    * @param workspace Open workspace folder
    * @param controller Test controller that holds the test suite
+   * @param config Configuration provider
+   * @param testSuite TestSuite instance
    */
   constructor(
     rootLog: IChildLogger,

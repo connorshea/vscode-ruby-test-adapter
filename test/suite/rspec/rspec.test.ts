@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import * as path from 'path'
 import { anything, instance, verify } from 'ts-mockito'
-import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
-import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
-import { TestLoader } from '../../../src/testLoader';
-import { RspecConfig } from '../../../src/rspec/rspecConfig';
-import { StubTestController } from '../../stubs/stubTestController';
 import { expect } from 'chai';
-import { TestSuite } from '../../../src/testSuite';
+
+import { RspecTestRunner } from 'src/rspec/rspecTestRunner';
+import { TestLoader } from 'src/testLoader';
+import { RspecConfig } from 'src/rspec/rspecConfig';
+import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from 'test/suite/helpers';
+import { StubTestController } from 'test/stubs/stubTestController';
+import { TestSuite } from 'src/testSuite';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController

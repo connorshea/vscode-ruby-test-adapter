@@ -1,7 +1,8 @@
 import * as vscode from 'vscode'
+import { instance, mock } from 'ts-mockito';
+
 import { StubTestItemCollection } from './stubTestItemCollection';
 import { StubTestItem } from './stubTestItem';
-import { instance, mock } from 'ts-mockito';
 
 export class StubTestController implements vscode.TestController {
   id: string = "stub_test_controller_id";

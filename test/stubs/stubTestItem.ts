@@ -1,4 +1,5 @@
 import * as vscode from 'vscode'
+
 import { StubTestItemCollection } from './stubTestItemCollection';
 
 export class StubTestItem implements vscode.TestItem {

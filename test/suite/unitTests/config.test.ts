@@ -1,9 +1,10 @@
-import { noop_logger } from "../helpers";
+import { expect } from "chai";
 import { spy, when } from 'ts-mockito'
 import * as vscode from 'vscode'
+
 import { Config } from "../../../src/config";
 import { RspecConfig } from "../../../src/rspec/rspecConfig";
-import { expect } from "chai";
+import { noop_logger } from "../helpers";
 
 suite('Config', function() {
   let setConfig = (testFramework: string) => {

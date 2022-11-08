@@ -1,9 +1,10 @@
 import * as vscode from 'vscode'
 import { expect } from 'chai'
 import { IVSCodeExtLogger, IChildLogger } from "@vscode-logging/types";
-import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
 import { anyString, anything, capture, instance, mock, when } from 'ts-mockito';
 import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCaptor';
+
+import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
 
 export function noop() {}
 
