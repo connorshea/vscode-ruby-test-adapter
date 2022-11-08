@@ -6,3 +6,4 @@ ruby/Gemfile.lock
 *.vsix
 .rbenv-gemsets
 .ruby-version
+**/.bundle/
