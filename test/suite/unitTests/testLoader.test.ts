@@ -17,7 +17,7 @@ suite('TestLoader', function () {
 
   before(function () {
     console.log('before')
-    when(config.getTestDirectory()).thenReturn('spec')
+    when(config.getRelativeTestDirectory()).thenReturn('spec')
   })
 
   beforeEach(function () {

@@ -32,16 +32,13 @@ export class TestLoader implements vscode.Disposable {
 
   constructor(
     readonly rootLog: IChildLogger,
-    private readonly workspace: vscode.WorkspaceFolder | undefined,
     private readonly controller: vscode.TestController,
     private readonly testRunner: RspecTestRunner | MinitestTestRunner,
     private readonly config: Config,
     private readonly testSuite: TestSuite,
   ) {
     this.log = rootLog.getChildLogger({ label: "TestLoader" });
-    this.log.debug('constructor')
     this.disposables.push(this.configWatcher());
-    this.log.debug('constructor complete')
   }
 
   dispose(): void {
@@ -92,7 +89,7 @@ export class TestLoader implements vscode.Disposable {
    */
   discoverAllFilesInWorkspace() {
     let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
-    let testDir = path.resolve(this.workspace?.uri.fsPath ?? '.', this.config.getTestDirectory())
+    let testDir = this.config.getAbsoluteTestDirectory()
     log.debug(`testDir: ${testDir}`)
 
     let patterns: Array<vscode.GlobPattern> = []

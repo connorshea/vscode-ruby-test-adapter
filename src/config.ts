@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import * as childProcess from 'child_process';
 import { IVSCodeExtLogger } from '@vscode-logging/logger';
 
@@ -30,11 +31,20 @@ export abstract class Config {
   }
 
   /**
-   * Get the user-configured test directory, if there is one.
+   * Get the user-configured test directory relative to the cwd, if there is one.
    *
    * @return The test directory
    */
-  public abstract getTestDirectory(): string;
+  public abstract getRelativeTestDirectory(): string;
+
+  /**
+   * Get the user-configured test directory relative to the cwd, if there is one.
+   *
+   * @return The test directory
+   */
+   public getAbsoluteTestDirectory(): string {
+     return path.resolve(__dirname, this.getRelativeTestDirectory())
+   }
 
   /**
    * Get the env vars to run the subprocess with.

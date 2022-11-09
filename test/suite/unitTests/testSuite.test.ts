@@ -2,25 +2,28 @@ import { expect } from 'chai';
 import { before, beforeEach } from 'mocha';
 import { instance, mock, when } from 'ts-mockito'
 import * as vscode from 'vscode'
+import path from 'path'
 
 import { Config } from '../../../src/config';
 import { TestSuite } from '../../../src/testSuite';
 import { StubTestController } from '../../stubs/stubTestController';
 import { StubTestItem } from '../../stubs/stubTestItem';
-import { noop_logger } from '../helpers';
+import { noop_logger, testUriMatches } from '../helpers';
 
 suite('TestSuite', function () {
-  let config: Config = mock<Config>();
+  let mockConfig: Config = mock<Config>();
+  const config: Config = instance(mockConfig)
   let controller: vscode.TestController;
   let testSuite: TestSuite;
 
   before(function () {
-    when(config.getTestDirectory()).thenReturn('spec')
+    when(mockConfig.getRelativeTestDirectory()).thenReturn('spec')
+    when(mockConfig.getAbsoluteTestDirectory()).thenReturn(path.resolve('spec'))
   });
 
   beforeEach(function () {
     controller = new StubTestController()
-    testSuite = new TestSuite(noop_logger(), controller, instance(config))
+    testSuite = new TestSuite(noop_logger(), controller, instance(mockConfig))
   });
 
   suite('#normaliseTestId()', function () {
@@ -110,7 +113,7 @@ suite('TestSuite', function () {
     const id = 'test-id'
     const label = 'test-label'
     const testItem = new StubTestItem(id, label)
-    const childId = 'folder/child-test'
+    const childId = `folder${path.sep}child-test`
     const childItem = new StubTestItem(childId, 'child-test')
 
     test('gets the specified item if ID is found', function () {
@@ -122,6 +125,7 @@ suite('TestSuite', function () {
       let testItem = testSuite.getOrCreateTestItem('not-found')
       expect(testItem).to.not.be.undefined
       expect(testItem?.id).to.eq('not-found')
+      testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), 'not-found'))
     })
 
     test('gets the specified nested test if ID is found', function () {
@@ -134,22 +138,26 @@ suite('TestSuite', function () {
     })
 
     test('creates item if nested ID is not found', function () {
+      let id = `folder${path.sep}not-found`
       let folderItem = new StubTestItem('folder', 'folder')
       controller.items.add(folderItem)
 
-      let testItem = testSuite.getOrCreateTestItem('folder/not-found')
+      let testItem = testSuite.getOrCreateTestItem(id)
       expect(testItem).to.not.be.undefined
-      expect(testItem?.id).to.eq('folder/not-found')
+      expect(testItem?.id).to.eq(id)
+      testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
     })
 
     test('creates item and parent if parent of nested ID is not found', function () {
-      let testItem = testSuite.getOrCreateTestItem('folder/not-found')
+      let id = `folder${path.sep}not-found`
+      let testItem = testSuite.getOrCreateTestItem(id)
       expect(testItem).to.not.be.undefined
-      expect(testItem?.id).to.eq('folder/not-found')
+      expect(testItem?.id).to.eq(id)
 
       let folder = testSuite.getOrCreateTestItem('folder')
       expect(folder?.children.size).to.eq(1)
-      expect(folder?.children.get('folder/not-found')).to.eq(testItem)
+      expect(folder?.children.get(id)).to.eq(testItem)
+      testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
     })
   })
 });

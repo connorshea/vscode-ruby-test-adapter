@@ -12,7 +12,7 @@ export class MinitestConfig extends Config {
    *
    * @return The test directory
    */
-  public getTestDirectory(): string {
+  public getRelativeTestDirectory(): string {
     return (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string)
       || path.join('.', 'test');
   }
@@ -26,7 +26,7 @@ export class MinitestConfig extends Config {
     return Object.assign({}, process.env, {
       "RAILS_ENV": "test",
       "EXT_DIR": this.rubyScriptPath,
-      "TESTS_DIR": this.getTestDirectory(),
+      "TESTS_DIR": this.getRelativeTestDirectory(),
       "TESTS_PATTERN": this.getFilePattern().join(',')
     });
   }

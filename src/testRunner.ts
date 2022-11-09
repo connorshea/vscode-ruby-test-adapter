@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
-import * as path from 'path'
 import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
@@ -138,15 +137,7 @@ export abstract class TestRunner implements vscode.Disposable {
       data = data.toString();
       childProcessLogger.debug(data);
       let markTestStatus = (fn: (test: vscode.TestItem) => void, testId: string) => {
-        if (testId.startsWith(`.${path.sep}`)) {
-          testId = testId.substring(2)
-        }
-        if (testId.startsWith(this.config.getTestDirectory())) {
-          testId = testId.replace(this.config.getTestDirectory(), '')
-          if (testId.startsWith(path.sep)) {
-            testId = testId.substring(1)
-          }
-        }
+        testId = this.testSuite.normaliseTestId(testId)
         let test = this.testSuite.getOrCreateTestItem(testId)
         context.passed(test)
       }

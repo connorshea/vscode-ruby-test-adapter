@@ -61,7 +61,6 @@ export class TestSuite {
         collection,
         testId,
         label,
-        vscode.Uri.file(path.resolve(this.config.getTestDirectory(), testId.replace(this.locationPattern, ''))),
         !this.locationPattern.test(testId)
       );
     }
@@ -97,10 +96,10 @@ export class TestSuite {
       log.debug(`Stripping leading .${path.sep}`)
       testId = testId.substring(2)
     }
-    log.debug(`Checking if ID starts with test dir (${this.config.getTestDirectory()})`)
-    if (testId.startsWith(this.config.getTestDirectory())) {
-      log.debug(`Stripping test dir (${this.config.getTestDirectory()})`)
-      testId = testId.replace(this.config.getTestDirectory(), '')
+    log.debug(`Checking if ID starts with test dir (${this.config.getRelativeTestDirectory()})`)
+    if (testId.startsWith(this.config.getRelativeTestDirectory())) {
+      log.debug(`Stripping test dir (${this.config.getRelativeTestDirectory()})`)
+      testId = testId.replace(this.config.getRelativeTestDirectory(), '')
       if (testId.startsWith(path.sep)) {
         log.debug(`Stripping leading ${path.sep}`)
         testId = testId.substring(1)
@@ -121,14 +120,15 @@ export class TestSuite {
       log.debug("uri is string. Returning unchanged")
       return uri
     }
-    let fullTestDirPath = path.resolve(
-      vscode.workspace?.workspaceFolders![0].uri.fsPath,
-      this.config.getTestDirectory()
-    )
+    let fullTestDirPath = this.config.getAbsoluteTestDirectory()
     log.debug(`Full path to test dir: ${fullTestDirPath}`)
     let strippedUri = uri.fsPath.replace(fullTestDirPath + path.sep, '')
     log.debug(`Stripped URI: ${strippedUri}`)
     return strippedUri
+  }
+
+  private testIdToUri(testId: string): vscode.Uri {
+    return vscode.Uri.file(path.resolve(this.config.getAbsoluteTestDirectory(), testId))
   }
 
   /**
@@ -152,8 +152,7 @@ export class TestSuite {
         let child = this.createTestItem(
           collection,
           collectionId,
-          idSegments[i],
-          vscode.Uri.file(path.resolve(this.config.getTestDirectory(), collectionId))
+          idSegments[i]
         )
         childCollection = child.children
       }
@@ -175,8 +174,7 @@ export class TestSuite {
         let child = this.createTestItem(
           collection,
           fileId,
-          fileId.substring(fileId.lastIndexOf(path.sep) + 1),
-          vscode.Uri.file(path.resolve(this.config.getTestDirectory(), fileId))
+          fileId.substring(fileId.lastIndexOf(path.sep) + 1)
         )
         childCollection = child.children
       }
@@ -199,10 +197,10 @@ export class TestSuite {
     collection: vscode.TestItemCollection,
     testId: string,
     label: string,
-    uri: vscode.Uri,
     canResolveChildren: boolean = true
   ): vscode.TestItem {
     let log = this.log.getChildLogger({ label: `createTestId(${testId})` })
+    let uri = this.testIdToUri(testId)
     log.debug(`Creating test item - label: ${label}, uri: ${uri}, canResolveChildren: ${canResolveChildren}`)
     let item = this.controller.createTestItem(testId, label, uri)
     item.canResolveChildren = canResolveChildren

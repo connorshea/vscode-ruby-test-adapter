@@ -1,5 +1,6 @@
 {
   "rubyTestExplorer": {
     "testFramework": "rspec"
-  }
+  },
+  "rubyTestExplorer.rspecDirectory": "rspec/spec"
 }

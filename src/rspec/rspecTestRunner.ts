@@ -17,7 +17,7 @@ export class RspecTestRunner extends TestRunner {
     let cmd = `${cfg.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
 
     testItems.forEach((item) => {
-      let testPath = `${cfg.getTestDirectory()}${path.sep}${item.id}`
+      let testPath = item.uri ? item.uri.fsPath : `${cfg.getAbsoluteTestDirectory()}${path.sep}${item.id}`
       cmd = `${cmd} ${testPath}`
     })
 
@@ -121,11 +121,11 @@ export class RspecTestRunner extends TestRunner {
   };
 
   protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
-    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getTestDirectory()}${path.sep}${testItem.id}'`
+    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
   };
 
   protected getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string {
-    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getTestDirectory()}${path.sep}${testItem.id}'`
+    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
   };
 
   protected getFullTestSuiteCommand(context: TestRunContext): string {

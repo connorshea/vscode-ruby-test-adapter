@@ -87,6 +87,15 @@ export type TestItemExpectation = {
   children?: TestItemExpectation[]
 }
 
+export function testUriMatches(testItem: vscode.TestItem, path?: string) {
+  if (path) {
+    expect(testItem.uri).to.not.be.undefined
+    expect(testItem.uri?.path).to.eql(path, `uri mismatch (id: ${testItem.id})`)
+  } else {
+    expect(testItem.uri).to.be.undefined
+  }
+}
+
 /**
  * Assert that a {@link vscode.TestItem TestItem} matches the expected values
  * @param testItem {@link vscode.TestItem TestItem} to check
@@ -96,12 +105,7 @@ export function testItemMatches(testItem: vscode.TestItem, expectation: TestItem
   if (!expectation) expect.fail("No expectation given")
 
   expect(testItem.id).to.eq(expectation.id, `id mismatch (expected: ${expectation.id})`)
-  if (expectation.file) {
-    expect(testItem.uri).to.not.be.undefined
-    expect(testItem.uri?.path).to.eql(expectation.file, `uri mismatch (id: ${expectation.id})`)
-  } else {
-    expect(testItem.uri).to.be.undefined
-  }
+  testUriMatches(testItem, expectation.file)
   if (expectation.children && expectation.children.length > 0) {
     expect(testItem.children.size).to.eq(expectation.children.length, `wrong number of children (id: ${expectation.id})`)
     let i = 0;

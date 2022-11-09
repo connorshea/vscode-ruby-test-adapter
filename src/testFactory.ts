@@ -59,7 +59,6 @@ export class TestFactory implements vscode.Disposable {
     if (!this.loader) {
       this.loader = new TestLoader(
         this.log,
-        this.workspace,
         this.controller,
         this.getRunner(),
         this.config,

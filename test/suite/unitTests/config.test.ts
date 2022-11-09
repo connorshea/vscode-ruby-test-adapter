@@ -62,7 +62,7 @@ suite('Config', function() {
     suite("#getTestDirectory()", function() {
       test("with no config set, it returns default value", function() {
         let config = new RspecConfig("../../../ruby")
-        expect(config.getTestDirectory()).to.eq("spec/")
+        expect(config.getRelativeTestDirectory()).to.eq("spec/")
       })
     })
   })

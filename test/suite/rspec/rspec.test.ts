@@ -3,12 +3,13 @@ import * as path from 'path'
 import { anything, instance, verify } from 'ts-mockito'
 import { expect } from 'chai';
 
-import { RspecTestRunner } from 'src/rspec/rspecTestRunner';
-import { TestLoader } from 'src/testLoader';
-import { RspecConfig } from 'src/rspec/rspecConfig';
-import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from 'test/suite/helpers';
-import { StubTestController } from 'test/stubs/stubTestController';
-import { TestSuite } from 'src/testSuite';
+import { TestLoader } from '../../../src/testLoader';
+import { TestSuite } from '../../../src/testSuite';
+import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
+import { RspecConfig } from '../../../src/rspec/rspecConfig';
+
+import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
@@ -29,7 +30,8 @@ suite('Extension Test for RSpec', function() {
       file)
   }
 
-  this.beforeEach(async function() {
+  this.beforeEach(async function () {
+    vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'rspec/spec')
     testController = new StubTestController()
 
     // Populate controller with test files. This would be done by the filesystem globs in the watchers
@@ -41,9 +43,11 @@ suite('Extension Test for RSpec', function() {
     subfolderItem.children.add(createTest("subfolder/foo_spec.rb"))
 
     config = new RspecConfig(dirPath)
+    console.log(`dirpath: ${dirPath}`)
+
     let testSuite = new TestSuite(stdout_logger(), testController, config)
     testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
-    testLoader = new TestLoader(stdout_logger(), workspaceFolder, testController, testRunner, config, testSuite);
+    testLoader = new TestLoader(stdout_logger(), testController, testRunner, config, testSuite);
   })
 
   test('Load tests on file resolve request', async function () {
