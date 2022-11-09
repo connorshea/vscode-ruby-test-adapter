@@ -92,15 +92,21 @@ export class TestSuite {
    * - Removes leading test dir if present
    */
   public normaliseTestId(testId: string): string {
+    let log = this.log.getChildLogger({label: `normaliseTestId(${testId})`})
     if (testId.startsWith(`.${path.sep}`)) {
+      log.debug(`Stripping leading .${path.sep}`)
       testId = testId.substring(2)
     }
+    log.debug(`Checking if ID starts with test dir (${this.config.getTestDirectory()})`)
     if (testId.startsWith(this.config.getTestDirectory())) {
+      log.debug(`Stripping test dir (${this.config.getTestDirectory()})`)
       testId = testId.replace(this.config.getTestDirectory(), '')
       if (testId.startsWith(path.sep)) {
+        log.debug(`Stripping leading ${path.sep}`)
         testId = testId.substring(1)
       }
     }
+    log.debug(`Normalised ID: ${testId}`)
     return testId
   }
 

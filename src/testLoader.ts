@@ -13,10 +13,11 @@ export type ParsedTest = {
   description: string,
   file_path: string,
   line_number: number,
-  location: number,
+  location?: number,
   status?: string,
-  pending_message?: string,
+  pending_message?: string | null,
   exception?: any,
+  type?: any, // what is this?
 }
 
 /**
@@ -37,8 +38,10 @@ export class TestLoader implements vscode.Disposable {
     private readonly config: Config,
     private readonly testSuite: TestSuite,
   ) {
-    this.log = rootLog.getChildLogger({label: "TestLoader"});
+    this.log = rootLog.getChildLogger({ label: "TestLoader" });
+    this.log.debug('constructor')
     this.disposables.push(this.configWatcher());
+    this.log.debug('constructor complete')
   }
 
   dispose(): void {
@@ -90,6 +93,7 @@ export class TestLoader implements vscode.Disposable {
   discoverAllFilesInWorkspace() {
     let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
     let testDir = path.resolve(this.workspace?.uri.fsPath ?? '.', this.config.getTestDirectory())
+    log.debug(`testDir: ${testDir}`)
 
     let patterns: Array<vscode.GlobPattern> = []
     this.config.getFilePattern().forEach(pattern => {
@@ -104,6 +108,8 @@ export class TestLoader implements vscode.Disposable {
 
     log.debug("Setting up watchers with the following test patterns", patterns)
     return Promise.all(patterns.map(async (pattern) => await this.createWatcher(pattern)))
+      .then()
+      .catch(err => { log.error(err) })
   }
 
   /**
@@ -128,19 +134,11 @@ export class TestLoader implements vscode.Disposable {
         log.error('JSON parsing failed', error);
       }
 
-      let tests: Array<ParsedTest> = [];
-
-      testMetadata.examples.forEach(
-        (test: ParsedTest) => {
-          let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-          let test_location_string: string = test_location_array.join('');
-          test.location = parseInt(test_location_string); // TODO: check this isn't RSpec specific
-          test.id = this.testSuite.normaliseTestId(test.id)
-          test.file_path = test.file_path.replace(this.config.getTestDirectory(), '')
-          tests.push(test);
-          log.debug("Parsed test", test)
-        }
-      );
+      let tests = TestLoader.parseDryRunOutput(
+        this.log,
+        this.testSuite,
+        testMetadata.examples
+      )
 
       log.debug("Test output parsed. Adding tests to test suite", tests)
       this.getTestSuiteForFile(tests, testItem);
@@ -148,6 +146,41 @@ export class TestLoader implements vscode.Disposable {
       log.error("Failed to load tests", e)
       return Promise.reject(e)
     }
+  }
+
+  public static parseDryRunOutput(
+    rootLog: IChildLogger,
+    testSuite: TestSuite,
+    tests: ParsedTest[]
+  ): ParsedTest[] {
+    let log = rootLog.getChildLogger({ label: "parseDryRunOutput" })
+    log.debug(`called with ${tests.length} items`)
+    let parsedTests: Array<ParsedTest> = [];
+
+    tests.forEach(
+      (test: ParsedTest) => {
+        log.debug("Parsing test", test)
+        let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
+        let test_location_string: string = test_location_array.join('');
+        let location = parseInt(test_location_string); // TODO: check this isn't RSpec specific
+        let id = testSuite.normaliseTestId(test.id)
+        let file_path = TestLoader.normaliseFilePath(testSuite, test.file_path)
+        let parsedTest = {
+          ...test,
+          id: id,
+          file_path: file_path,
+          location: location,
+        }
+        parsedTests.push(parsedTest);
+        log.debug("Parsed test", parsedTest)
+      }
+    );
+    return parsedTests
+  }
+
+  public static normaliseFilePath(testSuite: TestSuite, filePath: string): string {
+    filePath = testSuite.normaliseTestId(filePath)
+    return filePath.replace(/\[.*/, '')
   }
 
   /**
@@ -235,6 +268,8 @@ export class TestLoader implements vscode.Disposable {
   }
 
   private configWatcher(): vscode.Disposable {
+    let log = this.rootLog.getChildLogger({ label: "TestLoader.configWatcher" });
+    log.debug('configWatcher')
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
       if (configChange.affectsConfiguration("rubyTestExplorer")) {

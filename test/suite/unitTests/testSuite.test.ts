@@ -25,14 +25,15 @@ suite('TestSuite', function () {
 
   suite('#normaliseTestId()', function () {
     const parameters = [
-      { arg: 'test-id', expected: 'test-id' },
-      { arg: './test-id', expected: 'test-id' },
-      { arg: 'folder/test-id', expected: 'folder/test-id' },
-      { arg: './folder/test-id', expected: 'folder/test-id' },
-      { arg: 'spec/test-id', expected: 'test-id' },
-      { arg: './spec/test-id', expected: 'test-id' },
-      { arg: 'spec/folder/test-id', expected: 'folder/test-id' },
-      { arg: './spec/folder/test-id', expected: 'folder/test-id' },
+      { arg: 'test-id',                 expected: 'test-id' },
+      { arg: './test-id',               expected: 'test-id' },
+      { arg: 'folder/test-id',          expected: 'folder/test-id' },
+      { arg: './folder/test-id',        expected: 'folder/test-id' },
+      { arg: 'spec/test-id',            expected: 'test-id' },
+      { arg: './spec/test-id',          expected: 'test-id' },
+      { arg: 'spec/folder/test-id',     expected: 'folder/test-id' },
+      { arg: './spec/folder/test-id',   expected: 'folder/test-id' },
+      { arg: './spec/abs_spec.rb[1:1]', expected: 'abs_spec.rb[1:1]' },
     ];
 
     parameters.forEach(({ arg, expected }) => {
