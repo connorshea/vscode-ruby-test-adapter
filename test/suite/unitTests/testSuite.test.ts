@@ -17,8 +17,9 @@ suite('TestSuite', function () {
   let testSuite: TestSuite;
 
   before(function () {
-    when(mockConfig.getRelativeTestDirectory()).thenReturn('spec')
-    when(mockConfig.getAbsoluteTestDirectory()).thenReturn(path.resolve('spec'))
+    let relativeTestPath = 'path/to/spec'
+    when(mockConfig.getRelativeTestDirectory()).thenReturn(relativeTestPath)
+    when(mockConfig.getAbsoluteTestDirectory()).thenReturn(path.resolve(relativeTestPath))
   });
 
   beforeEach(function () {
@@ -28,15 +29,20 @@ suite('TestSuite', function () {
 
   suite('#normaliseTestId()', function () {
     const parameters = [
-      { arg: 'test-id',                 expected: 'test-id' },
-      { arg: './test-id',               expected: 'test-id' },
-      { arg: 'folder/test-id',          expected: 'folder/test-id' },
-      { arg: './folder/test-id',        expected: 'folder/test-id' },
-      { arg: 'spec/test-id',            expected: 'test-id' },
-      { arg: './spec/test-id',          expected: 'test-id' },
-      { arg: 'spec/folder/test-id',     expected: 'folder/test-id' },
-      { arg: './spec/folder/test-id',   expected: 'folder/test-id' },
-      { arg: './spec/abs_spec.rb[1:1]', expected: 'abs_spec.rb[1:1]' },
+      { arg: 'test-id',                         expected: 'test-id' },
+      { arg: './test-id',                       expected: 'test-id' },
+      { arg: 'folder/test-id',                  expected: 'folder/test-id' },
+      { arg: './folder/test-id',                expected: 'folder/test-id' },
+      { arg: 'spec/test-id',                    expected: 'test-id' },
+      { arg: './spec/test-id',                  expected: 'test-id' },
+      { arg: 'spec/folder/test-id',             expected: 'folder/test-id' },
+      { arg: './spec/folder/test-id',           expected: 'folder/test-id' },
+      { arg: './spec/abs_spec.rb[1:1]',         expected: 'abs_spec.rb[1:1]' },
+      { arg: 'path/to/spec/test-id',            expected: 'test-id' },
+      { arg: './path/to/spec/test-id',          expected: 'test-id' },
+      { arg: 'path/to/spec/folder/test-id',     expected: 'folder/test-id' },
+      { arg: './path/to/spec/folder/test-id',   expected: 'folder/test-id' },
+      { arg: './path/to/spec/abs_spec.rb[1:1]', expected: 'abs_spec.rb[1:1]' },
     ];
 
     parameters.forEach(({ arg, expected }) => {

@@ -23,11 +23,11 @@ export class RspecTestRunner extends TestRunner {
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
     this.log.debug(`cwd: ${__dirname}`)
-    this.log.debug(`child process cwd: ${this.workspace?.uri.fsPath}`)
+    this.log.debug(`child process cwd: ${this.config.getAbsoluteTestDirectory()}`)
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
-      cwd: this.workspace?.uri.fsPath,
+      cwd: path.resolve(this.config.getAbsoluteTestDirectory(), '..'),
       maxBuffer: 8192 * 8192,
     };
 

@@ -100,10 +100,16 @@ export class TestSuite {
     if (testId.startsWith(this.config.getRelativeTestDirectory())) {
       log.debug(`Stripping test dir (${this.config.getRelativeTestDirectory()})`)
       testId = testId.replace(this.config.getRelativeTestDirectory(), '')
-      if (testId.startsWith(path.sep)) {
-        log.debug(`Stripping leading ${path.sep}`)
-        testId = testId.substring(1)
-      }
+    }
+    let testDirParent = this.config.getRelativeTestDirectory().split(path.sep).pop()
+    log.debug(`Checking if ID starts with test root (${testDirParent})`)
+    if (testDirParent && testId.startsWith(testDirParent)) {
+      log.debug(`Stripping test root dir (${testDirParent})`)
+      testId = testId.replace(testDirParent, '')
+    }
+    if (testId.startsWith(path.sep)) {
+      log.debug(`Stripping leading ${path.sep}`)
+      testId = testId.substring(1)
     }
     log.debug(`Normalised ID: ${testId}`)
     return testId
