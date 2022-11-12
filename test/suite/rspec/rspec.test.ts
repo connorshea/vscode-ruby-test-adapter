@@ -8,7 +8,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
-import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { noop_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {
@@ -17,6 +17,7 @@ suite('Extension Test for RSpec', function() {
   let config: RspecConfig
   let testRunner: RspecTestRunner;
   let testLoader: TestLoader;
+  let testSuite: TestSuite;
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -27,25 +28,38 @@ suite('Extension Test for RSpec', function() {
       file)
   }
 
+  this.beforeAll(function () {
+    if (vscode.workspace.workspaceFolders) {
+        console.debug("Found workspace folders (test):")
+      for (const folder of vscode.workspace.workspaceFolders) {
+        console.debug(` - ${folder.uri.fsPath}`)
+      }
+    } else {
+      console.debug("No workspace folders open")
+    }
+  })
+
   this.beforeEach(async function () {
-    vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'test/fixtures/rspec/spec')
+    vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
     testController = new StubTestController()
 
     // Populate controller with test files. This would be done by the filesystem globs in the watchers
-    let createTest = (id: string) => testController.createTestItem(id, id, vscode.Uri.file(expectedPath(id)))
+    let createTest = (id: string, label?: string) =>
+      testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
     testController.items.add(createTest("abs_spec.rb"))
     testController.items.add(createTest("square_spec.rb"))
     let subfolderItem = createTest("subfolder")
     testController.items.add(subfolderItem)
-    subfolderItem.children.add(createTest("subfolder/foo_spec.rb"))
+    subfolderItem.children.add(createTest("subfolder/foo_spec.rb", "foo_spec.rb"))
 
-    config = new RspecConfig(path.resolve("ruby"))
+    console.debug(`Workspace folder used in test: ${workspaceFolder.uri.fsPath}`)
+    config = new RspecConfig(path.resolve("ruby"), workspaceFolder)
     console.debug(`relative test dir: ${config.getRelativeTestDirectory()}`)
     console.debug(`absolute test dir: ${config.getAbsoluteTestDirectory()}`)
 
-    let testSuite = new TestSuite(stdout_logger(), testController, config)
-    testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
-    testLoader = new TestLoader(stdout_logger(), testController, testRunner, config, testSuite);
+    testSuite = new TestSuite(noop_logger(), testController, config)
+    testRunner = new RspecTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)
+    testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
   })
 
   test('Load tests on file resolve request', async function () {
@@ -216,7 +230,7 @@ suite('Extension Test for RSpec', function() {
   test('run test success', async function() {
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
 
-    let mockRequest = setupMockRequest(testController, "square_spec.rb")
+    let mockRequest = setupMockRequest(testSuite, "square_spec.rb")
     let request = instance(mockRequest)
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
@@ -230,30 +244,35 @@ suite('Extension Test for RSpec', function() {
       label: "finds the square of 2",
       line: 3
     }
+
+    // Passed called once per test in file during dry run
     testItemMatches(args.passedArg(0)["testItem"], expectation)
-    testItemMatches(args.passedArg(1)["testItem"], expectation)
+    testItemMatches(
+      args.passedArg(1)["testItem"],
+      {
+        id: "square_spec.rb[1:2]",
+        file: expectedPath("square_spec.rb"),
+        label: "finds the square of 3",
+        line: 7
+      }
+    )
+
+    // Passed called again for passing test but not for failing test
     testItemMatches(args.passedArg(2)["testItem"], expectation)
-    testItemMatches(args.passedArg(3)["testItem"], expectation)
-    verify(mockTestRun.passed(anything(), undefined)).times(4)
+    verify(mockTestRun.passed(anything(), undefined)).times(3)
   })
 
   test('run test failure', async function() {
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
 
-    let mockRequest = setupMockRequest(testController, "square_spec.rb")
+    let mockRequest = setupMockRequest(testSuite, "square_spec.rb")
     let request = instance(mockRequest)
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
 
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    let args = testStateCaptors(mockTestRun)
-
-    // Initial failure event with no details
-    let firstCallArgs = args.failedArg(0)
-    expect(firstCallArgs.testItem).to.have.property("id", "square_spec.rb[1:2]")
-    expect(firstCallArgs.testItem).to.have.property("label", "finds the square of 3")
-    expect(firstCallArgs.message.location?.uri.fsPath).to.eq(expectedPath("square_spec.rb"))
+    let args = testStateCaptors(mockTestRun).failedArg(0)
 
     // Actual failure report
     let expectation = {
@@ -262,36 +281,30 @@ suite('Extension Test for RSpec', function() {
       label: "finds the square of 3",
       line: 7
     }
-    let failedArg = args.failedArg(1)
-    testItemMatches(failedArg["testItem"], expectation)
+    testItemMatches(args.testItem, expectation)
 
-    expect(failedArg["message"].message).to.contain("RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n")
-    expect(failedArg["message"].actualOutput).to.be.undefined
-    expect(failedArg["message"].expectedOutput).to.be.undefined
-    expect(failedArg["message"].location?.range.start.line).to.eq(8)
-    expect(failedArg["message"].location?.uri.fsPath).to.eq(expectation.file)
+    expect(args.message.message).to.contain("RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n")
+    expect(args.message.actualOutput).to.be.undefined
+    expect(args.message.expectedOutput).to.be.undefined
+    expect(args.message.location?.range.start.line).to.eq(8)
+    expect(args.message.location?.uri.fsPath).to.eq(expectation.file)
+    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("square_spec.rb"))
 
-    verify(mockTestRun.started(anything())).times(3)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(4)
+    verify(mockTestRun.started(anything())).times(1)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
   })
 
   test('run test error', async function() {
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
 
-    let mockRequest = setupMockRequest(testController, "abs_spec.rb[1:2]")
+    let mockRequest = setupMockRequest(testSuite, "abs_spec.rb[1:2]")
     let request = instance(mockRequest)
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
 
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    let args = testStateCaptors(mockTestRun)
-
-    // Initial failure event with no details
-    let firstCallArgs = args.failedArg(0)
-    expect(firstCallArgs.testItem).to.have.property("id", "abs_spec.rb[1:2]")
-    expect(firstCallArgs.testItem).to.have.property("label", "finds the absolute value of 0")
-    expect(firstCallArgs.message.location?.uri.fsPath).to.eq(expectedPath("abs_spec.rb"))
+    let args = testStateCaptors(mockTestRun).failedArg(0)
 
     // Actual failure report
     let expectation = {
@@ -300,22 +313,22 @@ suite('Extension Test for RSpec', function() {
       label: "finds the absolute value of 0",
       line: 7,
     }
-    let failedArg = args.failedArg(1)
-    testItemMatches(failedArg["testItem"], expectation)
+    testItemMatches(args.testItem, expectation)
 
-    expect(failedArg["message"].message).to.match(/RuntimeError:\nAbs for zero is not supported/)
-    expect(failedArg["message"].actualOutput).to.be.undefined
-    expect(failedArg["message"].expectedOutput).to.be.undefined
-    expect(failedArg["message"].location?.range.start.line).to.eq(8)
-    expect(failedArg["message"].location?.uri.fsPath).to.eq(expectation.file)
+    expect(args.message.message).to.match(/RuntimeError:\nAbs for zero is not supported/)
+    expect(args.message.actualOutput).to.be.undefined
+    expect(args.message.expectedOutput).to.be.undefined
+    expect(args.message.location?.range.start.line).to.eq(8)
+    expect(args.message.location?.uri.fsPath).to.eq(expectation.file)
+    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("abs_spec.rb"))
     verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(2)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
   })
 
   test('run test skip', async function() {
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
 
-    let mockRequest = setupMockRequest(testController, "abs_spec.rb[1:3]")
+    let mockRequest = setupMockRequest(testSuite, "abs_spec.rb[1:3]")
     let request = instance(mockRequest)
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)

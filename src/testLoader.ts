@@ -224,6 +224,7 @@ export class TestLoader implements vscode.Disposable {
 
       let childTestItem = this.testSuite.getOrCreateTestItem(test.id)
       childTestItem.canResolveChildren = false
+      log.debug(`Setting test ${childTestItem.id} label to "${description}"`)
       childTestItem.label = description
       childTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
 

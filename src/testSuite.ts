@@ -93,22 +93,12 @@ export class TestSuite {
   public normaliseTestId(testId: string): string {
     let log = this.log.getChildLogger({label: `normaliseTestId(${testId})`})
     if (testId.startsWith(`.${path.sep}`)) {
-      log.debug(`Stripping leading .${path.sep}`)
       testId = testId.substring(2)
     }
-    log.debug(`Checking if ID starts with test dir (${this.config.getRelativeTestDirectory()})`)
     if (testId.startsWith(this.config.getRelativeTestDirectory())) {
-      log.debug(`Stripping test dir (${this.config.getRelativeTestDirectory()})`)
       testId = testId.replace(this.config.getRelativeTestDirectory(), '')
     }
-    let testDirParent = this.config.getRelativeTestDirectory().split(path.sep).pop()
-    log.debug(`Checking if ID starts with test root (${testDirParent})`)
-    if (testDirParent && testId.startsWith(testDirParent)) {
-      log.debug(`Stripping test root dir (${testDirParent})`)
-      testId = testId.replace(testDirParent, '')
-    }
     if (testId.startsWith(path.sep)) {
-      log.debug(`Stripping leading ${path.sep}`)
       testId = testId.substring(1)
     }
     log.debug(`Normalised ID: ${testId}`)
@@ -134,7 +124,7 @@ export class TestSuite {
   }
 
   private testIdToUri(testId: string): vscode.Uri {
-    return vscode.Uri.file(path.resolve(this.config.getAbsoluteTestDirectory(), testId))
+    return vscode.Uri.file(path.resolve(this.config.getAbsoluteTestDirectory(), testId.replace(/\[.*\]/, '')))
   }
 
   /**

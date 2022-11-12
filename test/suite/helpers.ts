@@ -5,6 +5,7 @@ import { anyString, anything, capture, instance, mock, when } from 'ts-mockito';
 import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCaptor';
 
 import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
+import { TestSuite } from '../../src/testSuite';
 
 export function noop() {}
 
@@ -176,10 +177,10 @@ export function setupMockTestController(): vscode.TestController {
   return mockTestController
 }
 
-export function setupMockRequest(testController: vscode.TestController, testId?: string): vscode.TestRunRequest {
+export function setupMockRequest(testSuite: TestSuite, testId?: string): vscode.TestRunRequest {
   let mockRequest = mock<vscode.TestRunRequest>()
   if (testId) {
-    let testItem = testController.items.get(testId)
+    let testItem = testSuite.getTestItem(testId)
     if (testItem === undefined) {
       throw new Error("Couldn't find test")
     }

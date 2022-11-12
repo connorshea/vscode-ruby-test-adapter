@@ -17,17 +17,17 @@ export class RspecTestRunner extends TestRunner {
     let cmd = `${cfg.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
 
     testItems.forEach((item) => {
-      let testPath = item.uri ? item.uri.fsPath : `${cfg.getAbsoluteTestDirectory()}${path.sep}${item.id}`
-      cmd = `${cmd} ${testPath}`
+      let testPath = `${cfg.getAbsoluteTestDirectory()}${path.sep}${item.id}`
+      cmd = `${cmd} "${testPath}"`
     })
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
     this.log.debug(`cwd: ${__dirname}`)
-    this.log.debug(`child process cwd: ${this.config.getAbsoluteTestDirectory()}`)
+    this.log.debug(`child process cwd: ${this.workspace?.uri.fsPath}`)
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
-      cwd: path.resolve(this.config.getAbsoluteTestDirectory(), '..'),
+      cwd: this.workspace?.uri.fsPath,
       maxBuffer: 8192 * 8192,
     };
 

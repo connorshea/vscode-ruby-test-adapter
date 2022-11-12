@@ -10,16 +10,19 @@ export abstract class Config {
    */
   public readonly rubyScriptPath: string;
 
+  public readonly workspaceFolder?: vscode.WorkspaceFolder;
+
   /**
    * @param context Either a vscode.ExtensionContext with the extensionUri field set to the location of the extension,
    *   or a string containing the full path to the ruby script dir (the folder containing custom_formatter.rb)
    */
-  constructor(context: vscode.ExtensionContext | string) {
+  constructor(context: vscode.ExtensionContext | string, workspaceFolder?: vscode.WorkspaceFolder) {
     if (typeof context === "object") {
       this.rubyScriptPath = vscode.Uri.joinPath(context?.extensionUri ?? vscode.Uri.file("./"), 'ruby').fsPath;
     } else {
       this.rubyScriptPath = (context as string)
     }
+    this.workspaceFolder = workspaceFolder
   }
 
   /**
@@ -39,20 +42,20 @@ export abstract class Config {
   }
 
   /**
-   * Get the user-configured test directory relative to the cwd, if there is one.
+   * Get the user-configured test directory relative to the test project root folder, if there is one.
    *
    * @return The test directory
    */
   public abstract getRelativeTestDirectory(): string;
 
   /**
-   * Get the user-configured test directory relative to the cwd, if there is one.
+   * Get the absolute path to user-configured test directory, if there is one.
    *
    * @return The test directory
    */
-   public getAbsoluteTestDirectory(): string {
-     return path.resolve(this.getRelativeTestDirectory())
-   }
+  public getAbsoluteTestDirectory(): string {
+    return path.resolve(this.workspaceFolder?.uri.fsPath || '.', this.getRelativeTestDirectory())
+  }
 
   /**
    * Get the env vars to run the subprocess with.

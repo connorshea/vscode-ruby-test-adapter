@@ -1,13 +1,21 @@
 import * as vscode from 'vscode';
-import { getExtensionLogger } from "@vscode-logging/logger";
+import { getExtensionLogger, IChildLogger } from "@vscode-logging/logger";
 import { TestFactory } from './testFactory';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
 import { Config } from './config';
 
-export const guessWorkspaceFolder = async () => {
+export const guessWorkspaceFolder = async (rootLog: IChildLogger) => {
+  let log = rootLog.getChildLogger({ label: "guessWorkspaceFolder: " })
   if (!vscode.workspace.workspaceFolders) {
     return undefined;
+  }
+
+  console.debug("Found workspace folders:")
+  log.debug("Found workspace folders:")
+  for (const folder of vscode.workspace.workspaceFolders) {
+    console.debug(` - ${folder.uri.fsPath}`)
+    log.debug(` - ${folder.uri.fsPath}`)
   }
 
   if (vscode.workspace.workspaceFolders.length < 2) {
@@ -41,12 +49,12 @@ export async function activate(context: vscode.ExtensionContext) {
     log.error("No workspace opened")
   }
 
-  const workspace: vscode.WorkspaceFolder | undefined = await guessWorkspaceFolder();
+  const workspace: vscode.WorkspaceFolder | undefined = await guessWorkspaceFolder(log);
   let testFramework: string = Config.getTestFramework(log);
 
   let testConfig = testFramework == "rspec"
-    ? new RspecConfig(context)
-    : new MinitestConfig(context)
+    ? new RspecConfig(context, workspace)
+    : new MinitestConfig(context, workspace)
 
   const debuggerConfig: vscode.DebugConfiguration = {
     name: "Debug Ruby Tests",
