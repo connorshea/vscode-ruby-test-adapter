@@ -35,8 +35,9 @@ async function runTestSuite(vscodeExecutablePath: string, suite: string) {
   let testsPath = path.resolve(__dirname, `suite`)
   let fixturesPath = path.resolve(extensionDevelopmentPath, `test/fixtures/${suite}`)
 
-  console.debug(`testsPath: ${testsPath}`)
-  console.debug(`fixturesPath: ${fixturesPath}`)
+  console.debug(`extensionDevelopmentPath: ${extensionDevelopmentPath}`) // Root folder of repository
+  console.debug(`testsPath: ${testsPath}`) // Path to tests/suite
+  console.debug(`fixturesPath: ${fixturesPath}`) // Workspace folder
 
   await runTests({
     extensionDevelopmentPath,

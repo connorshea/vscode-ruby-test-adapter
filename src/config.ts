@@ -5,8 +5,15 @@ import { IVSCodeExtLogger } from '@vscode-logging/logger';
 
 export abstract class Config {
 
+  /**
+   * Full path to the ruby script directory
+   */
   public readonly rubyScriptPath: string;
 
+  /**
+   * @param context Either a vscode.ExtensionContext with the extensionUri field set to the location of the extension,
+   *   or a string containing the full path to the ruby script dir (the folder containing custom_formatter.rb)
+   */
   constructor(context: vscode.ExtensionContext | string) {
     if (typeof context === "object") {
       this.rubyScriptPath = vscode.Uri.joinPath(context?.extensionUri ?? vscode.Uri.file("./"), 'ruby').fsPath;
@@ -26,7 +33,8 @@ export abstract class Config {
    * @return The file pattern
    */
   public getFilePattern(): Array<string> {
-    let pattern: Array<string> = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('filePattern') as Array<string>);
+    let pattern: Array<string> =
+      vscode.workspace.getConfiguration('rubyTestExplorer', null).get('filePattern') as Array<string>;
     return pattern || ['*_test.rb', 'test_*.rb'];
   }
 
@@ -43,7 +51,7 @@ export abstract class Config {
    * @return The test directory
    */
    public getAbsoluteTestDirectory(): string {
-     return path.resolve(__dirname, this.getRelativeTestDirectory())
+     return path.resolve(this.getRelativeTestDirectory())
    }
 
   /**

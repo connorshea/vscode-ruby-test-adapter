@@ -2,5 +2,5 @@
   "rubyTestExplorer": {
     "testFramework": "rspec"
   },
-  "rubyTestExplorer.rspecDirectory": "rspec/spec"
+  "rubyTestExplorer.rspecDirectory": "test/fixtures/rspec/spec"
 }

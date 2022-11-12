@@ -15,7 +15,8 @@ export class RspecConfig extends Config {
    * @return The RSpec command
    */
   public getTestCommand(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
+    let command: string =
+      vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string;
     return command || `bundle exec rspec`
   }
 

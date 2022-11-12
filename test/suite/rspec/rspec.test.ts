@@ -18,11 +18,8 @@ suite('Extension Test for RSpec', function() {
   let testRunner: RspecTestRunner;
   let testLoader: TestLoader;
 
-  const dirPath = path.resolve("ruby")
   let expectedPath = (file: string): string => {
     return path.resolve(
-      dirPath,
-      '..',
       'test',
       'fixtures',
       'rspec',
@@ -31,7 +28,7 @@ suite('Extension Test for RSpec', function() {
   }
 
   this.beforeEach(async function () {
-    vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'rspec/spec')
+    vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'test/fixtures/rspec/spec')
     testController = new StubTestController()
 
     // Populate controller with test files. This would be done by the filesystem globs in the watchers
@@ -42,8 +39,9 @@ suite('Extension Test for RSpec', function() {
     testController.items.add(subfolderItem)
     subfolderItem.children.add(createTest("subfolder/foo_spec.rb"))
 
-    config = new RspecConfig(dirPath)
-    console.log(`dirpath: ${dirPath}`)
+    config = new RspecConfig(path.resolve("ruby"))
+    console.debug(`relative test dir: ${config.getRelativeTestDirectory()}`)
+    console.debug(`absolute test dir: ${config.getAbsoluteTestDirectory()}`)
 
     let testSuite = new TestSuite(stdout_logger(), testController, config)
     testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
