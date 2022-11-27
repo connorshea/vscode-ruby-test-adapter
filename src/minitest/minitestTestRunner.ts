@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
+import * as path from 'path'
 import * as childProcess from 'child_process';
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
+import { MinitestConfig } from './minitestConfig';
 
 export class MinitestTestRunner extends TestRunner {
   testFrameworkName = 'Minitest';
@@ -12,7 +14,7 @@ export class MinitestTestRunner extends TestRunner {
    * @return The raw output from the Minitest JSON formatter.
    */
   initTests = async (testItems: vscode.TestItem[]) => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getTestCommand()} vscode:minitest:list`;
+    let cmd = `${(this.config as MinitestConfig).getTestCommand()} vscode:minitest:list`;
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
@@ -20,10 +22,6 @@ export class MinitestTestRunner extends TestRunner {
       maxBuffer: 8192 * 8192,
       env: this.config.getProcessEnv()
     };
-
-    testItems.forEach((item) => {
-      cmd = `${cmd} ${item.id}`
-    })
 
     this.log.info(`Getting a list of Minitest tests in suite with the following command: ${cmd}`);
 
@@ -40,59 +38,19 @@ export class MinitestTestRunner extends TestRunner {
     });
   });
 
-  /**
-   * Get the user-configured Minitest command, if there is one.
-   *
-   * @return The Minitest command
-   */
-  protected getTestCommand(): string {
-    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestCommand') as string) || 'bundle exec rake';
-    return `${command} -R ${(process.platform == 'win32') ? '%EXT_DIR%' : '$EXT_DIR'}`;
-  }
-
-  /**
-   * Get the user-configured rdebug-ide command, if there is one.
-   *
-   * @return The rdebug-ide command
-   */
-  protected getDebugCommand(debuggerConfig: vscode.DebugConfiguration): string {
-    let command: string =
-      (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
-      'rdebug-ide';
-
-    return (
-      `${command}  --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
-      ` -- ${process.platform == 'win32' ? '%EXT_DIR%' : '$EXT_DIR'}/debug_minitest.rb`
-    );
-  }
-
-  /**
-  * Get test command with formatter and debugger arguments
-  *
-  * @param debuggerConfig A VS Code debugger configuration.
-  * @return The test command
-  */
-  protected testCommandWithDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
-    let cmd = `${this.getTestCommand()} vscode:minitest:run`
-    if (debuggerConfig) {
-      cmd = this.getDebugCommand(debuggerConfig);
-    }
-    return cmd;
-  }
-
   protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
     let line = testItem.id.split(':').pop();
-    let relativeLocation = testItem.id.split(/:\d+$/)[0].replace(`${this.workspace?.uri.fsPath || "."}/`, "")
-    return `${this.testCommandWithDebugger(context.debuggerConfig)} '${relativeLocation}:${line}'`
+    let relativeLocation = `${context.config.getAbsoluteTestDirectory()}${path.sep}${testItem.id}`
+    return `${(this.config as MinitestConfig).testCommandWithDebugger(context.debuggerConfig)} '${relativeLocation}:${line}'`
   };
 
   protected getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string {
-    let relativeFile = testItem.id.replace(`${this.workspace?.uri.fsPath || '.'}/`, "").replace(`./`, "")
-    return `${this.testCommandWithDebugger(context.debuggerConfig)} '${relativeFile}'`
+    let relativeFile = `${context.config.getAbsoluteTestDirectory()}${path.sep}${testItem.id}`
+    return `${(this.config as MinitestConfig).testCommandWithDebugger(context.debuggerConfig)} '${relativeFile}'`
   };
 
   protected getFullTestSuiteCommand(context: TestRunContext): string {
-    return this.testCommandWithDebugger(context.debuggerConfig)
+    return (this.config as MinitestConfig).testCommandWithDebugger(context.debuggerConfig)
   };
 
   /**
@@ -107,6 +65,7 @@ export class MinitestTestRunner extends TestRunner {
     if (test.status === "passed") {
       context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {
+      // Failed/Errored
       let errorMessageLine: number = test.line_number;
       let errorMessage: string = test.exception.message;
 
@@ -126,20 +85,24 @@ export class MinitestTestRunner extends TestRunner {
         });
       }
 
-      context.failed(
-        testItem,
-        errorMessage,
-        test.file_path.replace('./', ''),
-        errorMessageLine - 1
-      )
+      if (test.exception.class === "Minitest::UnexpectedError") {
+        context.errored(
+          testItem,
+          errorMessage,
+          test.file_path.replace('./', ''),
+          errorMessageLine - 1
+        )
+      } else {
+        context.failed(
+          testItem,
+          errorMessage,
+          test.file_path.replace('./', ''),
+          errorMessageLine - 1
+        )
+      }
     } else if (test.status === "failed" && test.pending_message !== null) {
       // Handle pending test cases.
-      context.errored(
-        testItem,
-        test.pending_message,
-        test.file_path.replace('./', ''),
-        test.line_number
-      )
+      context.skipped(testItem)
     }
   };
 }

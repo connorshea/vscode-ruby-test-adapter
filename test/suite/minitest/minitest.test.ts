@@ -1,206 +1,291 @@
-import * as assert from 'assert';
-//import * as path from 'path';
-import 'mocha'
+import * as vscode from 'vscode';
+import * as path from 'path'
+import { anything, instance, verify } from 'ts-mockito'
+import { expect } from 'chai';
 
-//import * as vscode from 'vscode';
+import { TestLoader } from '../../../src/testLoader';
+import { TestSuite } from '../../../src/testSuite';
+import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
+import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-suite('Extension Test for Minitest', () => {
+import { stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { StubTestController } from '../../stubs/stubTestController';
+
+suite('Extension Test for Minitest', function() {
+  let testController: vscode.TestController
+  let workspaceFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders![0]
+  let config: MinitestConfig
+  let testRunner: MinitestTestRunner;
+  let testLoader: TestLoader;
+  let testSuite: TestSuite;
+
+  let expectedPath = (file: string): string => {
+    return path.resolve(
+      'test',
+      'fixtures',
+      'minitest',
+      'test',
+      file)
+  }
+
+  let abs_positive_expectation = {
+    file: expectedPath("abs_test.rb"),
+    id: "abs_test.rb[4]",
+    label: "abs positive",
+    line: 3,
+  }
+  let abs_zero_expectation = {
+    file: expectedPath("abs_test.rb"),
+    id: "abs_test.rb[8]",
+    label: "abs 0",
+    line: 7,
+  }
+  let abs_negative_expectation = {
+    file: expectedPath("abs_test.rb"),
+    id: "abs_test.rb[12]",
+    label: "abs negative",
+    line: 11,
+  }
+  let square_2_expectation = {
+    id: "square/square_test.rb[4]",
+    file: expectedPath("square/square_test.rb"),
+    label: "square 2",
+    line: 3
+  }
+  let square_3_expectation = {
+    id: "square/square_test.rb[8]",
+    file: expectedPath("square/square_test.rb"),
+    label: "square 3",
+    line: 7
+  }
+
+  this.beforeAll(function () {
+    if (vscode.workspace.workspaceFolders) {
+        console.debug("Found workspace folders (test):")
+      for (const folder of vscode.workspace.workspaceFolders) {
+        console.debug(` - ${folder.uri.fsPath}`)
+      }
+    } else {
+      console.debug("No workspace folders open")
+    }
+  })
+
+  this.beforeEach(async function () {
+    vscode.workspace.getConfiguration('rubyTestExplorer').update('minitestDirectory', 'test')
+    testController = new StubTestController()
+
+    // Populate controller with test files. This would be done by the filesystem globs in the watchers
+    let createTest = (id: string, label?: string) =>
+      testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
+    testController.items.add(createTest("abs_test.rb"))
+    let squareFolder = createTest("square")
+    testController.items.add(squareFolder)
+    squareFolder.children.add(createTest("square/square_test.rb", "square_test.rb"))
+
+    console.debug(`Workspace folder used in test: ${workspaceFolder.uri.fsPath}`)
+    config = new MinitestConfig(path.resolve("ruby"), workspaceFolder)
+    console.debug(`relative test dir: ${config.getRelativeTestDirectory()}`)
+    console.debug(`absolute test dir: ${config.getAbsoluteTestDirectory()}`)
+
+    testSuite = new TestSuite(stdout_logger(), testController, config)
+    testRunner = new MinitestTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
+    testLoader = new TestLoader(stdout_logger(), testController, testRunner, config, testSuite);
+  })
+
+  test('Load tests on file resolve request', async function () {
+    // No tests in suite initially, only test files and folders
+    testItemCollectionMatches(testController.items,
+      [
+        {
+          file: expectedPath("abs_test.rb"),
+          id: "abs_test.rb",
+          label: "abs_test.rb",
+          children: []
+        },
+        {
+          file: expectedPath("square"),
+          id: "square",
+          label: "square",
+          children: [
+            {
+              file: expectedPath("square/square_test.rb"),
+              id: "square/square_test.rb",
+              label: "square_test.rb",
+              children: []
+            },
+          ]
+        },
+      ]
+    )
+
+    // Resolve a file (e.g. by clicking on it in the test explorer)
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
+
+    // Tests in that file have now been added to suite
+    testItemCollectionMatches(testController.items,
+      [
+        {
+          file: expectedPath("abs_test.rb"),
+          id: "abs_test.rb",
+          label: "abs_test.rb",
+          children: [
+            abs_positive_expectation,
+            abs_zero_expectation,
+            abs_negative_expectation
+          ]
+        },
+        {
+          file: expectedPath("square"),
+          id: "square",
+          label: "square",
+          children: [
+            {
+              file: expectedPath("square/square_test.rb"),
+              id: "square/square_test.rb",
+              label: "square_test.rb",
+              children: []
+            },
+          ],
+        },
+      ]
+    )
+  })
+
   test('Load all tests', async () => {
-    assert.fail("Not yet fixed for new API")
-  //   const dirPath = vscode.workspace.workspaceFolders![0].uri.path
+    // TODO: Load all files without resolving them all manually here
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square/square_test.rb")))
 
-  //   await controller.load()
+    const testSuite = testController.items
 
-  //   assert.deepStrictEqual(
-  //     controller.suite,
-  //     {
-  //       type: 'suite',
-  //       id: 'root',
-  //       label: 'minitest Minitest',
-  //       children: [
-  //         {
-  //           file: path.resolve(dirPath, "test/abs_test.rb"),
-  //           id: "./test/abs_test.rb",
-  //           label: "abs_test.rb",
-  //           type: "suite",
-  //           children: [
-  //             {
-  //               file: path.resolve(dirPath, "test/abs_test.rb"),
-  //               id: "./test/abs_test.rb[4]",
-  //               label: "abs positive",
-  //               line: 3,
-  //               type: "test"
-  //             },
-  //             {
-  //               file: path.resolve(dirPath, "test/abs_test.rb"),
-  //               id: "./test/abs_test.rb[8]",
-  //               label: "abs 0",
-  //               line: 7,
-  //               type: "test"
-  //             },
-  //             {
-  //               file: path.resolve(dirPath, "test/abs_test.rb"),
-  //               id: "./test/abs_test.rb[12]",
-  //               label: "abs negative",
-  //               line: 11,
-  //               type: "test"
-  //             }
-  //           ]
-  //         },
-  //         {
-  //           file: path.resolve(dirPath, "test/square_test.rb"),
-  //           id: "./test/square_test.rb",
-  //           label: "square_test.rb",
-  //           type: "suite",
-  //           children: [
-  //             {
-  //               file: path.resolve(dirPath, "test/square_test.rb"),
-  //               id: "./test/square_test.rb[4]",
-  //               label: "square 2",
-  //               line: 3,
-  //               type: "test"
-  //             },
-  //             {
-  //               file: path.resolve(dirPath, "test/square_test.rb"),
-  //               id: "./test/square_test.rb[8]",
-  //               label: "square 3",
-  //               line: 7,
-  //               type: "test"
-  //             }
-  //           ]
-  //         }
-  //       ]
-  //     } as TestSuiteInfo
-  //   )
+    testItemCollectionMatches(testSuite,
+      [
+        {
+          file: expectedPath("abs_test.rb"),
+          id: "abs_test.rb",
+          label: "abs_test.rb",
+          children: [
+            abs_positive_expectation,
+            abs_zero_expectation,
+            abs_negative_expectation
+          ]
+        },
+        {
+          file: expectedPath("square"),
+          id: "square",
+          label: "square",
+          children: [
+            {
+              file: expectedPath("square/square_test.rb"),
+              id: "square/square_test.rb",
+              label: "square_test.rb",
+              children: [
+                square_2_expectation,
+                square_3_expectation
+              ]
+            },
+          ],
+        },
+      ]
+    )
   })
 
-  test('run test success', async () => {
-    assert.fail("Not yet fixed for new API")
-    // await controller.load()
-    // await controller.runTest('./test/square_test.rb[4]')
+  test('run test success', async function() {
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square/square_test.rb")))
 
-    // assert.deepStrictEqual(
-    //   controller.testEvents['./test/square_test.rb[4]'],
-    //   [
-    //     { state: "running", test: "./test/square_test.rb[4]", type: "test" },
-    //     { state: "running", test: "./test/square_test.rb[4]", type: "test" },
-    //     { state: "passed", test: "./test/square_test.rb[4]", type: "test" },
-    //     { state: "passed", test: "./test/square_test.rb[4]", type: "test" }
-    //   ]
-    // )
+    let mockRequest = setupMockRequest(testSuite, "square/square_test.rb")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
+
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
+
+    let args = testStateCaptors(mockTestRun)
+
+    // Passed called twice per test in file during dry run
+    testItemMatches(args.passedArg(0)["testItem"], square_2_expectation)
+    testItemMatches(args.passedArg(1)["testItem"], square_2_expectation)
+    testItemMatches(args.passedArg(2)["testItem"], square_3_expectation)
+    testItemMatches(args.passedArg(3)["testItem"], square_3_expectation)
+
+    // Passed called again for passing test but not for failing test
+    testItemMatches(args.passedArg(4)["testItem"], square_2_expectation)
+    verify(mockTestRun.passed(anything(), undefined)).times(5)
   })
 
-  test('run test failure', async () => {
-    assert.fail("Not yet fixed for new API")
-  //   await controller.load()
-  //   await controller.runTest('./test/square_test.rb[8]')
+  test('run test failure', async function() {
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square/square_test.rb")))
 
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/square_test.rb[8]'][0],
-  //     { state: "running", test: "./test/square_test.rb[8]", type: "test" }
-  //   )
+    let mockRequest = setupMockRequest(testSuite, "square/square_test.rb")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/square_test.rb[8]'][1],
-  //     { state: "running", test: "./test/square_test.rb[8]", type: "test" }
-  //   )
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/square_test.rb[8]'][2],
-  //     { state: "failed", test: "./test/square_test.rb[8]", type: "test" }
-  //   )
+    let args = testStateCaptors(mockTestRun).failedArg(0)
 
-  //   const lastEvent = controller.testEvents['./test/square_test.rb[8]'][3]
-  //   assert.strictEqual(lastEvent.state, "failed")
-  //   assert.strictEqual(lastEvent.line, undefined)
-  //   assert.strictEqual(lastEvent.tooltip, undefined)
-  //   assert.strictEqual(lastEvent.description, undefined)
-  //   assert.ok(lastEvent.message?.startsWith("Expected: 9\n  Actual: 6\n"))
+    testItemMatches(args.testItem, square_3_expectation)
 
-  //   assert.strictEqual(lastEvent.decorations!.length, 1)
-  //   const decoration = lastEvent.decorations![0]
-  //   assert.strictEqual(decoration.line, 8)
-  //   assert.strictEqual(decoration.file, undefined)
-  //   assert.strictEqual(decoration.hover, undefined)
-  //   assert.strictEqual(decoration.message, "Expected: 9\n  Actual: 6")
+    expect(args.message.message).to.contain("Expected: 9\n  Actual: 6\n")
+    expect(args.message.actualOutput).to.be.undefined
+    expect(args.message.expectedOutput).to.be.undefined
+    expect(args.message.location?.range.start.line).to.eq(8)
+    expect(args.message.location?.uri.fsPath).to.eq(square_3_expectation.file)
+    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("square/square_test.rb"))
+
+    verify(mockTestRun.started(anything())).times(1)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
   })
 
-  test('run test error', async () => {
-    assert.fail("Not yet fixed for new API")
-  //   const controller = new DummyController()
+  test('run test error', async function() {
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
 
-  //   const testExplorerExtension = vscode.extensions.getExtension<TestHub>(testExplorerExtensionId)!;
-  //   const testHub = testExplorerExtension.exports;
+    let mockRequest = setupMockRequest(testSuite, "abs_test.rb")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-  //   testHub.registerTestController(controller);
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-  //   await controller.load()
-  //   await controller.runTest('./test/abs_test.rb[8]')
+    let args = testStateCaptors(mockTestRun).erroredArg(0)
 
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/abs_test.rb[8]'][0],
-  //     { state: "running", test: "./test/abs_test.rb[8]", type: "test" }
-  //   )
+    testItemMatches(args.testItem, abs_zero_expectation)
 
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/abs_test.rb[8]'][1],
-  //     { state: "running", test: "./test/abs_test.rb[8]", type: "test" }
-  //   )
-
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/abs_test.rb[8]'][2],
-  //     { state: "failed", test: "./test/abs_test.rb[8]", type: "test" }
-  //   )
-
-  //   const lastEvent = controller.testEvents['./test/abs_test.rb[8]'][3]
-  //   assert.strictEqual(lastEvent.state, "failed")
-  //   assert.strictEqual(lastEvent.line, undefined)
-  //   assert.strictEqual(lastEvent.tooltip, undefined)
-  //   assert.strictEqual(lastEvent.description, undefined)
-  //   assert.ok(lastEvent.message?.startsWith("RuntimeError: Abs for zero is not supported\n"))
-
-  //   assert.strictEqual(lastEvent.decorations!.length, 1)
-  //   const decoration = lastEvent.decorations![0]
-  //   assert.strictEqual(decoration.line, 8)
-  //   assert.strictEqual(decoration.file, undefined)
-  //   assert.strictEqual(decoration.hover, undefined)
-  //   assert.ok(decoration.message?.startsWith("RuntimeError: Abs for zero is not supported\n"))
+    expect(args.message.message).to.match(/RuntimeError: Abs for zero is not supported/)
+    expect(args.message.actualOutput).to.be.undefined
+    expect(args.message.expectedOutput).to.be.undefined
+    expect(args.message.location?.range.start.line).to.eq(8)
+    expect(args.message.location?.uri.fsPath).to.eq(abs_zero_expectation.file)
+    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("abs_test.rb"))
+    verify(mockTestRun.started(anything())).times(1)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(0)
+    verify(mockTestRun.errored(anything(), anything(), undefined)).times(1)
   })
 
-  test('run test skip', async () => {
-    assert.fail("Not yet fixed for new API")
-  //   const controller = new DummyController()
+  test('run test skip', async function() {
+    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
 
-  //   const testExplorerExtension = vscode.extensions.getExtension<TestHub>(testExplorerExtensionId)!;
-  //   const testHub = testExplorerExtension.exports;
+    let mockRequest = setupMockRequest(testSuite, "abs_test.rb")
+    let request = instance(mockRequest)
+    let cancellationTokenSource = new vscode.CancellationTokenSource()
+    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-  //   testHub.registerTestController(controller);
+    let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-  //   await controller.load()
-  //   await controller.runTest('./test/abs_test.rb[12]')
-
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/abs_test.rb[12]'][0],
-  //     { state: "running", test: "./test/abs_test.rb[12]", type: "test" }
-  //   )
-
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/abs_test.rb[12]'][1],
-  //     { state: "running", test: "./test/abs_test.rb[12]", type: "test" }
-  //   )
-
-  //   assert.deepStrictEqual(
-  //     controller.testEvents['./test/abs_test.rb[12]'][2],
-  //     { state: "skipped", test: "./test/abs_test.rb[12]", type: "test" }
-  //   )
-
-  //   const lastEvent = controller.testEvents['./test/abs_test.rb[12]'][3]
-  //   assert.strictEqual(lastEvent.state, "skipped")
-  //   assert.strictEqual(lastEvent.line, undefined)
-  //   assert.strictEqual(lastEvent.tooltip, undefined)
-  //   assert.strictEqual(lastEvent.description, undefined)
-  //   assert.strictEqual(lastEvent.message, "Not implemented yet")
-
-  //   assert.strictEqual(lastEvent.decorations, undefined)
+    let args = testStateCaptors(mockTestRun)
+    testItemMatches(args.startedArg(0), {
+      file: expectedPath("abs_test.rb"),
+      id: "abs_test.rb",
+      label: "abs_test.rb",
+      children: [
+        abs_positive_expectation,
+        abs_zero_expectation,
+        abs_negative_expectation
+      ]
+    })
+    testItemMatches(args.skippedArg(0), abs_negative_expectation)
+    verify(mockTestRun.started(anything())).times(1)
+    verify(mockTestRun.skipped(anything())).times(1)
   })
 });

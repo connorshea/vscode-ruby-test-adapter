@@ -108,12 +108,7 @@ export function testItemMatches(testItem: vscode.TestItem, expectation: TestItem
   expect(testItem.id).to.eq(expectation.id, `id mismatch (expected: ${expectation.id})`)
   testUriMatches(testItem, expectation.file)
   if (expectation.children && expectation.children.length > 0) {
-    expect(testItem.children.size).to.eq(expectation.children.length, `wrong number of children (id: ${expectation.id})`)
-    let i = 0;
-    testItem.children.forEach((child) => {
-      testItemMatches(child, expectation.children![i])
-      i++
-    })
+    testItemCollectionMatches(testItem.children, expectation.children, testItem)
   }
   expect(testItem.canResolveChildren).to.be.false
   expect(testItem.label).to.eq(expectation.label, `label mismatch (id: ${expectation.id})`)
@@ -141,12 +136,19 @@ export function testItemArrayMatches(testItems: readonly vscode.TestItem[], expe
 }
 
 /**
- * Loops through an array of {@link vscode.TestItem TestItem}s and asserts whether each in turn matches the expectation with the same index
+ * Loops through a {@link vscode.TestItemCollection TestItemCollection} and asserts whether each in turn matches the expectation with the same index
  * @param testItems TestItems to check
  * @param expectation Array of {@link TestItemExpectation}s to compare to
  */
- export function testItemCollectionMatches(testItems: vscode.TestItemCollection, expectation: TestItemExpectation[]) {
-  expect(testItems.size).to.eq(expectation.length)
+export function testItemCollectionMatches(
+  testItems: vscode.TestItemCollection,
+  expectation: TestItemExpectation[],
+  parent?: vscode.TestItem
+) {
+  expect(testItems.size).to.eq(
+    expectation.length,
+    parent ? `Wrong number of children in item ${parent.id}\n\t${testItems.toString()}` : `Wrong number of items in collection\n\t${testItems.toString()}`
+  )
   let i = 0;
   testItems.forEach((testItem: vscode.TestItem) => {
     testItemMatches(testItem, expectation[i])

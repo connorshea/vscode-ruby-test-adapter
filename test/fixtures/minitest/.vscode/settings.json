@@ -1,5 +1,6 @@
 {
   "rubyTestExplorer": {
     "testFramework": "minitest"
-  }
+  },
+  "rubyTestExplorer.minitestDirectory": "test"
 }

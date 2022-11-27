@@ -148,7 +148,8 @@ suite('Extension Test for RSpec', function() {
     )
   })
 
-  test('Load all tests', async function() {
+  test('Load all tests', async function () {
+    // TODO: Load all files without resolving them all manually here
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
     await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("subfolder/foo_spec.rb")))

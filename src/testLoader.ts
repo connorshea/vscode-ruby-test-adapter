@@ -18,6 +18,10 @@ export type ParsedTest = {
   pending_message?: string | null,
   exception?: any,
   type?: any, // what is this?
+  full_path?: string, // Minitest
+  klass?: string, // Minitest
+  method?: string, // Minitest
+  runnable?: string, // Minitest
 }
 
 /**
@@ -138,7 +142,13 @@ export class TestLoader implements vscode.Disposable {
       )
 
       log.debug("Test output parsed. Adding tests to test suite", tests)
-      this.getTestSuiteForFile(tests, testItem);
+      // TODO: Add option to list only tests for single file to minitest and remove filter below
+      log.debug(`testItem fsPath: ${testItem.uri?.fsPath}`)
+      var filteredTests = tests.filter((test) => {
+        log.debug(`filter: test file path: ${test.file_path}`)
+        return testItem.uri?.fsPath.endsWith(test.file_path)
+      })
+      this.getTestSuiteForFile(filteredTests, testItem);
     } catch (e: any) {
       log.error("Failed to load tests", e)
       return Promise.reject(e)

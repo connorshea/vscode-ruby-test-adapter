@@ -40,14 +40,14 @@ export class TestFactory implements vscode.Disposable {
             this.log,
             this.workspace,
             this.controller,
-            this.config,
+            this.config as RspecConfig,
             this.testSuite
           )
         : new MinitestTestRunner(
             this.log,
             this.workspace,
             this.controller,
-            this.config,
+            this.config as MinitestConfig,
             this.testSuite
           )
       this.disposables.push(this.runner);

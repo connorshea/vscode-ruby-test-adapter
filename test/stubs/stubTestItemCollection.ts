@@ -46,4 +46,13 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   get(itemId: string): vscode.TestItem | undefined {
     return this.testIds[itemId]
   }
+
+  toString(): string {
+    var output = []
+    output.push("[")
+    this.forEach((item, _) => { output.push(item.id, ", ") })
+    if (this.size > 0) output = output.slice(0, -1)
+    output.push("]")
+    return output.join("")
+  }
 }

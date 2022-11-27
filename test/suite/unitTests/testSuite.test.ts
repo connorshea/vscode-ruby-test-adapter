@@ -38,6 +38,7 @@ suite('TestSuite', function () {
       { arg: 'path/to/spec/folder/test-id',     expected: 'folder/test-id' },
       { arg: './path/to/spec/folder/test-id',   expected: 'folder/test-id' },
       { arg: './path/to/spec/abs_spec.rb[1:1]', expected: 'abs_spec.rb[1:1]' },
+      { arg: './path/to/spec/abs_spec.rb[1]',   expected: 'abs_spec.rb[1]' },
     ];
 
     parameters.forEach(({ arg, expected }) => {

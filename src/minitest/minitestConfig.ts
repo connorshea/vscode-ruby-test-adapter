@@ -8,6 +8,46 @@ export class MinitestConfig extends Config {
   }
 
   /**
+   * Get the user-configured Minitest command, if there is one.
+   *
+   * @return The Minitest command
+   */
+  public getTestCommand(): string {
+    let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestCommand') as string) || 'bundle exec rake';
+    return `${command} -R ${this.rubyScriptPath}`;
+  }
+
+  /**
+   * Get the user-configured rdebug-ide command, if there is one.
+   *
+   * @return The rdebug-ide command
+   */
+  public getDebugCommand(debuggerConfig: vscode.DebugConfiguration): string {
+    let command: string =
+      (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
+      'rdebug-ide';
+
+    return (
+      `${command}  --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
+      ` -- ${this.rubyScriptPath}/debug_minitest.rb`
+    );
+  }
+
+  /**
+   * Get test command with formatter and debugger arguments
+   *
+   * @param debuggerConfig A VS Code debugger configuration.
+   * @return The test command
+   */
+  public testCommandWithDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
+    let cmd = `${this.getTestCommand()} vscode:minitest:run`
+    if (debuggerConfig) {
+      cmd = this.getDebugCommand(debuggerConfig);
+    }
+    return cmd;
+  }
+
+  /**
    * Get the user-configured test directory, if there is one.
    *
    * @return The test directory
