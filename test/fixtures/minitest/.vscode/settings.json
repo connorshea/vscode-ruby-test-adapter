@@ -2,5 +2,8 @@
   "rubyTestExplorer": {
     "testFramework": "minitest"
   },
-  "rubyTestExplorer.minitestDirectory": "test"
+  "rubyTestExplorer.minitestDirectory": "test",
+  "rubyTestExplorer.filePattern": [
+    "*_test.rb"
+  ]
 }

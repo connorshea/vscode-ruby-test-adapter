@@ -80,9 +80,11 @@ export class TestLoader implements vscode.Disposable {
       this.testSuite.deleteTestItem(uri)
     });
 
+    let testFiles = []
     for (const file of await vscode.workspace.findFiles(pattern)) {
-      this.testSuite.getOrCreateTestItem(file);
+      testFiles.push(this.testSuite.getOrCreateTestItem(file))
     }
+    await this.loadTests(testFiles)
 
     return watcher;
   }
@@ -91,7 +93,7 @@ export class TestLoader implements vscode.Disposable {
    * Searches the configured test directory for test files, and calls createWatcher for
    * each one found.
    */
-  discoverAllFilesInWorkspace() {
+  public async discoverAllFilesInWorkspace(): Promise<vscode.FileSystemWatcher[]> {
     let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
     let testDir = this.config.getAbsoluteTestDirectory()
     log.debug(`testDir: ${testDir}`)
@@ -109,8 +111,6 @@ export class TestLoader implements vscode.Disposable {
 
     log.debug("Setting up watchers with the following test patterns", patterns)
     return Promise.all(patterns.map(async (pattern) => await this.createWatcher(pattern)))
-      .then()
-      .catch(err => { log.error(err) })
   }
 
   /**
@@ -119,11 +119,11 @@ export class TestLoader implements vscode.Disposable {
    *
    * @return The full test suite.
    */
-  public async loadTests(testItem: vscode.TestItem): Promise<void> {
+  public async loadTests(testItems: vscode.TestItem[]): Promise<void> {
     let log = this.log.getChildLogger({label:"loadTests"})
-    log.info(`Loading tests for ${testItem.id} (${this.config.frameworkName()})...`);
+    log.info(`Loading tests for ${testItems.length} items (${this.config.frameworkName()})...`);
     try {
-      let output = await this.testRunner.initTests([testItem]);
+      let output = await this.testRunner.initTests(testItems);
 
       log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
       output = TestRunner.getJsonFromOutput(output);
@@ -142,13 +142,15 @@ export class TestLoader implements vscode.Disposable {
       )
 
       log.debug("Test output parsed. Adding tests to test suite", tests)
-      // TODO: Add option to list only tests for single file to minitest and remove filter below
-      log.debug(`testItem fsPath: ${testItem.uri?.fsPath}`)
-      var filteredTests = tests.filter((test) => {
-        log.debug(`filter: test file path: ${test.file_path}`)
-        return testItem.uri?.fsPath.endsWith(test.file_path)
+      testItems.forEach((testItem) => {
+        // TODO: Add option to list only tests for single file to minitest and remove filter below
+        log.debug(`testItem fsPath: ${testItem.uri?.fsPath}`)
+        var filteredTests = tests.filter((test) => {
+          log.debug(`filter: test file path: ${test.file_path}`)
+          return testItem.uri?.fsPath.endsWith(test.file_path)
+        })
+        this.getTestSuiteForFile(filteredTests, testItem);
       })
-      this.getTestSuiteForFile(filteredTests, testItem);
     } catch (e: any) {
       log.error("Failed to load tests", e)
       return Promise.reject(e)
@@ -272,7 +274,7 @@ export class TestLoader implements vscode.Disposable {
     }
 
     log.info(`${testItem.id} has been edited, reloading tests.`);
-    await this.loadTests(testItem)
+    await this.loadTests([testItem])
   }
 
   private configWatcher(): vscode.Disposable {

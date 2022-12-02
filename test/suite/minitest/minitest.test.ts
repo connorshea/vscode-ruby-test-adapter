@@ -8,7 +8,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-import { stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { noop_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {
@@ -72,6 +72,7 @@ suite('Extension Test for Minitest', function() {
 
   this.beforeEach(async function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('minitestDirectory', 'test')
+    vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_test.rb'])
     testController = new StubTestController()
 
     // Populate controller with test files. This would be done by the filesystem globs in the watchers
@@ -87,9 +88,9 @@ suite('Extension Test for Minitest', function() {
     console.debug(`relative test dir: ${config.getRelativeTestDirectory()}`)
     console.debug(`absolute test dir: ${config.getAbsoluteTestDirectory()}`)
 
-    testSuite = new TestSuite(stdout_logger(), testController, config)
-    testRunner = new MinitestTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
-    testLoader = new TestLoader(stdout_logger(), testController, testRunner, config, testSuite);
+    testSuite = new TestSuite(noop_logger(), testController, config)
+    testRunner = new MinitestTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)
+    testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
   })
 
   test('Load tests on file resolve request', async function () {
@@ -152,9 +153,7 @@ suite('Extension Test for Minitest', function() {
   })
 
   test('Load all tests', async () => {
-    // TODO: Load all files without resolving them all manually here
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square/square_test.rb")))
+    await testLoader.discoverAllFilesInWorkspace()
 
     const testSuite = testController.items
 

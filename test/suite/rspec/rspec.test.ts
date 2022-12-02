@@ -41,6 +41,7 @@ suite('Extension Test for RSpec', function() {
 
   this.beforeEach(async function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
+    vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_spec.rb'])
     testController = new StubTestController()
 
     // Populate controller with test files. This would be done by the filesystem globs in the watchers
@@ -149,10 +150,7 @@ suite('Extension Test for RSpec', function() {
   })
 
   test('Load all tests', async function () {
-    // TODO: Load all files without resolving them all manually here
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("subfolder/foo_spec.rb")))
+    await testLoader.discoverAllFilesInWorkspace()
 
     const testSuite = testController.items
 
