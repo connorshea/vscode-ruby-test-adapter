@@ -305,7 +305,7 @@ suite('Extension Test for RSpec', function() {
 
     let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    let args = testStateCaptors(mockTestRun).failedArg(0)
+    let args = testStateCaptors(mockTestRun).erroredArg(0)
 
     // Actual failure report
     let expectation = {
@@ -323,7 +323,8 @@ suite('Extension Test for RSpec', function() {
     expect(args.message.location?.uri.fsPath).to.eq(expectation.file)
     expect(args.message.location?.uri.fsPath).to.eq(expectedPath("abs_spec.rb"))
     verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
+    verify(mockTestRun.failed(anything(), anything(), undefined)).times(0)
+    verify(mockTestRun.errored(anything(), anything(), undefined)).times(1)
   })
 
   test('run test skip', async function() {

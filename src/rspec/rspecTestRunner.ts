@@ -108,12 +108,21 @@ export class RspecTestRunner extends TestRunner {
         });
       }
 
-      context.failed(
-        testItem,
-        errorMessage,
-        filePath,
-        (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
-      )
+      if (test.exception.class.startsWith("RSpec")) {
+        context.failed(
+          testItem,
+          errorMessage,
+          filePath,
+          (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
+        )
+      } else {
+        context.errored(
+          testItem,
+          errorMessage,
+          filePath,
+          (fileBacktraceLineNumber ? fileBacktraceLineNumber : test.line_number) - 1,
+        )
+      }
     } else if ((test.status === "pending" || test.status === "failed") && test.pending_message !== null) {
       // Handle pending test cases.
       context.skipped(testItem)
