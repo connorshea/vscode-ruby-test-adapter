@@ -76,7 +76,6 @@ export class RspecTestRunner extends TestRunner {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
     let testItem = this.testSuite.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
-      // TODO: Parse additional test data
       context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {
       // Remove linebreaks from error message.

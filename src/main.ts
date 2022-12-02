@@ -77,10 +77,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
     testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
 
-    // TODO: Allow lazy-loading of child tests - below is taken from example in docs
-    // Custom handler for loading tests. The "test" argument here is undefined,
-    // but if we supported lazy-loading child test then this could be called with
-    // the test whose children VS Code wanted to load.
     controller.resolveHandler = async test => {
       log.debug('resolveHandler called', test)
       if (!test) {

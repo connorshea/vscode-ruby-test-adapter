@@ -17,7 +17,7 @@ export type ParsedTest = {
   status?: string,
   pending_message?: string | null,
   exception?: any,
-  type?: any, // what is this?
+  type?: any,
   full_path?: string, // Minitest
   klass?: string, // Minitest
   method?: string, // Minitest
@@ -100,12 +100,6 @@ export class TestLoader implements vscode.Disposable {
 
     let patterns: Array<vscode.GlobPattern> = []
     this.config.getFilePattern().forEach(pattern => {
-      // TODO: Search all workspace folders (needs ability to exclude folders)
-      // if (vscode.workspace.workspaceFolders) {
-      //   vscode.workspace.workspaceFolders!.forEach(async (workspaceFolder) => {
-      //     patterns.push(new vscode.RelativePattern(workspaceFolder, '**/' + pattern))
-      //   })
-      // }
       patterns.push(new vscode.RelativePattern(testDir, '**/' + pattern))
     })
 
@@ -171,7 +165,7 @@ export class TestLoader implements vscode.Disposable {
         log.debug("Parsing test", test)
         let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
         let test_location_string: string = test_location_array.join('');
-        let location = parseInt(test_location_string); // TODO: check this isn't RSpec specific
+        let location = parseInt(test_location_string);
         let id = testSuite.normaliseTestId(test.id)
         let file_path = TestLoader.normaliseFilePath(testSuite, test.file_path)
         let parsedTest = {

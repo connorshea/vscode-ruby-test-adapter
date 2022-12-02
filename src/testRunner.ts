@@ -132,7 +132,6 @@ export abstract class TestRunner implements vscode.Disposable {
       }
     });
 
-    // TODO: Parse test IDs, durations, and failure message(s) from data
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
       childProcessLogger.debug(data);
