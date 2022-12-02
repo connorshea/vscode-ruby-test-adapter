@@ -59,7 +59,7 @@ function printHelpAndExit() {
   });
   console.log("")
   console.log("Example:")
-  console.log("node ./out/test/runTestSuites.js rspec")
+  console.log("node ./out/test/runFrameworkTests.js rspec")
 
   process.exit(1)
 }
