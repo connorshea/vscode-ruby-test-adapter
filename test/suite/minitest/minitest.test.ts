@@ -59,17 +59,6 @@ suite('Extension Test for Minitest', function() {
     line: 7
   }
 
-  this.beforeAll(function () {
-    if (vscode.workspace.workspaceFolders) {
-        console.debug("Found workspace folders (test):")
-      for (const folder of vscode.workspace.workspaceFolders) {
-        console.debug(` - ${folder.uri.fsPath}`)
-      }
-    } else {
-      console.debug("No workspace folders open")
-    }
-  })
-
   this.beforeEach(async function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('minitestDirectory', 'test')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_test.rb'])
@@ -83,10 +72,7 @@ suite('Extension Test for Minitest', function() {
     testController.items.add(squareFolder)
     squareFolder.children.add(createTest("square/square_test.rb", "square_test.rb"))
 
-    console.debug(`Workspace folder used in test: ${workspaceFolder.uri.fsPath}`)
     config = new MinitestConfig(path.resolve("ruby"), workspaceFolder)
-    console.debug(`relative test dir: ${config.getRelativeTestDirectory()}`)
-    console.debug(`absolute test dir: ${config.getAbsoluteTestDirectory()}`)
 
     testSuite = new TestSuite(noop_logger(), testController, config)
     testRunner = new MinitestTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)

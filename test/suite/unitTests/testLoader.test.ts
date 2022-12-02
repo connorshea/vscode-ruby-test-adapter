@@ -6,7 +6,7 @@ import * as vscode from 'vscode'
 import { Config } from "../../../src/config";
 import { ParsedTest, TestLoader } from "../../../src/testLoader";
 import { TestSuite } from "../../../src/testSuite";
-import { noop_logger, stdout_logger } from "../helpers";
+import { noop_logger } from "../helpers";
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('TestLoader', function () {
@@ -18,13 +18,12 @@ suite('TestLoader', function () {
   suite('#parseDryRunOutput()', function () {
     suite('RSpec output', function () {
       before(function () {
-        console.log('before')
         when(config.getRelativeTestDirectory()).thenReturn('spec')
       })
 
       beforeEach(function () {
         testController = new StubTestController()
-        testSuite = new TestSuite(stdout_logger(), testController, instance(config))
+        testSuite = new TestSuite(noop_logger(), testController, instance(config))
       })
 
       const examples: ParsedTest[] = [
@@ -93,13 +92,12 @@ suite('TestLoader', function () {
 
     suite('Minitest output', function () {
       before(function () {
-        console.log('before')
         when(config.getRelativeTestDirectory()).thenReturn('test')
       })
 
       beforeEach(function () {
         testController = new StubTestController()
-        testSuite = new TestSuite(stdout_logger(), testController, instance(config))
+        testSuite = new TestSuite(noop_logger(), testController, instance(config))
       })
 
       const examples: ParsedTest[] = [
@@ -180,7 +178,7 @@ suite('TestLoader', function () {
       }) => {
         test(`parses specs correctly - ${spec["id"]}`, function () {
           let parsedSpec = TestLoader.parseDryRunOutput(
-            stdout_logger(),
+            noop_logger(),
             testSuite,
             [spec]
           )[0]

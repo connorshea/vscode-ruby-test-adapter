@@ -28,17 +28,6 @@ suite('Extension Test for RSpec', function() {
       file)
   }
 
-  this.beforeAll(function () {
-    if (vscode.workspace.workspaceFolders) {
-        console.debug("Found workspace folders (test):")
-      for (const folder of vscode.workspace.workspaceFolders) {
-        console.debug(` - ${folder.uri.fsPath}`)
-      }
-    } else {
-      console.debug("No workspace folders open")
-    }
-  })
-
   this.beforeEach(async function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_spec.rb'])
@@ -53,10 +42,7 @@ suite('Extension Test for RSpec', function() {
     testController.items.add(subfolderItem)
     subfolderItem.children.add(createTest("subfolder/foo_spec.rb", "foo_spec.rb"))
 
-    console.debug(`Workspace folder used in test: ${workspaceFolder.uri.fsPath}`)
     config = new RspecConfig(path.resolve("ruby"), workspaceFolder)
-    console.debug(`relative test dir: ${config.getRelativeTestDirectory()}`)
-    console.debug(`absolute test dir: ${config.getAbsoluteTestDirectory()}`)
 
     testSuite = new TestSuite(noop_logger(), testController, config)
     testRunner = new RspecTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)
@@ -153,8 +139,6 @@ suite('Extension Test for RSpec', function() {
     await testLoader.discoverAllFilesInWorkspace()
 
     const testSuite = testController.items
-
-    console.log(`testSuite: ${JSON.stringify(testSuite)}`)
 
     testItemCollectionMatches(testSuite,
       [
