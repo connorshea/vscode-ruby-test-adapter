@@ -5,6 +5,7 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   get size(): number { return Object.keys(this.testIds).length; };
 
   replace(items: readonly vscode.TestItem[]): void {
+    this.testIds = {}
     items.forEach(item => {
       this.testIds[item.id] = item
     })

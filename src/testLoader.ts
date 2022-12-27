@@ -201,6 +201,7 @@ export class TestLoader implements vscode.Disposable {
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
 
+    let testItems: vscode.TestItem[] = []
     tests.forEach((test) => {
       log.debug(`Building test: ${test.id}`)
       // RSpec provides test ids like "file_name.rb[1:2:3]".
@@ -234,8 +235,9 @@ export class TestLoader implements vscode.Disposable {
       childTestItem.label = description
       childTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
 
-      testItem.children.add(childTestItem);
+      testItems.push(childTestItem);
     });
+    testItem.children.replace(testItems)
   }
 
 

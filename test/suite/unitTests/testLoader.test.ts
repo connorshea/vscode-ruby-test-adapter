@@ -2,10 +2,12 @@ import { expect } from "chai";
 import { before, beforeEach } from 'mocha';
 import { instance, mock, when } from 'ts-mockito'
 import * as vscode from 'vscode'
+import * as path from 'path'
 
 import { Config } from "../../../src/config";
 import { ParsedTest, TestLoader } from "../../../src/testLoader";
 import { TestSuite } from "../../../src/testSuite";
+import { RspecTestRunner } from "../../../src/rspec/rspecTestRunner";
 import { noop_logger } from "../helpers";
 import { StubTestController } from '../../stubs/stubTestController';
 
@@ -187,6 +189,55 @@ suite('TestLoader', function () {
           expect(parsedSpec['file_path']).to.eq(expected_file_path, 'file path incorrect')
         })
       })
+    })
+  })
+
+  suite('getTestSuiteForFile', function() {
+    let mockTestRunner: RspecTestRunner
+    let testRunner: RspecTestRunner
+    let testLoader: TestLoader
+    let parsedTests = [{"id":"abs_spec.rb[1:1]","description":"finds the absolute value of 1","full_description":"Abs finds the absolute value of 1","status":"passed","file_path":"abs_spec.rb","line_number":4,"type":null,"pending_message":null,"location":11}]
+    let expectedPath = path.resolve('test', 'fixtures', 'rspec', 'spec')
+    let id = "abs_spec.rb"
+    let abs_spec_item: vscode.TestItem
+    let createTestItem = (id: string): vscode.TestItem => {
+      return testController.createTestItem(id, id, vscode.Uri.file(path.resolve(expectedPath, id)))
+    }
+
+    this.beforeAll(function () {
+      when(config.getRelativeTestDirectory()).thenReturn('spec')
+      when(config.getAbsoluteTestDirectory()).thenReturn(expectedPath)
+    })
+
+    this.beforeEach(function () {
+      mockTestRunner = mock(RspecTestRunner)
+      testRunner = instance(mockTestRunner)
+      testController = new StubTestController()
+      testSuite = new TestSuite(noop_logger(), testController, instance(config))
+      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite)
+      abs_spec_item = createTestItem(id)
+      testController.items.add(abs_spec_item)
+    })
+
+    test('creates test items from output', function () {
+      expect(abs_spec_item.children.size).to.eq(0)
+
+      testLoader.getTestSuiteForFile(parsedTests, abs_spec_item)
+
+      expect(abs_spec_item.children.size).to.eq(1)
+    })
+
+    test('removes test items not in output', function () {
+      let missing_id = "abs_spec.rb[3:1]"
+      let missing_child_item = createTestItem(missing_id)
+      abs_spec_item.children.add(missing_child_item)
+      expect(abs_spec_item.children.size).to.eq(1)
+
+      testLoader.getTestSuiteForFile(parsedTests, abs_spec_item)
+
+      expect(abs_spec_item.children.size).to.eq(1)
+      expect(abs_spec_item.children.get(missing_id)).to.be.undefined
+      expect(abs_spec_item.children.get("abs_spec.rb[1:1]")).to.not.be.undefined
     })
   })
 })

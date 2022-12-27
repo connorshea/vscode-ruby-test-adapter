@@ -163,9 +163,9 @@ export class TestSuite {
       if (fileId.startsWith(path.sep)) {
         fileId = fileId.substring(1)
       }
-      log.debug(`Getting file collection ${fileId}`)
       let childCollection = collection.get(fileId)?.children
       if (!childCollection) {
+        log.debug(`TestItem for file ${fileId} not in parent collection`)
         if (!createIfMissing) return undefined
         let child = this.createTestItem(
           collection,
@@ -174,6 +174,7 @@ export class TestSuite {
         )
         childCollection = child.children
       }
+      log.debug(`Got TestItem for file ${fileId} from parent collection`)
       collection = childCollection
     }
     // else test item is the file so return the file's parent
