@@ -12,7 +12,7 @@ export class RspecTestRunner extends TestRunner {
    *
    * @return The raw output from the RSpec JSON formatter.
    */
-  initTests = async (testItems: vscode.TestItem[]) => new Promise<string>((resolve, reject) => {
+  async initTests(testItems: vscode.TestItem[]): Promise<string> {
     let cfg = this.config as RspecConfig
     let cmd = `${cfg.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
 
@@ -31,6 +31,7 @@ export class RspecTestRunner extends TestRunner {
       maxBuffer: 8192 * 8192,
     };
 
+    let output: string | undefined
     childProcess.exec(cmd, execArgs, (err, stdout) => {
       if (err) {
         if (err.message.includes('deprecated')) {
@@ -62,9 +63,13 @@ export class RspecTestRunner extends TestRunner {
           throw err;
         }
       }
-      resolve(stdout);
+      output = stdout;
     });
-  });
+    if (!output) {
+      throw "No output returned from child process"
+    }
+    return output as string
+  };
 
   /**
    * Handles test state based on the output returned by the custom RSpec formatter.

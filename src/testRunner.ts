@@ -36,7 +36,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * Initialise the test framework, parse tests (without executing) and retrieve the output
    * @return Stdout outpu from framework initialisation
    */
-  abstract initTests: (testItems: vscode.TestItem[]) => Promise<string>;
+  abstract initTests(testItems: vscode.TestItem[]): Promise<string>
 
   public dispose() {
     this.killChild();

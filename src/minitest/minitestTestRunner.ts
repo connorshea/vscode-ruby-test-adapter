@@ -13,7 +13,7 @@ export class MinitestTestRunner extends TestRunner {
    *
    * @return The raw output from the Minitest JSON formatter.
    */
-  initTests = async (testItems: vscode.TestItem[]) => new Promise<string>((resolve, reject) => {
+  async initTests(testItems: vscode.TestItem[]): Promise<string> {
     let cmd = `${(this.config as MinitestConfig).getTestCommand()} vscode:minitest:list`;
 
     // Allow a buffer of 64MB.
@@ -25,6 +25,7 @@ export class MinitestTestRunner extends TestRunner {
 
     this.log.info(`Getting a list of Minitest tests in suite with the following command: ${cmd}`);
 
+    let output: string | undefined
     childProcess.exec(cmd, execArgs, (err, stdout) => {
       if (err) {
         this.log.error(`Error while finding Minitest test suite: ${err.message}`);
@@ -34,9 +35,14 @@ export class MinitestTestRunner extends TestRunner {
         vscode.window.showErrorMessage(err.message);
         throw err;
       }
-      resolve(stdout);
+      output = stdout;
     });
-  });
+
+    if (!output) {
+      "No output returned from child process"
+    }
+    return output as string
+  };
 
   protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
     let line = testItem.id.split(':').pop();
