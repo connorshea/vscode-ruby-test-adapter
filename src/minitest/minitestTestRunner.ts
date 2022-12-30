@@ -14,7 +14,7 @@ export class MinitestTestRunner extends TestRunner {
    * @return The raw output from the Minitest JSON formatter.
    */
   async initTests(testItems: vscode.TestItem[]): Promise<string> {
-    let cmd = `${(this.config as MinitestConfig).getTestCommand()} vscode:minitest:list`;
+    let cmd = this.getListTestsCommand(testItems)
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
@@ -25,24 +25,25 @@ export class MinitestTestRunner extends TestRunner {
 
     this.log.info(`Getting a list of Minitest tests in suite with the following command: ${cmd}`);
 
-    let output: string | undefined
-    childProcess.exec(cmd, execArgs, (err, stdout) => {
-      if (err) {
-        this.log.error(`Error while finding Minitest test suite: ${err.message}`);
-        this.log.error(`Output: ${stdout}`);
-        // Show an error message.
-        vscode.window.showWarningMessage("Ruby Test Explorer failed to find a Minitest test suite. Make sure Minitest is installed and your configured Minitest command is correct.");
-        vscode.window.showErrorMessage(err.message);
-        throw err;
-      }
-      output = stdout;
+    let output: Promise<string> = new Promise((resolve, reject) => {
+      childProcess.exec(cmd, execArgs, (err, stdout) => {
+        if (err) {
+          this.log.error(`Error while finding Minitest test suite: ${err.message}`);
+          this.log.error(`Output: ${stdout}`);
+          // Show an error message.
+          vscode.window.showWarningMessage("Ruby Test Explorer failed to find a Minitest test suite. Make sure Minitest is installed and your configured Minitest command is correct.");
+          vscode.window.showErrorMessage(err.message);
+          reject(err);
+        }
+        resolve(stdout);
+      });
     });
-
-    if (!output) {
-      "No output returned from child process"
-    }
-    return output as string
+    return await output
   };
+
+  protected getListTestsCommand(testItems?: vscode.TestItem[]): string {
+    return `${(this.config as MinitestConfig).getTestCommand()} vscode:minitest:list`
+  }
 
   protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
     let line = testItem.id.split(':').pop();

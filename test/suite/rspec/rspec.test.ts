@@ -8,7 +8,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
-import { noop_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { noop_logger, stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {
@@ -44,8 +44,8 @@ suite('Extension Test for RSpec', function() {
 
     config = new RspecConfig(path.resolve("ruby"), workspaceFolder)
 
-    testSuite = new TestSuite(noop_logger(), testController, config)
-    testRunner = new RspecTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)
+    testSuite = new TestSuite(stdout_logger(), testController, config)
+    testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
     testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
   })
 

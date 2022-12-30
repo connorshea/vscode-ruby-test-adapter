@@ -114,50 +114,67 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param process A process running the tests.
    * @return A promise that resolves when the test run completes.
    */
-  handleChildProcess = async (process: childProcess.ChildProcess, context: TestRunContext) => new Promise<string>((resolve, reject) => {
+  async handleChildProcess(process: childProcess.ChildProcess, context: TestRunContext): Promise<string> {
     this.currentChildProcess = process;
-    let childProcessLogger = this.log.getChildLogger({ label: `ChildProcess(${context.config.frameworkName()})` })
+    let log = this.log.getChildLogger({ label: `ChildProcess(${context.config.frameworkName()})` })
+    let output: Promise<string> = new Promise((resolve, reject) => {
+      let buffer: string | undefined
 
-    this.currentChildProcess.on('exit', () => {
-      childProcessLogger.info('Child process has exited. Sending test run finish event.');
-      this.currentChildProcess = undefined;
-      resolve('{}');
-    });
+      process.on('exit', () => {
+        log.info('Child process has exited. Sending test run finish event.');
+        this.currentChildProcess = undefined;
+        if(buffer) {
+          resolve(buffer);
+        } else {
+          let error = new Error("No output returned from child process")
+          log.error(error.message)
+          reject(error)
+        }
+      });
 
-    this.currentChildProcess.stderr!.pipe(split2()).on('data', (data) => {
-      data = data.toString();
-      childProcessLogger.debug(data);
-      if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
-        this.debugCommandStartedResolver()
-      }
-    });
+      process.stderr!.pipe(split2()).on('data', (data) => {
+        data = data.toString();
+        log.debug(data);
+        if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
+          this.debugCommandStartedResolver()
+        }
+      });
 
-    this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
-      data = data.toString();
-      childProcessLogger.debug(data);
-      let markTestStatus = (fn: (test: vscode.TestItem) => void, testId: string) => {
-        testId = this.testSuite.normaliseTestId(testId)
-        let test = this.testSuite.getOrCreateTestItem(testId)
-        context.passed(test)
-      }
-      if (data.startsWith('PASSED:')) {
-        data = data.replace('PASSED: ', '');
-        markTestStatus(test => context.passed(test), data)
-      } else if (data.startsWith('FAILED:')) {
-        data = data.replace('FAILED: ', '');
-        markTestStatus(test => context.failed(test, "", "", 0), data)
-      } else if (data.startsWith('RUNNING:')) {
-        data = data.replace('RUNNING: ', '');
-        markTestStatus(test => context.started(test), data)
-      } else if (data.startsWith('PENDING:')) {
-        data = data.replace('PENDING: ', '');
-        markTestStatus(test => context.enqueued(test), data)
-      }
-      if (data.includes('START_OF_TEST_JSON')) {
-        resolve(data);
-      }
-    });
-  });
+      process.stdout!.pipe(split2()).on('data', (data) => {
+        data = data.toString();
+        log.debug(data);
+        let markTestStatus = (fn: (test: vscode.TestItem) => void, testId: string) => {
+          testId = this.testSuite.normaliseTestId(testId)
+          let test = this.testSuite.getOrCreateTestItem(testId)
+          //context.passed(test)
+          // why does this not work?
+          //fn(test)
+        }
+        if (data.startsWith('PASSED:')) {
+          log.debug(`Received test status - PASSED`, data)
+          data = data.replace('PASSED: ', '');
+          markTestStatus(test => context.passed(test), data)
+        } else if (data.startsWith('FAILED:')) {
+          log.debug(`Received test status - FAILED`, data)
+          data = data.replace('FAILED: ', '');
+          markTestStatus(test => context.failed(test, "", "", 0), data)
+        } else if (data.startsWith('RUNNING:')) {
+          log.debug(`Received test status - RUNNING`, data)
+          data = data.replace('RUNNING: ', '');
+          markTestStatus(test => context.started(test), data)
+        } else if (data.startsWith('PENDING:')) {
+          log.debug(`Received test status - PENDING`, data)
+          data = data.replace('PENDING: ', '');
+          markTestStatus(test => context.enqueued(test), data)
+        }
+        if (data.includes('START_OF_TEST_JSON')) {
+          buffer = data;
+        }
+      });
+    })
+
+    return await output
+  };
 
   /**
    * Test run handler
@@ -180,14 +197,15 @@ export abstract class TestRunner implements vscode.Disposable {
       this.config,
       debuggerConfig
     )
+    let log = this.log.getChildLogger({ label: `runHandler` })
     try {
       const queue: vscode.TestItem[] = [];
 
       if (debuggerConfig) {
-        this.log.info(`Debugging test(s) ${JSON.stringify(request.include)}`);
+        log.info(`Debugging test(s) ${JSON.stringify(request.include)}`);
 
         if (!this.workspace) {
-          this.log.error("Cannot debug without a folder opened")
+          log.error("Cannot debug without a folder opened")
           context.testRun.end()
           return
         }
@@ -198,20 +216,20 @@ export abstract class TestRunner implements vscode.Disposable {
           await this.debugCommandStarted()
           debugSession = await this.startDebugging(debuggerConfig);
         } catch (err) {
-          this.log.error('Failed starting the debug session - aborting', err);
+          log.error('Failed starting the debug session - aborting', err);
           this.killChild();
           return;
         }
 
         const subscription = this.onDidTerminateDebugSession((session) => {
           if (debugSession != session) return;
-          this.log.info('Debug session ended');
+          log.info('Debug session ended');
           this.killChild(); // terminate the test run
           subscription.dispose();
         });
       }
       else {
-        this.log.info(`Running test(s) ${JSON.stringify(request.include)}`);
+        log.info(`Running test(s) ${JSON.stringify(request.include)}`);
       }
 
       // Loop through all included tests, or all known tests, and add them to our queue
@@ -237,7 +255,7 @@ export abstract class TestRunner implements vscode.Disposable {
           });
         }
         if (token.isCancellationRequested) {
-          this.log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
+          log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
         }
       } else {
         await this.runNode(null, context);
@@ -377,12 +395,11 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context
    * @return The raw output from running the test suite.
    */
-  runTestFramework = async (testCommand: string, type: string, context: TestRunContext) =>
-  new Promise<string>(async (resolve, reject) => {
+  async runTestFramework(testCommand: string, type: string, context: TestRunContext): Promise<string> {
     this.log.info(`Running test suite: ${type}`);
 
-    resolve(await this.spawnCancellableChild(testCommand, context))
-  });
+    return await this.spawnCancellableChild(testCommand, context)
+  };
 
   /**
    * Spawns a child process to run a command, that will be killed
@@ -459,20 +476,29 @@ export abstract class TestRunner implements vscode.Disposable {
   }
 
   /**
+   * Gets the command to get information about tests.
+   *
+   * @param testItems Optional array of tests to list. If missing, all tests should be
+   *   listed
+   * @return The command to run to get test details
+   */
+  protected abstract getListTestsCommand(testItems?: vscode.TestItem[]): string;
+
+  /**
    * Gets the command to run a single test.
    *
-   * @param testLocation A file path with a line number, e.g. `/path/to/test.rb:12`.
+   * @param testItem A TestItem of a single test to be run
    * @param context Test run context
-   * @return The raw output from running the test.
+   * @return The command to run a single test.
    */
   protected abstract getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string;
 
   /**
    * Gets the command to run tests in a given file.
    *
-   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
+   * @param testItem A TestItem of a file containing tests
    * @param context Test run context
-   * @return The raw output from running the tests.
+   * @return The command to run all tests in a given file.
    */
   protected abstract getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string;
 
@@ -480,14 +506,14 @@ export abstract class TestRunner implements vscode.Disposable {
    * Gets the command to run the full test suite for the current workspace.
    *
    * @param context Test run context
-   * @return The raw output from running the test suite.
+   * @return The command to run the full test suite for the current workspace.
    */
   protected abstract getFullTestSuiteCommand(context: TestRunContext): string;
 
   /**
    * Handles test state based on the output returned by the test command.
    *
-   * @param test The test that we want to handle.
+   * @param test The parsed output from running the test
    * @param context Test run context
    */
   protected abstract handleStatus(test: ParsedTest, context: TestRunContext): void;
