@@ -143,29 +143,23 @@ export abstract class TestRunner implements vscode.Disposable {
       process.stdout!.pipe(split2()).on('data', (data) => {
         data = data.toString();
         log.debug(data);
-        let markTestStatus = (fn: (test: vscode.TestItem) => void, testId: string) => {
+        let getTest = (testId: string): vscode.TestItem => {
           testId = this.testSuite.normaliseTestId(testId)
-          let test = this.testSuite.getOrCreateTestItem(testId)
-          //context.passed(test)
-          // why does this not work?
-          //fn(test)
+          return this.testSuite.getOrCreateTestItem(testId)
         }
         if (data.startsWith('PASSED:')) {
           log.debug(`Received test status - PASSED`, data)
-          data = data.replace('PASSED: ', '');
-          markTestStatus(test => context.passed(test), data)
+          context.passed(getTest(data.replace('PASSED: ', '')))
         } else if (data.startsWith('FAILED:')) {
           log.debug(`Received test status - FAILED`, data)
-          data = data.replace('FAILED: ', '');
-          markTestStatus(test => context.failed(test, "", "", 0), data)
+          let testItem = getTest(data.replace('FAILED: ', ''))
+          context.failed(testItem, "", testItem.uri?.fsPath || "", testItem.range?.start.line || 0)
         } else if (data.startsWith('RUNNING:')) {
           log.debug(`Received test status - RUNNING`, data)
-          data = data.replace('RUNNING: ', '');
-          markTestStatus(test => context.started(test), data)
+          context.started(getTest(data.replace('RUNNING: ', '')))
         } else if (data.startsWith('PENDING:')) {
           log.debug(`Received test status - PENDING`, data)
-          data = data.replace('PENDING: ', '');
-          markTestStatus(test => context.enqueued(test), data)
+          context.enqueued(getTest(data.replace('PENDING: ', '')))
         }
         if (data.includes('START_OF_TEST_JSON')) {
           buffer = data;
@@ -234,11 +228,13 @@ export abstract class TestRunner implements vscode.Disposable {
 
       // Loop through all included tests, or all known tests, and add them to our queue
       if (request.include) {
+        log.debug(`${request.include.length} tests in request`);
         request.include.forEach(test => queue.push(test));
 
-        // For every test that was queued, try to run it. Call run.passed() or run.failed()
+        // For every test that was queued, try to run it
         while (queue.length > 0 && !token.isCancellationRequested) {
           const test = queue.pop()!;
+          log.debug(`Running test from queue ${test.id}`);
 
           // Skip tests the user asked to exclude
           if (request.exclude?.includes(test)) {
@@ -258,6 +254,7 @@ export abstract class TestRunner implements vscode.Disposable {
           log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
         }
       } else {
+        log.debug('Running all tests in suite');
         await this.runNode(null, context);
       }
     }
@@ -314,29 +311,35 @@ export abstract class TestRunner implements vscode.Disposable {
     node: vscode.TestItem | null,
     context: TestRunContext
   ): Promise<void> {
-    let log = this.log.getChildLogger({label: "runNode"})
+    let log = this.log.getChildLogger({label: this.runNode.name})
     // Special case handling for the root suite, since it can be run
     // with runFullTestSuite()
     try {
       if (node == null) {
         log.debug("Running all tests")
         this.controller.items.forEach((testSuite) => {
-          this.enqueTestAndChildren(testSuite, context)
+          //this.enqueTestAndChildren(testSuite, context)
+          // Mark selected tests as started
+          this.markTestAndChildrenStarted(testSuite, context)
         })
         let testOutput = await this.runFullTestSuite(context);
         this.parseAndHandleTestOutput(testOutput, context)
         // If the suite is a file, run the tests as a file rather than as separate tests.
       } else if (node.label.endsWith('.rb')) {
         log.debug(`Running test file: ${node.id}`)
-        // Mark selected tests as enqueued
-        this.enqueTestAndChildren(node, context)
 
-        context.started(node)
+        // Mark selected tests as enqueued - not really much point
+        //this.enqueTestAndChildren(node, context)
+
+        // Mark selected tests as started
+        this.markTestAndChildrenStarted(node, context)
+
         let testOutput = await this.runTestFile(node, context);
 
         this.parseAndHandleTestOutput(testOutput, context)
       } else {
-        if (node.uri !== undefined && node.range !== undefined) {
+        log.debug(`Running single test: ${node.id}`)
+        if (node.uri !== undefined) {
           log.debug(`Running single test: ${node.id}`)
           context.started(node)
 
@@ -345,6 +348,8 @@ export abstract class TestRunner implements vscode.Disposable {
           let testOutput = await this.runSingleTest(node, context);
 
           this.parseAndHandleTestOutput(testOutput, context)
+        } else {
+          log.error("test missing file path")
         }
       }
     } finally {
@@ -353,7 +358,7 @@ export abstract class TestRunner implements vscode.Disposable {
   }
 
   private parseAndHandleTestOutput(testOutput: string, context: TestRunContext) {
-    let log = this.log.getChildLogger({label: 'parseAndHandleTestOutput'})
+    let log = this.log.getChildLogger({label: this.parseAndHandleTestOutput.name})
     testOutput = TestRunner.getJsonFromOutput(testOutput);
     log.debug('Parsing the below JSON:');
     log.debug(`${testOutput}`);
@@ -379,11 +384,19 @@ export abstract class TestRunner implements vscode.Disposable {
    * Mark a test node and all its children as being queued for execution
    */
   private enqueTestAndChildren(test: vscode.TestItem, context: TestRunContext) {
-    let log = this.log.getChildLogger({label: "enqueTestAndChildren"})
-    log.debug(`enqueing test ${test.id}`)
     context.enqueued(test);
     if (test.children && test.children.size > 0) {
       test.children.forEach(child => { this.enqueTestAndChildren(child, context) })
+    }
+  }
+
+  /**
+   * Mark a test node and all its children as being queued for execution
+   */
+  private markTestAndChildrenStarted(test: vscode.TestItem, context: TestRunContext) {
+    context.started(test);
+    if (test.children && test.children.size > 0) {
+      test.children.forEach(child => { this.markTestAndChildrenStarted(child, context) })
     }
   }
 

@@ -9,6 +9,7 @@ import { Config } from './config'
  */
 export class TestRunContext {
   public readonly testRun: vscode.TestRun
+  public readonly log: IChildLogger
 
   /**
    * Create a new context
@@ -20,13 +21,14 @@ export class TestRunContext {
    * @param debuggerConfig A VS Code debugger configuration.
    */
   constructor(
-    public readonly log: IChildLogger,
+    readonly rootLog: IChildLogger,
     public readonly token: vscode.CancellationToken,
     readonly request: vscode.TestRunRequest,
     readonly controller: vscode.TestController,
     public readonly config: Config,
     public readonly debuggerConfig?: vscode.DebugConfiguration
   ) {
+    this.log = rootLog.getChildLogger({ label: "TestRunContext" })
     this.testRun = controller.createTestRun(request)
   }
 

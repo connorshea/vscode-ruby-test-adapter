@@ -8,7 +8,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
-import { noop_logger, stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { noop_logger, stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {
@@ -28,7 +28,7 @@ suite('Extension Test for RSpec', function() {
       file)
   }
 
-  this.beforeEach(async function () {
+  this.beforeEach(function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_spec.rb'])
     testController = new StubTestController()
@@ -44,7 +44,7 @@ suite('Extension Test for RSpec', function() {
 
     config = new RspecConfig(path.resolve("ruby"), workspaceFolder)
 
-    testSuite = new TestSuite(stdout_logger(), testController, config)
+    testSuite = new TestSuite(noop_logger(), testController, config)
     testRunner = new RspecTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
     testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
   })
@@ -210,125 +210,153 @@ suite('Extension Test for RSpec', function() {
     )
   })
 
-  test('run test success', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
-
-    let mockRequest = setupMockRequest(testSuite, "square_spec.rb")
-    let request = instance(mockRequest)
+  suite('status events', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+    suite('file with passing and failing specs', function() {
+      let mockTestRun: vscode.TestRun
 
-    let args = testStateCaptors(mockTestRun)
-    let expectation = {
-      id: "square_spec.rb[1:1]",
-      file: expectedPath("square_spec.rb"),
-      label: "finds the square of 2",
-      line: 3
-    }
+      this.beforeAll(async function() {
+        await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
 
-    // Passed called once per test in file during dry run
-    testItemMatches(args.passedArg(0)["testItem"], expectation)
-    testItemMatches(
-      args.passedArg(1)["testItem"],
-      {
-        id: "square_spec.rb[1:2]",
-        file: expectedPath("square_spec.rb"),
-        label: "finds the square of 3",
-        line: 7
-      }
-    )
+        let mockRequest = setupMockRequest(testSuite, "square_spec.rb")
+        let request = instance(mockRequest)
+        await testRunner.runHandler(request, cancellationTokenSource.token)
+        mockTestRun = (testController as StubTestController).getMockTestRun()
+      })
 
-    // Passed called again for passing test but not for failing test
-    testItemMatches(args.passedArg(2)["testItem"], expectation)
-    verify(mockTestRun.passed(anything(), undefined)).times(3)
-  })
+      test('enqueued status event', async function() {
+        // Not really a useful status event unless you can queue up tests and run only
+        // parts of the queue at a time - perhaps in the future
+        verify(mockTestRun.enqueued(anything())).times(0)
+      })
 
-  test('run test failure', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square_spec.rb")))
+      test('started status event', function() {
+        let args = testStateCaptors(mockTestRun)
 
-    let mockRequest = setupMockRequest(testSuite, "square_spec.rb")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
+        // Assert that all specs and the file are marked as started
+        expect(args.startedArg(0).id).to.eq("square_spec.rb")
+        expect(args.startedArg(1).id).to.eq("square_spec.rb[1:1]")
+        expect(args.startedArg(2).id).to.eq("square_spec.rb[1:2]")
+        verify(mockTestRun.started(anything())).times(3)
+      })
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+      test('passed status event', function() {
+        let expectedTestItem = {
+          id: "square_spec.rb[1:1]",
+          file: expectedPath("square_spec.rb"),
+          label: "finds the square of 2",
+          line: 3
+        }
 
-    let args = testStateCaptors(mockTestRun).failedArg(0)
+        // Verify that passed status event occurred exactly twice (once as soon as it
+        // passed and again when parsing the test run output)
+        testItemMatches(testStateCaptors(mockTestRun).passedArg(0).testItem,
+                        expectedTestItem)
+        testItemMatches(testStateCaptors(mockTestRun).passedArg(1).testItem,
+                        expectedTestItem)
+        verify(mockTestRun.passed(anything(), anything())).times(2)
 
-    // Actual failure report
-    let expectation = {
-      id: "square_spec.rb[1:2]",
-      file: expectedPath("square_spec.rb"),
-      label: "finds the square of 3",
-      line: 7
-    }
-    testItemMatches(args.testItem, expectation)
+        // Expect failed status events for the other spec in the file
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
 
-    expect(args.message.message).to.contain("RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n")
-    expect(args.message.actualOutput).to.be.undefined
-    expect(args.message.expectedOutput).to.be.undefined
-    expect(args.message.location?.range.start.line).to.eq(8)
-    expect(args.message.location?.uri.fsPath).to.eq(expectation.file)
-    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("square_spec.rb"))
+        // Verify that no other status events occurred
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
+        verify(mockTestRun.skipped(anything())).times(0)
+      })
 
-    verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
-  })
+      test('failure status event', function() {
+        let expectedTestItem = {
+          id: "square_spec.rb[1:2]",
+          file: expectedPath("square_spec.rb"),
+          label: "finds the square of 3",
+          line: 7
+        }
 
-  test('run test error', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
+        // Verify that failed status event occurred twice - once immediately after the
+        // test failed with no details, and once at the end when parsing test output with
+        // more information
+        verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, {
+          testItem: expectedTestItem,
+        })
+        verifyFailure(1, testStateCaptors(mockTestRun).failedArgs, {
+          testItem: expectedTestItem,
+          message: "RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n",
+          line: 8,
+        })
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
 
-    let mockRequest = setupMockRequest(testSuite, "abs_spec.rb[1:2]")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
+        // Expect passed status events for the other spec in the file
+        verify(mockTestRun.passed(anything(), anything())).times(2)
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+        // Verify that no other status events occurred
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
+        verify(mockTestRun.skipped(anything())).times(0)
+      })
+    })
 
-    let args = testStateCaptors(mockTestRun).erroredArg(0)
+    suite('single specs from file with passing, skipped and errored specs', async function() {
+      test('error status event', async function() {
+        let errorRequest = instance(setupMockRequest(testSuite, "abs_spec.rb[1:2]"))
 
-    // Actual failure report
-    let expectation = {
-      id: "abs_spec.rb[1:2]",
-      file: expectedPath("abs_spec.rb"),
-      label: "finds the absolute value of 0",
-      line: 7,
-    }
-    testItemMatches(args.testItem, expectation)
+        await testRunner.runHandler(errorRequest, cancellationTokenSource.token)
+        let mockTestRun = (testController as StubTestController).getMockTestRun()
 
-    expect(args.message.message).to.match(/RuntimeError:\nAbs for zero is not supported/)
-    expect(args.message.actualOutput).to.be.undefined
-    expect(args.message.expectedOutput).to.be.undefined
-    expect(args.message.location?.range.start.line).to.eq(8)
-    expect(args.message.location?.uri.fsPath).to.eq(expectation.file)
-    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("abs_spec.rb"))
-    verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(0)
-    verify(mockTestRun.errored(anything(), anything(), undefined)).times(1)
-  })
+        let expectedTestItem = {
+          id: "abs_spec.rb[1:2]",
+          file: expectedPath("abs_spec.rb"),
+          label: "finds the absolute value of 0",
+          line: 7,
+        }
+        // Verify that failed status occurred immediately and error status event occurred
+        // when parsing test output with more information
+        // verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, {
+        //   testItem: expectedTestItem,
+        // })
+        verifyFailure(0, testStateCaptors(mockTestRun).erroredArgs, {
+          testItem: expectedTestItem,
+          message: "RuntimeError:\nAbs for zero is not supported",
+          line: 8,
+        })
 
-  test('run test skip', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
+        // Verify that only expected status events occurred
+        verify(mockTestRun.started(anything())).times(1)
+        //verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
 
-    let mockRequest = setupMockRequest(testSuite, "abs_spec.rb[1:3]")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
+        // Verify that no other status events occurred
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
+        verify(mockTestRun.enqueued(anything())).times(0)
+        verify(mockTestRun.passed(anything(), anything())).times(0)
+        verify(mockTestRun.skipped(anything())).times(0)
+      })
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+      test('skipped event', async function() {
+        let skippedRequest = instance(setupMockRequest(testSuite, "abs_spec.rb[1:3]"))
+        await testRunner.runHandler(skippedRequest, cancellationTokenSource.token)
 
-    let args = testStateCaptors(mockTestRun)
-    let expectation = {
-      id: "abs_spec.rb[1:3]",
-      file: expectedPath("abs_spec.rb"),
-      label: "finds the absolute value of -1",
-      line: 11
-    }
-    testItemMatches(args.startedArg(0), expectation)
-    testItemMatches(args.skippedArg(0), expectation)
-    verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.skipped(anything())).times(1)
+        let mockTestRun = (testController as StubTestController).getMockTestRun()
+
+        let args = testStateCaptors(mockTestRun)
+        let expectation = {
+          id: "abs_spec.rb[1:3]",
+          file: expectedPath("abs_spec.rb"),
+          label: "finds the absolute value of -1",
+          line: 11
+        }
+        testItemMatches(args.startedArg(0), expectation)
+        testItemMatches(args.skippedArg(0), expectation)
+
+        // Verify that only expected status events occurred
+        verify(mockTestRun.started(anything())).times(1)
+        verify(mockTestRun.skipped(anything())).times(1)
+
+        // Verify that no other status events occurred
+        verify(mockTestRun.enqueued(anything())).times(0)
+        verify(mockTestRun.passed(anything(), anything())).times(0)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
+      })
+    })
   })
 });

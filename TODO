@@ -1,0 +1,3 @@
+* Move logic for setting test info from test runner output from TestLoader into TestRunner and use it before we call handleStatus on line 371
+* Fix up minitest specs like I did for the RSpec ones
+* Get rid of initTests and do it using TestRunner.spawnCancellable child like the actual test runs do

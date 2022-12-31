@@ -88,6 +88,17 @@ export type TestItemExpectation = {
   children?: TestItemExpectation[]
 }
 
+/**
+ * Object to simplify describing a {@link vscode.TestItem TestItem} for testing its values
+ */
+export type TestFailureExpectation = {
+  testItem: TestItemExpectation,
+  message?: string,
+  actualOutput?: string,
+  expectedOutput?: string,
+  line?: number,
+}
+
 export function testUriMatches(testItem: vscode.TestItem, path?: string) {
   if (path) {
     expect(testItem.uri).to.not.be.undefined
@@ -156,6 +167,26 @@ export function testItemCollectionMatches(
   })
 }
 
+export function verifyFailure(
+  index: number,
+  captor: ArgCaptor3<vscode.TestItem, vscode.TestMessage, number | undefined>,
+  expectation: TestFailureExpectation): void
+{
+  let failure = captor.byCallIndex(index)
+  let testItem = failure[0]
+  let failureDetails = failure[1]
+  testItemMatches(testItem, expectation.testItem)
+  if (expectation.message) {
+    expect(failureDetails.message).to.contain(expectation.message)
+  } else {
+    expect(failureDetails.message).to.eq('')
+  }
+  expect(failureDetails.actualOutput).to.eq(expectation.actualOutput)
+  expect(failureDetails.expectedOutput).to.eq(expectation.expectedOutput)
+  expect(failureDetails.location?.range.start.line).to.eq(expectation.line || expectation.testItem.line || 0)
+  expect(failureDetails.location?.uri.fsPath).to.eq(expectation.testItem.file)
+}
+
 export function setupMockTestController(): vscode.TestController {
   let mockTestController = mock<vscode.TestController>()
   let createTestItem = (id: string, label: string, uri?: vscode.Uri | undefined) => {
@@ -182,10 +213,7 @@ export function setupMockTestController(): vscode.TestController {
 export function setupMockRequest(testSuite: TestSuite, testId?: string): vscode.TestRunRequest {
   let mockRequest = mock<vscode.TestRunRequest>()
   if (testId) {
-    let testItem = testSuite.getTestItem(testId)
-    if (testItem === undefined) {
-      throw new Error("Couldn't find test")
-    }
+    let testItem = testSuite.getOrCreateTestItem(testId)
     when(mockRequest.include).thenReturn([testItem])
   } else {
     when(mockRequest.include).thenReturn([])
