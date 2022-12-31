@@ -85,7 +85,8 @@ export type TestItemExpectation = {
   label: string,
   file?: string,
   line?: number,
-  children?: TestItemExpectation[]
+  children?: TestItemExpectation[],
+  canResolveChildren?: boolean,
 }
 
 /**
@@ -121,7 +122,7 @@ export function testItemMatches(testItem: vscode.TestItem, expectation: TestItem
   if (expectation.children && expectation.children.length > 0) {
     testItemCollectionMatches(testItem.children, expectation.children, testItem)
   }
-  expect(testItem.canResolveChildren).to.be.false
+  expect(testItem.canResolveChildren).to.eq(expectation.canResolveChildren || false, 'canResolveChildren')
   expect(testItem.label).to.eq(expectation.label, `label mismatch (id: ${expectation.id})`)
   expect(testItem.description).to.be.undefined
   //expect(testItem.description).to.eq(expectation.label, 'description mismatch')
@@ -160,10 +161,8 @@ export function testItemCollectionMatches(
     expectation.length,
     parent ? `Wrong number of children in item ${parent.id}\n\t${testItems.toString()}` : `Wrong number of items in collection\n\t${testItems.toString()}`
   )
-  let i = 0;
   testItems.forEach((testItem: vscode.TestItem) => {
-    testItemMatches(testItem, expectation[i])
-    i++
+    testItemMatches(testItem, expectation.find(x => x.id == testItem.id))
   })
 }
 
