@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { IChildLogger } from '@vscode-logging/logger';
-import { TestRunner } from './testRunner';
 import { RspecTestRunner } from './rspec/rspecTestRunner';
 import { MinitestTestRunner } from './minitest/minitestTestRunner';
 import { Config } from './config';
@@ -120,141 +118,12 @@ export class TestLoader implements vscode.Disposable {
       let output = await this.testRunner.initTests(testItems);
 
       log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
-      output = TestRunner.getJsonFromOutput(output);
-      log.debug(`Parsing the returned JSON: ${output}`);
-      let testMetadata;
-      try {
-        testMetadata = JSON.parse(output);
-      } catch (error) {
-        log.error('JSON parsing failed', error);
-      }
-
-      let tests = TestLoader.parseDryRunOutput(
-        this.log,
-        this.testSuite,
-        testMetadata.examples
-      )
-
-      log.debug("Test output parsed. Adding tests to test suite", tests)
-      testItems.forEach((testItem) => {
-        // TODO: Add option to list only tests for single file to minitest and remove filter below
-        log.debug(`testItem fsPath: ${testItem.uri?.fsPath}`)
-        var filteredTests = tests.filter((test) => {
-          log.debug(`filter: test file path: ${test.file_path}`)
-          return testItem.uri?.fsPath.endsWith(test.file_path)
-        })
-        this.getTestSuiteForFile(filteredTests, testItem);
-      })
+      this.testRunner.parseAndHandleTestOutput(output)
     } catch (e: any) {
       log.error("Failed to load tests", e)
       return Promise.reject(e)
     }
   }
-
-  public static parseDryRunOutput(
-    rootLog: IChildLogger,
-    testSuite: TestSuite,
-    tests: ParsedTest[]
-  ): ParsedTest[] {
-    let log = rootLog.getChildLogger({ label: "parseDryRunOutput" })
-    log.debug(`called with ${tests.length} items`)
-    let parsedTests: Array<ParsedTest> = [];
-
-    tests.forEach(
-      (test: ParsedTest) => {
-        log.debug("Parsing test", test)
-        let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-        let test_location_string: string = test_location_array.join('');
-        let location = parseInt(test_location_string);
-        let id = testSuite.normaliseTestId(test.id)
-        let file_path = TestLoader.normaliseFilePath(testSuite, test.file_path)
-        let parsedTest = {
-          ...test,
-          id: id,
-          file_path: file_path,
-          location: location,
-        }
-        parsedTests.push(parsedTest);
-        log.debug("Parsed test", parsedTest)
-      }
-    );
-    return parsedTests
-  }
-
-  public static normaliseFilePath(testSuite: TestSuite, filePath: string): string {
-    filePath = testSuite.normaliseTestId(filePath)
-    return filePath.replace(/\[.*/, '')
-  }
-
-  /**
-   * Get the tests in a given file.
-   *
-   * @param tests Parsed output from framework
-   * @param testItem TestItem object containing file details
-   */
-  public getTestSuiteForFile(tests: Array<ParsedTest>, testItem: vscode.TestItem) {
-    let log = this.log.getChildLogger({ label: `getTestSuiteForFile(${testItem.id})` })
-
-    let currentFileSplitName = testItem.uri?.fsPath.split(path.sep);
-    let currentFileLabel = currentFileSplitName ? currentFileSplitName[currentFileSplitName!.length - 1] : testItem.label
-    log.debug(`Current file label: ${currentFileLabel}`)
-
-    let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
-
-    let testItems: vscode.TestItem[] = []
-    tests.forEach((test) => {
-      log.debug(`Building test: ${test.id}`)
-      // RSpec provides test ids like "file_name.rb[1:2:3]".
-      // This uses the digits at the end of the id to create
-      // an array of numbers representing the location of the
-      // test in the file.
-      let testLocationArray: Array<number> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').map((x) => {
-        return parseInt(x);
-      });
-
-      // Get the last element in the location array.
-      let testNumber: number = testLocationArray[testLocationArray.length - 1];
-      // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
-      // is appended to the test description to distinguish between separate tests.
-      let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${testNumber}` : test.full_description;
-
-      // If the current file label doesn't have a slash in it and it starts with the PascalCase'd
-      // file name, remove the from the start of the description. This turns, e.g.
-      // `ExternalAccount Validations blah blah blah' into 'Validations blah blah blah'.
-      if (!pascalCurrentFileLabel.includes('/') && description.startsWith(pascalCurrentFileLabel)) {
-        // Optional check for a space following the PascalCase file name. In some
-        // cases, e.g. 'FileName#method_name` there's no space after the file name.
-        let regexString = `${pascalCurrentFileLabel}[ ]?`;
-        let regex = new RegExp(regexString, "g");
-        description = description.replace(regex, '');
-      }
-
-      let childTestItem = this.testSuite.getOrCreateTestItem(test.id)
-      childTestItem.canResolveChildren = false
-      log.debug(`Setting test ${childTestItem.id} label to "${description}"`)
-      childTestItem.label = description
-      childTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
-
-      testItems.push(childTestItem);
-    });
-    testItem.children.replace(testItems)
-  }
-
-
-
-  /**
-   * Convert a string from snake_case to PascalCase.
-   * Note that the function will return the input string unchanged if it
-   * includes a '/'.
-   *
-   * @param string The string to convert to PascalCase.
-   * @return The converted string.
-   */
-  private snakeToPascalCase(string: string): string {
-    if (string.includes('/')) { return string }
-    return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
-  }
-
 
   public async parseTestsInFile(uri: vscode.Uri | vscode.TestItem) {
     let log = this.log.getChildLogger({label: "parseTestsInFile"})

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { IVSCodeExtLogger, IChildLogger } from "@vscode-logging/types";
+import { IVSCodeExtLogger, IChildLogger, LogLevel } from "@vscode-logging/types";
 import { anyString, anything, capture, instance, mock, when } from 'ts-mockito';
 import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCaptor';
 
@@ -27,14 +27,6 @@ const NOOP_LOGGER: IVSCodeExtLogger = {
 }
 Object.freeze(NOOP_LOGGER)
 
-function writeStdOutLogMsg(level: string, msg: string, ...args: any[]): void {
-  console.log(`[${level}] ${msg}${args.length > 0 ? ':' : ''}`)
-  args.forEach((arg) => {
-    console.log(`${JSON.stringify(arg)}`)
-  })
-  console.log('----------')
-}
-
 function createChildLogger(parent: IVSCodeExtLogger, label: string): IChildLogger {
   let prependLabel = (l:string, m:string):string => `${l}: ${m}`
   return {
@@ -49,33 +41,49 @@ function createChildLogger(parent: IVSCodeExtLogger, label: string): IChildLogge
 }
 
 /**
- * Logger that logs to stdout - not terribly pretty but useful for seeing what failing tests are doing
- */
-const STDOUT_LOGGER: IVSCodeExtLogger = {
-  changeLevel: noop,
-  changeSourceLocationTracking: noop,
-  debug: (msg: string, ...args: any[]) => { writeStdOutLogMsg("debug", msg, ...args) },
-  error: (msg: string, ...args: any[]) => { writeStdOutLogMsg("error", msg, ...args) },
-  fatal: (msg: string, ...args: any[]) => { writeStdOutLogMsg("fatal", msg, ...args) },
-  getChildLogger(opts: { label: string }): IChildLogger {
-    return createChildLogger(this, opts.label);
-  },
-  info: (msg: string, ...args: any[]) => { writeStdOutLogMsg("info", msg, ...args) },
-  trace: (msg: string, ...args: any[]) => { writeStdOutLogMsg("trace", msg, ...args) },
-  warn: (msg: string, ...args: any[]) => { writeStdOutLogMsg("warn", msg, ...args) }
-}
-Object.freeze(STDOUT_LOGGER)
-
-/**
  * Get a noop logger for use in testing where logs are usually unnecessary
  */
 export function noop_logger(): IVSCodeExtLogger { return NOOP_LOGGER }
+
 /**
  * Get a logger that logs to stdout.
  *
  * Not terribly pretty but useful for seeing what failing tests are doing
  */
-export function stdout_logger(): IVSCodeExtLogger { return STDOUT_LOGGER }
+export function stdout_logger(level: LogLevel = "info"): IVSCodeExtLogger {
+  const levels: { [key: string]: number } = {
+    "fatal": 0,
+    "error": 1,
+    "warn": 2,
+    "info": 3,
+    "debug": 4,
+    "trace": 5,
+  }
+  let maxLevel = levels[level]
+  function writeStdOutLogMsg(level: LogLevel, msg: string, ...args: any[]): void {
+    if (levels[level] <= maxLevel) {
+      console.log(`[${level}] ${msg}${args.length > 0 ? ':' : ''}`)
+      args.forEach((arg) => {
+        console.log(`${JSON.stringify(arg)}`)
+      })
+      console.log('----------')
+    }
+  }
+  let logger: IVSCodeExtLogger = {
+    changeLevel: (level: LogLevel) => { maxLevel = levels[level] },
+    changeSourceLocationTracking: noop,
+    debug: (msg: string, ...args: any[]) => { writeStdOutLogMsg("debug", msg, ...args) },
+    error: (msg: string, ...args: any[]) => { writeStdOutLogMsg("error", msg, ...args) },
+    fatal: (msg: string, ...args: any[]) => { writeStdOutLogMsg("fatal", msg, ...args) },
+    getChildLogger(opts: { label: string }): IChildLogger {
+      return createChildLogger(this, opts.label);
+    },
+    info: (msg: string, ...args: any[]) => { writeStdOutLogMsg("info", msg, ...args) },
+    trace: (msg: string, ...args: any[]) => { writeStdOutLogMsg("trace", msg, ...args) },
+    warn: (msg: string, ...args: any[]) => { writeStdOutLogMsg("warn", msg, ...args) }
+  }
+  return logger
+}
 
 /**
  * Object to simplify describing a {@link vscode.TestItem TestItem} for testing its values
@@ -93,7 +101,6 @@ export type TestItemExpectation = {
  * Object to simplify describing a {@link vscode.TestItem TestItem} for testing its values
  */
 export type TestFailureExpectation = {
-  testItem: TestItemExpectation,
   message?: string,
   actualOutput?: string,
   expectedOutput?: string,
@@ -114,21 +121,21 @@ export function testUriMatches(testItem: vscode.TestItem, path?: string) {
  * @param testItem {@link vscode.TestItem TestItem} to check
  * @param expectation {@link TestItemExpectation} to check against
  */
-export function testItemMatches(testItem: vscode.TestItem, expectation: TestItemExpectation | undefined) {
+export function testItemMatches(testItem: vscode.TestItem, expectation?: TestItemExpectation, message?: string) {
   if (!expectation) expect.fail("No expectation given")
 
-  expect(testItem.id).to.eq(expectation.id, `id mismatch (expected: ${expectation.id})`)
+  expect(testItem.id).to.eq(expectation.id, `${message ? message + ' - ' : ''}id mismatch (expected: ${expectation.id})`)
   testUriMatches(testItem, expectation.file)
   if (expectation.children && expectation.children.length > 0) {
     testItemCollectionMatches(testItem.children, expectation.children, testItem)
   }
-  expect(testItem.canResolveChildren).to.eq(expectation.canResolveChildren || false, 'canResolveChildren')
-  expect(testItem.label).to.eq(expectation.label, `label mismatch (id: ${expectation.id})`)
+  expect(testItem.canResolveChildren).to.eq(expectation.canResolveChildren || false, `${message ? message + ' - ' : ''}canResolveChildren (id: ${expectation.id})`)
+  expect(testItem.label).to.eq(expectation.label, `${message ? message + ' - ' : ''}label mismatch (id: ${expectation.id})`)
   expect(testItem.description).to.be.undefined
   //expect(testItem.description).to.eq(expectation.label, 'description mismatch')
   if (expectation.line) {
     expect(testItem.range).to.not.be.undefined
-    expect(testItem.range?.start.line).to.eq(expectation.line, `line number mismatch (id: ${expectation.id})`)
+    expect(testItem.range?.start.line).to.eq(expectation.line, `${message ? message + ' - ' : ''}line number mismatch (id: ${expectation.id})`)
   } else {
     expect(testItem.range).to.be.undefined
   }
@@ -162,31 +169,38 @@ export function testItemCollectionMatches(
     parent ? `Wrong number of children in item ${parent.id}\n\t${testItems.toString()}` : `Wrong number of items in collection\n\t${testItems.toString()}`
   )
   testItems.forEach((testItem: vscode.TestItem) => {
-    testItemMatches(testItem, expectation.find(x => x.id == testItem.id))
+    let expectedItem = expectation.find(x => x.id == testItem.id)
+    if(!expectedItem) {
+      expect.fail(`${testItem.id} not found in expected items`)
+    }
+    testItemMatches(testItem, expectedItem)
   })
 }
 
 export function verifyFailure(
   index: number,
   captor: ArgCaptor3<vscode.TestItem, vscode.TestMessage, number | undefined>,
-  expectation: TestFailureExpectation): void
+  expectedTestItem: TestItemExpectation,
+  expectation: TestFailureExpectation,
+  message?: string): void
 {
   let failure = captor.byCallIndex(index)
   let testItem = failure[0]
   let failureDetails = failure[1]
-  testItemMatches(testItem, expectation.testItem)
+  let messagePrefix = message ? `${message} - ${testItem.id}` : testItem.id
+  testItemMatches(testItem, expectedTestItem)
   if (expectation.message) {
-    expect(failureDetails.message).to.contain(expectation.message)
+    expect(failureDetails.message).to.contain(expectation.message, `${messagePrefix}: message`)
   } else {
     expect(failureDetails.message).to.eq('')
   }
-  expect(failureDetails.actualOutput).to.eq(expectation.actualOutput)
-  expect(failureDetails.expectedOutput).to.eq(expectation.expectedOutput)
-  expect(failureDetails.location?.range.start.line).to.eq(expectation.line || expectation.testItem.line || 0)
-  expect(failureDetails.location?.uri.fsPath).to.eq(expectation.testItem.file)
+  expect(failureDetails.actualOutput).to.eq(expectation.actualOutput, `${messagePrefix}: actualOutput`)
+  expect(failureDetails.expectedOutput).to.eq(expectation.expectedOutput, `${messagePrefix}: expectedOutput`)
+  expect(failureDetails.location?.range.start.line).to.eq(expectation.line || 0, `${messagePrefix}: line number`)
+  expect(failureDetails.location?.uri.fsPath).to.eq(expectedTestItem.file, `${messagePrefix}: path`)
 }
 
-export function setupMockTestController(): vscode.TestController {
+export function setupMockTestController(rootLog?: IChildLogger): vscode.TestController {
   let mockTestController = mock<vscode.TestController>()
   let createTestItem = (id: string, label: string, uri?: vscode.Uri | undefined) => {
     return {
@@ -199,23 +213,32 @@ export function setupMockTestController(): vscode.TestController {
       busy: false,
       range: undefined,
       error: undefined,
-      children: new StubTestItemCollection(),
+      children: new StubTestItemCollection(rootLog || noop_logger(), instance(mockTestController)),
     }
   }
   when(mockTestController.createTestItem(anyString(), anyString())).thenCall(createTestItem)
   when(mockTestController.createTestItem(anyString(), anyString(), anything())).thenCall(createTestItem)
-  let testItems = new StubTestItemCollection()
+  let testItems = new StubTestItemCollection(rootLog || noop_logger(), instance(mockTestController))
   when(mockTestController.items).thenReturn(testItems)
   return mockTestController
 }
 
-export function setupMockRequest(testSuite: TestSuite, testId?: string): vscode.TestRunRequest {
+export function setupMockRequest(testSuite: TestSuite, testId?: string | string[]): vscode.TestRunRequest {
   let mockRequest = mock<vscode.TestRunRequest>()
   if (testId) {
-    let testItem = testSuite.getOrCreateTestItem(testId)
-    when(mockRequest.include).thenReturn([testItem])
+    if (Array.isArray(testId)) {
+      let testItems: vscode.TestItem[] = []
+      testId.forEach(id => {
+        let testItem = testSuite.getOrCreateTestItem(id)
+        testItems.push(testItem)
+      })
+      when(mockRequest.include).thenReturn(testItems)
+    } else {
+      let testItem = testSuite.getOrCreateTestItem(testId as string)
+      when(mockRequest.include).thenReturn([testItem])
+    }
   } else {
-    when(mockRequest.include).thenReturn([])
+    when(mockRequest.include).thenReturn(undefined)
   }
   when(mockRequest.exclude).thenReturn([])
   return mockRequest

@@ -3,12 +3,19 @@ import { instance, mock } from 'ts-mockito';
 
 import { StubTestItemCollection } from './stubTestItemCollection';
 import { StubTestItem } from './stubTestItem';
+import { IChildLogger } from '@vscode-logging/logger';
 
 export class StubTestController implements vscode.TestController {
   id: string = "stub_test_controller_id";
   label: string = "stub_test_controller_label";
-  items: vscode.TestItemCollection = new StubTestItemCollection();
-  mockTestRun: vscode.TestRun | undefined
+  items: vscode.TestItemCollection
+  testRuns: Map<vscode.TestRunRequest, vscode.TestRun> = new Map<vscode.TestRunRequest, vscode.TestRun>()
+  readonly rootLog: IChildLogger
+
+  constructor(readonly log: IChildLogger) {
+    this.rootLog = log
+    this.items = new StubTestItemCollection(log, this);
+  }
 
   createRunProfile(
     label: string,
@@ -29,20 +36,19 @@ export class StubTestController implements vscode.TestController {
     name?: string,
     persist?: boolean
   ): vscode.TestRun {
-    this.mockTestRun = mock<vscode.TestRun>()
-    return instance(this.mockTestRun)
+    let mockTestRun = mock<vscode.TestRun>()
+    this.testRuns.set(request, mockTestRun)
+    return instance(mockTestRun)
   }
 
   createTestItem(id: string, label: string, uri?: vscode.Uri): vscode.TestItem {
-    return new StubTestItem(id, label, uri)
+    return new StubTestItem(this.rootLog, this, id, label, uri)
+  }
+
+  getMockTestRun(request: vscode.TestRunRequest): vscode.TestRun | undefined {
+    return this.testRuns.get(request)
   }
 
   dispose = () => {}
-
-  getMockTestRun(): vscode.TestRun {
-    if (this.mockTestRun)
-      return this.mockTestRun
-    throw new Error("No test run")
-  }
 
 }

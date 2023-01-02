@@ -71,12 +71,13 @@ export class RspecTestRunner extends TestRunner {
    */
   handleStatus(test: ParsedTest, context: TestRunContext): void {
     let log = this.log.getChildLogger({ label: "handleStatus" })
-    log.debug(`Handling status of test: ${JSON.stringify(test)}`);
+    log.trace(`Handling status of test: ${JSON.stringify(test)}`);
     let testItem = this.testSuite.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
-      log.debug("Passed", testItem.id)
+      log.trace("Passed", testItem.id)
       context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {
+      log.trace("Failed/Errored", testItem.id)
       // Remove linebreaks from error message.
       let errorMessageNoLinebreaks = test.exception.message.replace(/(\r\n|\n|\r)/, ' ');
       // Prepend the class name to the error message string.
@@ -123,7 +124,7 @@ export class RspecTestRunner extends TestRunner {
       }
     } else if ((test.status === "pending" || test.status === "failed") && test.pending_message !== null) {
       // Handle pending test cases.
-      log.debug("Skipped", testItem.id)
+      log.trace("Skipped", testItem.id)
       context.skipped(testItem)
     }
   };

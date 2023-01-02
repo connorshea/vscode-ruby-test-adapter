@@ -7,7 +7,6 @@ import path from 'path'
 import { Config } from '../../../src/config';
 import { TestSuite } from '../../../src/testSuite';
 import { StubTestController } from '../../stubs/stubTestController';
-import { StubTestItem } from '../../stubs/stubTestItem';
 import { noop_logger, testUriMatches } from '../helpers';
 
 suite('TestSuite', function () {
@@ -23,7 +22,7 @@ suite('TestSuite', function () {
   });
 
   beforeEach(function () {
-    controller = new StubTestController()
+    controller = new StubTestController(noop_logger())
     testSuite = new TestSuite(noop_logger(), controller, instance(mockConfig))
   });
 
@@ -53,11 +52,11 @@ suite('TestSuite', function () {
     const label = 'test-label'
 
     beforeEach(function () {
-      controller.items.add(new StubTestItem(id, label))
+      controller.items.add(controller.createTestItem(id, label))
     })
 
     test('deletes only the specified test item', function () {
-      let secondTestItem = new StubTestItem('test-id-2', 'test-label-2')
+      let secondTestItem = controller.createTestItem('test-id-2', 'test-label-2')
       controller.items.add(secondTestItem)
       expect(controller.items.size).to.eq(2)
 
@@ -79,10 +78,16 @@ suite('TestSuite', function () {
   suite('#getTestItem()', function () {
     const id = 'test-id'
     const label = 'test-label'
-    const testItem = new StubTestItem(id, label)
     const childId = 'folder/child-test'
-    const childItem = new StubTestItem(childId, 'child-test')
-    const folderItem = new StubTestItem('folder', 'folder')
+    let testItem: vscode.TestItem
+    let childItem: vscode.TestItem
+    let folderItem: vscode.TestItem
+
+    before(function () {
+      testItem = controller.createTestItem(id, label)
+      childItem = controller.createTestItem(childId, 'child-test')
+      folderItem = controller.createTestItem('folder', 'folder')
+    })
 
     beforeEach(function () {
       controller.items.add(testItem)
@@ -114,9 +119,14 @@ suite('TestSuite', function () {
   suite('#getOrCreateTestItem()', function () {
     const id = 'test-id'
     const label = 'test-label'
-    const testItem = new StubTestItem(id, label)
     const childId = `folder${path.sep}child-test`
-    const childItem = new StubTestItem(childId, 'child-test')
+    let testItem: vscode.TestItem
+    let childItem: vscode.TestItem
+
+    beforeEach(function () {
+      testItem = controller.createTestItem(id, label)
+      childItem = controller.createTestItem(childId, 'child-test')
+    })
 
     test('gets the specified item if ID is found', function () {
       controller.items.add(testItem)
@@ -131,7 +141,7 @@ suite('TestSuite', function () {
     })
 
     test('gets the specified nested test if ID is found', function () {
-      let folderItem = new StubTestItem('folder', 'folder')
+      let folderItem = controller.createTestItem('folder', 'folder')
       controller.items.add(testItem)
       folderItem.children.add(childItem)
       controller.items.add(folderItem)
@@ -141,7 +151,7 @@ suite('TestSuite', function () {
 
     test('creates item if nested ID is not found', function () {
       let id = `folder${path.sep}not-found`
-      let folderItem = new StubTestItem('folder', 'folder')
+      let folderItem = controller.createTestItem('folder', 'folder')
       controller.items.add(folderItem)
 
       let testItem = testSuite.getOrCreateTestItem(id)

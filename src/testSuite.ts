@@ -24,15 +24,20 @@ export class TestSuite {
     let log = this.log.getChildLogger({label: 'deleteTestItem'})
     testId = this.uriToTestId(testId)
     log.debug(`Deleting test ${testId}`)
-    let collection = this.getParentTestItemCollection(testId, false)
-    if (!collection) {
-      log.debug('Parent test collection not found')
-      return
+    let parent = this.getOrCreateParent(testId, false)
+    let collection: vscode.TestItemCollection | undefined
+    if (!parent) {
+      log.debug('Parent is controller')
+      collection = this.controller.items
+    } else {
+      log.debug(`Parent is ${parent.id}`)
+      collection = parent.children
     }
-    let testItem = collection.get(testId)
-    if (testItem) {
-      collection.delete(testItem.id);
-      log.debug(`Removed test ${testItem.id}`)
+    if (collection) {
+      collection.delete(testId);
+      log.debug(`Removed test ${testId}`)
+    } else {
+      log.error("Collection not found")
     }
   }
 
@@ -49,8 +54,8 @@ export class TestSuite {
       testId = testId.substring(2)
     }
     log.debug(`Looking for test ${testId}`)
-    let collection = this.getParentTestItemCollection(testId, true)!
-    let testItem = collection.get(testId)
+    let parent = this.getOrCreateParent(testId, true)
+    let testItem = (parent?.children || this.controller.items).get(testId)
     if (!testItem) {
       // Create a basic test item with what little info we have to be filled in later
       let label = testId.substring(testId.lastIndexOf(path.sep) + 1)
@@ -58,9 +63,9 @@ export class TestSuite {
         label = this.getPlaceholderLabelForSingleTest(testId)
       }
       testItem = this.createTestItem(
-        collection,
         testId,
         label,
+        parent,
         !this.locationPattern.test(testId)
       );
     }
@@ -75,13 +80,33 @@ export class TestSuite {
   public getTestItem(testId: string | vscode.Uri): vscode.TestItem | undefined {
     let log = this.log.getChildLogger({label: 'getTestItem'})
     testId = this.uriToTestId(testId)
-    let collection = this.getParentTestItemCollection(testId, false)
-    let testItem = collection?.get(testId)
+    let parent = this.getOrCreateParent(testId, false)
+    let testItem = (parent?.children || this.controller.items).get(testId)
     if (!testItem) {
       log.debug(`Couldn't find ${testId}`)
       return undefined
     }
     return testItem
+  }
+
+  public removeMissingTests(parsedTests: vscode.TestItem[], parent?: vscode.TestItem) {
+    //let log = this.log.getChildLogger({label: `${this.removeMissingTests.name}`})
+    let collection = parent?.children || this.controller.items
+    collection.forEach(item => {
+      if (!item.canResolveChildren) {
+        //log.debug(`Not an item with children - returning`)
+        return
+      }
+      //log.debug(`Checking tests in ${item.id}`)
+      if (parsedTests.find(x => x.id == item.id)) {
+        //log.debug(`Parsed test contains ${item.id}`)
+        let filteredTests = parsedTests.filter(x => x.parent?.id == item.id)
+        this.removeMissingTests(filteredTests, item)
+      } else {
+        //log.debug(`Parsed tests don't contain ${item.id}. Deleting`)
+        collection.delete(item.id)
+      }
+    })
   }
 
   /**
@@ -133,26 +158,24 @@ export class TestSuite {
    * @param createIfMissing Create parent test collections if missing
    * @returns Parent collection of the given test ID
    */
-  private getParentTestItemCollection(testId: string, createIfMissing: boolean): vscode.TestItemCollection | undefined {
-    let log = this.log.getChildLogger({label: `getParentTestItemCollection(${testId}, createIfMissing: ${createIfMissing})`})
+  private getOrCreateParent(testId: string, createIfMissing: boolean): vscode.TestItem | undefined {
+    let log = this.log.getChildLogger({label: `${this.getOrCreateParent.name}(${testId}, createIfMissing: ${createIfMissing})`})
     let idSegments = this.splitTestId(testId)
-    let collection: vscode.TestItemCollection = this.controller.items
+    let parent: vscode.TestItem | undefined
 
     // Walk through test folders to find the collection containing our test file
     for (let i = 0; i < idSegments.length - 1; i++) {
       let collectionId = this.getPartialId(idSegments, i)
       log.debug(`Getting parent collection ${collectionId}`)
-      let childCollection = collection.get(collectionId)?.children
-      if (!childCollection) {
+      let child = this.controller.items.get(collectionId)
+      if (!child) {
         if (!createIfMissing) return undefined
-        let child = this.createTestItem(
-          collection,
+        child = this.createTestItem(
           collectionId,
           idSegments[i]
         )
-        childCollection = child.children
       }
-      collection = childCollection
+      parent = child
     }
 
     // TODO: This might not handle nested describe/context/etc blocks?
@@ -163,22 +186,21 @@ export class TestSuite {
       if (fileId.startsWith(path.sep)) {
         fileId = fileId.substring(1)
       }
-      let childCollection = collection.get(fileId)?.children
-      if (!childCollection) {
+      let child = (parent?.children || this.controller.items).get(fileId)
+      if (!child) {
         log.debug(`TestItem for file ${fileId} not in parent collection`)
         if (!createIfMissing) return undefined
-        let child = this.createTestItem(
-          collection,
+        child = this.createTestItem(
           fileId,
-          fileId.substring(fileId.lastIndexOf(path.sep) + 1)
+          fileId.substring(fileId.lastIndexOf(path.sep) + 1),
+          parent,
         )
-        childCollection = child.children
       }
       log.debug(`Got TestItem for file ${fileId} from parent collection`)
-      collection = childCollection
+      parent = child
     }
     // else test item is the file so return the file's parent
-    return collection
+    return parent
   }
 
   /**
@@ -191,17 +213,17 @@ export class TestSuite {
    * @returns
    */
   private createTestItem(
-    collection: vscode.TestItemCollection,
     testId: string,
     label: string,
+    parent?: vscode.TestItem,
     canResolveChildren: boolean = true
   ): vscode.TestItem {
-    let log = this.log.getChildLogger({ label: `createTestId(${testId})` })
+    let log = this.log.getChildLogger({ label: `${this.createTestItem.name}(${testId})` })
     let uri = this.testIdToUri(testId)
-    log.debug(`Creating test item - label: ${label}, uri: ${uri}, canResolveChildren: ${canResolveChildren}`)
+    log.debug(`Creating test item - label: ${label}, parent: ${parent?.id}, canResolveChildren: ${canResolveChildren}, uri: ${uri},`)
     let item = this.controller.createTestItem(testId, label, uri)
-    item.canResolveChildren = canResolveChildren
-    collection.add(item);
+    item.canResolveChildren = canResolveChildren;
+    (parent?.children || this.controller.items).add(item);
     log.debug(`Added test ${item.id}`)
     return item
   }

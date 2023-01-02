@@ -8,7 +8,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-import { noop_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {
@@ -62,7 +62,7 @@ suite('Extension Test for Minitest', function() {
   this.beforeEach(async function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('minitestDirectory', 'test')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_test.rb'])
-    testController = new StubTestController()
+    testController = new StubTestController(stdout_logger())
 
     // Populate controller with test files. This would be done by the filesystem globs in the watchers
     let createTest = (id: string, label?: string) =>
@@ -74,9 +74,9 @@ suite('Extension Test for Minitest', function() {
 
     config = new MinitestConfig(path.resolve("ruby"), workspaceFolder)
 
-    testSuite = new TestSuite(noop_logger(), testController, config)
-    testRunner = new MinitestTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)
-    testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
+    testSuite = new TestSuite(stdout_logger(), testController, config)
+    testRunner = new MinitestTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
+    testLoader = new TestLoader(stdout_logger(), testController, testRunner, config, testSuite);
   })
 
   test('Load tests on file resolve request', async function () {
@@ -183,7 +183,7 @@ suite('Extension Test for Minitest', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
     let args = testStateCaptors(mockTestRun)
 
@@ -206,7 +206,7 @@ suite('Extension Test for Minitest', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
     let args = testStateCaptors(mockTestRun).failedArg(0)
 
@@ -231,7 +231,7 @@ suite('Extension Test for Minitest', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
     let args = testStateCaptors(mockTestRun).erroredArg(0)
 
@@ -256,7 +256,7 @@ suite('Extension Test for Minitest', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource()
     await testRunner.runHandler(request, cancellationTokenSource.token)
 
-    let mockTestRun = (testController as StubTestController).getMockTestRun()
+    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
     let args = testStateCaptors(mockTestRun)
     testItemMatches(args.startedArg(0), {

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import * as childProcess from 'child_process';
 import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
@@ -134,7 +135,7 @@ export abstract class TestRunner implements vscode.Disposable {
 
       process.stderr!.pipe(split2()).on('data', (data) => {
         data = data.toString();
-        log.debug(data);
+        log.trace(data);
         if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
           this.debugCommandStartedResolver()
         }
@@ -142,7 +143,7 @@ export abstract class TestRunner implements vscode.Disposable {
 
       process.stdout!.pipe(split2()).on('data', (data) => {
         data = data.toString();
-        log.debug(data);
+        log.trace(data);
         let getTest = (testId: string): vscode.TestItem => {
           testId = this.testSuite.normaliseTestId(testId)
           return this.testSuite.getOrCreateTestItem(testId)
@@ -153,13 +154,14 @@ export abstract class TestRunner implements vscode.Disposable {
         } else if (data.startsWith('FAILED:')) {
           log.debug(`Received test status - FAILED`, data)
           let testItem = getTest(data.replace('FAILED: ', ''))
-          context.failed(testItem, "", testItem.uri?.fsPath || "", testItem.range?.start.line || 0)
+          let line = testItem.range?.start?.line ? testItem.range.start.line + 1 : 0
+          context.failed(testItem, "", testItem.uri?.fsPath || "", line)
         } else if (data.startsWith('RUNNING:')) {
           log.debug(`Received test status - RUNNING`, data)
           context.started(getTest(data.replace('RUNNING: ', '')))
         } else if (data.startsWith('PENDING:')) {
           log.debug(`Received test status - PENDING`, data)
-          context.enqueued(getTest(data.replace('PENDING: ', '')))
+          context.skipped(getTest(data.replace('PENDING: ', '')))
         }
         if (data.includes('START_OF_TEST_JSON')) {
           buffer = data;
@@ -196,7 +198,7 @@ export abstract class TestRunner implements vscode.Disposable {
       const queue: vscode.TestItem[] = [];
 
       if (debuggerConfig) {
-        log.info(`Debugging test(s) ${JSON.stringify(request.include)}`);
+        log.debug(`Debugging test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
 
         if (!this.workspace) {
           log.error("Cannot debug without a folder opened")
@@ -223,38 +225,32 @@ export abstract class TestRunner implements vscode.Disposable {
         });
       }
       else {
-        log.info(`Running test(s) ${JSON.stringify(request.include)}`);
+        log.debug(`Running test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
       }
 
       // Loop through all included tests, or all known tests, and add them to our queue
       if (request.include) {
-        log.debug(`${request.include.length} tests in request`);
+        log.trace(`${request.include.length} tests in request`);
         request.include.forEach(test => queue.push(test));
 
         // For every test that was queued, try to run it
         while (queue.length > 0 && !token.isCancellationRequested) {
           const test = queue.pop()!;
-          log.debug(`Running test from queue ${test.id}`);
+          log.trace(`Running test from queue ${test.id}`);
 
           // Skip tests the user asked to exclude
           if (request.exclude?.includes(test)) {
+            log.debug(`Skipping test excluded from test run: ${test.id}`)
             continue;
           }
 
           await this.runNode(test, context);
-
-          test.children.forEach(test => {
-            if (test.id.endsWith('.rb')) {
-              // Only add files, not all the single test cases
-              queue.push(test)
-            }
-          });
         }
         if (token.isCancellationRequested) {
-          log.debug(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
+          log.info(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
         }
       } else {
-        log.debug('Running all tests in suite');
+        log.trace('Running all tests in suite');
         await this.runNode(null, context);
       }
     }
@@ -318,36 +314,31 @@ export abstract class TestRunner implements vscode.Disposable {
       if (node == null) {
         log.debug("Running all tests")
         this.controller.items.forEach((testSuite) => {
-          //this.enqueTestAndChildren(testSuite, context)
           // Mark selected tests as started
           this.markTestAndChildrenStarted(testSuite, context)
         })
         let testOutput = await this.runFullTestSuite(context);
-        this.parseAndHandleTestOutput(testOutput, context)
+        this.parseAndHandleTestOutput(testOutput, context, undefined)
         // If the suite is a file, run the tests as a file rather than as separate tests.
-      } else if (node.label.endsWith('.rb')) {
-        log.debug(`Running test file: ${node.id}`)
-
-        // Mark selected tests as enqueued - not really much point
-        //this.enqueTestAndChildren(node, context)
+      } else if (node.canResolveChildren) {
+        log.debug(`Running test file/folder: ${node.id}`)
 
         // Mark selected tests as started
         this.markTestAndChildrenStarted(node, context)
 
         let testOutput = await this.runTestFile(node, context);
 
-        this.parseAndHandleTestOutput(testOutput, context)
+        this.parseAndHandleTestOutput(testOutput, context, node)
       } else {
-        log.debug(`Running single test: ${node.id}`)
         if (node.uri !== undefined) {
           log.debug(`Running single test: ${node.id}`)
-          context.started(node)
+          this.markTestAndChildrenStarted(node, context)
 
           // Run the test at the given line, add one since the line is 0-indexed in
           // VS Code and 1-indexed for RSpec/Minitest.
           let testOutput = await this.runSingleTest(node, context);
 
-          this.parseAndHandleTestOutput(testOutput, context)
+          this.parseAndHandleTestOutput(testOutput, context, node)
         } else {
           log.error("test missing file path")
         }
@@ -357,20 +348,82 @@ export abstract class TestRunner implements vscode.Disposable {
     }
   }
 
-  private parseAndHandleTestOutput(testOutput: string, context: TestRunContext) {
+  public parseAndHandleTestOutput(testOutput: string, context?: TestRunContext, testItem?: vscode.TestItem) {
     let log = this.log.getChildLogger({label: this.parseAndHandleTestOutput.name})
     testOutput = TestRunner.getJsonFromOutput(testOutput);
-    log.debug('Parsing the below JSON:');
-    log.debug(`${testOutput}`);
+    log.trace('Parsing the below JSON:');
+    log.trace(`${testOutput}`);
     let testMetadata = JSON.parse(testOutput);
     let tests: Array<ParsedTest> = testMetadata.examples;
 
+    let parsedTests: vscode.TestItem[] = []
     if (tests && tests.length > 0) {
       tests.forEach((test: ParsedTest) => {
         test.id = this.testSuite.normaliseTestId(test.id)
-        this.handleStatus(test, context);
+
+        // RSpec provides test ids like "file_name.rb[1:2:3]".
+        // This uses the digits at the end of the id to create
+        // an array of numbers representing the location of the
+        // test in the file.
+        let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
+        let testNumber = test_location_array[test_location_array.length - 1];
+        test.file_path = this.testSuite.normaliseTestId(test.file_path).replace(/\[.*/, '')
+        let currentFileLabel = test.file_path.split(path.sep).slice(-1)[0]
+        let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
+        // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
+        // is appended to the test description to distinguish between separate tests.
+        let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${testNumber}` : test.full_description;
+
+        // If the current file label doesn't have a slash in it and it starts with the PascalCase'd
+        // file name, remove the from the start of the description. This turns, e.g.
+        // `ExternalAccount Validations blah blah blah' into 'Validations blah blah blah'.
+        if (!pascalCurrentFileLabel.includes('/') && description.startsWith(pascalCurrentFileLabel)) {
+          // Optional check for a space following the PascalCase file name. In some
+          // cases, e.g. 'FileName#method_name` there's no space after the file name.
+          let regexString = `${pascalCurrentFileLabel}[ ]?`;
+          let regex = new RegExp(regexString, "g");
+          description = description.replace(regex, '');
+        }
+        test.description = description
+        let test_location_string: string = test_location_array.join('');
+        test.location = parseInt(test_location_string);
+
+        let newTestItem = this.testSuite.getOrCreateTestItem(test.id)
+        newTestItem.canResolveChildren = !test.id.endsWith(']')
+        log.trace(`canResolveChildren (${test.id}): ${newTestItem.canResolveChildren}`)
+        log.trace(`Setting test ${newTestItem.id} label to "${description}"`)
+        newTestItem.label = description
+        newTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
+        parsedTests.push(newTestItem)
+        let parent = newTestItem.parent
+        while (parent) {
+          if (!parsedTests.includes(parent)) {
+            parsedTests.push(parent)
+          }
+          parent = parent.parent
+        }
+        log.trace("Parsed test", test)
+        if(context) {
+          // Only handle status if actual test run, not dry run
+          this.handleStatus(test, context);
+        }
       });
     }
+    this.testSuite.removeMissingTests(parsedTests, testItem)
+
+  }
+
+  /**
+   * Convert a string from snake_case to PascalCase.
+   * Note that the function will return the input string unchanged if it
+   * includes a '/'.
+   *
+   * @param string The string to convert to PascalCase.
+   * @return The converted string.
+   */
+  private snakeToPascalCase(string: string): string {
+    if (string.includes('/')) { return string }
+    return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
   }
 
   public async debugCommandStarted(): Promise<string> {
@@ -409,7 +462,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * @return The raw output from running the test suite.
    */
   async runTestFramework(testCommand: string, type: string, context: TestRunContext): Promise<string> {
-    this.log.info(`Running test suite: ${type}`);
+    this.log.trace(`Running test suite: ${type}`);
 
     return await this.spawnCancellableChild(testCommand, context)
   };
@@ -434,7 +487,7 @@ export abstract class TestRunner implements vscode.Disposable {
       env: context.config.getProcessEnv()
     };
 
-    this.log.info(`Running command: ${testCommand}`);
+    this.log.debug(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
       testCommand,

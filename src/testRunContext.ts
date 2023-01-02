@@ -66,7 +66,8 @@ export class TestRunContext {
         new vscode.Position(line, 0)
       )
       this.testRun.errored(testItem, testMessage, duration)
-      this.log.debug(`Errored: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
+      this.log.debug(`Errored: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''}`)
+      this.log.trace(`Error message: ${message}`)
     } catch (e: any) {
       this.log.error(`Failed to set test ${test} as Errored`, e)
     }
@@ -94,7 +95,8 @@ export class TestRunContext {
       new vscode.Position(line, 0)
     )
     this.testRun.failed(test, testMessage, duration)
-    this.log.debug(`Failed: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''} - ${message}`)
+    this.log.debug(`Failed: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''}`)
+    this.log.trace(`Failure message: ${message}`)
   }
 
   /**
