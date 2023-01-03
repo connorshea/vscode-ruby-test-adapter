@@ -24,7 +24,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param testSuite TestSuite instance
    */
   constructor(
-    rootLog: IChildLogger,
+    readonly rootLog: IChildLogger,
     protected controller: vscode.TestController,
     protected config: RspecConfig | MinitestConfig,
     protected testSuite: TestSuite,
@@ -32,12 +32,6 @@ export abstract class TestRunner implements vscode.Disposable {
   ) {
     this.log = rootLog.getChildLogger({label: "TestRunner"})
   }
-
-  /**
-   * Initialise the test framework, parse tests (without executing) and retrieve the output
-   * @return Stdout outpu from framework initialisation
-   */
-  abstract initTests(testItems: vscode.TestItem[]): Promise<string>
 
   abstract canNotifyOnStartingTests: boolean
 
@@ -119,7 +113,7 @@ export abstract class TestRunner implements vscode.Disposable {
    */
   async handleChildProcess(process: childProcess.ChildProcess, context: TestRunContext): Promise<vscode.TestItem[]> {
     this.currentChildProcess = process;
-    let log = this.log.getChildLogger({ label: `ChildProcess(${context.config.frameworkName()})` })
+    let log = this.log.getChildLogger({ label: `ChildProcess(${this.config.frameworkName()})` })
     let testIdsRun: vscode.TestItem[] = []
 
     process.stderr!.pipe(split2()).on('data', (data) => {
@@ -159,11 +153,8 @@ export abstract class TestRunner implements vscode.Disposable {
 
     await new Promise<void>((resolve, reject) => {
       process.once('exit', (code: number, signal: string) => {
-        if (code === 0) {
-          resolve();
-        } else {
-          reject(new Error(`Exit with error, code: ${code}, signal: ${signal}`));
-        }
+        log.debug('Child process exited', code, signal)
+        resolve();
       });
       process.once('error', (err: Error) => {
         reject(err);
@@ -187,12 +178,10 @@ export abstract class TestRunner implements vscode.Disposable {
     debuggerConfig?: vscode.DebugConfiguration
   ) {
     const context = new TestRunContext(
-      this.log,
+      this.rootLog,
       token,
       request,
-      this.controller,
-      this.config,
-      debuggerConfig
+      this.controller
     )
     let log = this.log.getChildLogger({ label: `runHandler` })
     try {
@@ -313,13 +302,16 @@ export abstract class TestRunner implements vscode.Disposable {
     // with runFullTestSuite()
     try {
       let testsRun: vscode.TestItem[]
-      if (node == null) {
+      let command: string
+      if (context.request.profile?.label === 'ResolveTests') {
+        command = this.config.getResolveTestsCommand(context.request.include)
+      } else if (node == null) {
         log.debug("Running all tests")
         this.controller.items.forEach((testSuite) => {
           // Mark selected tests as started
           this.enqueTestAndChildren(testSuite, context)
         })
-        testsRun = await this.runFullTestSuite(context)
+        command = this.config.getFullTestSuiteCommand(context.debuggerConfig)
       } else if (node.canResolveChildren) {
         // If the suite is a file, run the tests as a file rather than as separate tests.
         log.debug(`Running test file/folder: ${node.id}`)
@@ -327,7 +319,7 @@ export abstract class TestRunner implements vscode.Disposable {
         // Mark selected tests as started
         this.enqueTestAndChildren(node, context)
 
-        testsRun = await this.runTestFile(context, node)
+        command = this.config.getTestFileCommand(node, context.debuggerConfig)
       } else {
         if (node.uri !== undefined) {
           log.debug(`Running single test: ${node.id}`)
@@ -335,12 +327,13 @@ export abstract class TestRunner implements vscode.Disposable {
 
           // Run the test at the given line, add one since the line is 0-indexed in
           // VS Code and 1-indexed for RSpec/Minitest.
-          testsRun = await this.runSingleTest(context, node);
+          command = this.config.getSingleTestCommand(node, context.debuggerConfig)
         } else {
           log.error("test missing file path")
           return
         }
       }
+      testsRun = await this.runTestFramework(command, context)
       this.testSuite.removeMissingTests(testsRun, node)
     } finally {
       context.testRun.end()
@@ -441,20 +434,6 @@ export abstract class TestRunner implements vscode.Disposable {
   }
 
   /**
-   * Runs the test framework with the given command.
-   *
-   * @param testCommand Command to use to run the test framework
-   * @param type Type of test run for logging (full, single file, single test)
-   * @param context Test run context
-   * @return The raw output from running the test suite.
-   */
-  async runTestFramework(testCommand: string, type: string, context: TestRunContext): Promise<vscode.TestItem[]> {
-    this.log.trace(`Running test suite: ${type}`);
-
-    return await this.spawnCancellableChild(testCommand, context)
-  };
-
-  /**
    * Spawns a child process to run a command, that will be killed
    * if the cancellation token is triggered
    *
@@ -462,7 +441,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context for the cancellation token
    * @returns Raw output from process
    */
-  protected async spawnCancellableChild (testCommand: string, context: TestRunContext): Promise<vscode.TestItem[]> {
+  protected async runTestFramework (testCommand: string, context: TestRunContext): Promise<vscode.TestItem[]> {
     context.token.onCancellationRequested(() => {
       this.log.debug("Cancellation requested")
       this.killChild()
@@ -471,7 +450,7 @@ export abstract class TestRunner implements vscode.Disposable {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
-      env: context.config.getProcessEnv()
+      env: this.config.getProcessEnv()
     };
 
     this.log.debug(`Running command: ${testCommand}`);
@@ -483,85 +462,6 @@ export abstract class TestRunner implements vscode.Disposable {
 
     return await this.handleChildProcess(testProcess, context);
   }
-
-  /**
-   * Runs a single test.
-   *
-   * @param testLocation A file path with a line number, e.g. `/path/to/test.rb:12`.
-   * @param context Test run context
-   * @return The raw output from running the test.
-   */
-  protected async runSingleTest(context: TestRunContext, testItem: vscode.TestItem): Promise<vscode.TestItem[]> {
-    this.log.info(`Running single test: ${testItem.id}`);
-    return await this.runTestFramework(
-      this.getSingleTestCommand(testItem, context),
-      "single test",
-      context)
-  }
-
-  /**
-   * Runs tests in a given file.
-   *
-   * @param testFile The test file's file path, e.g. `/path/to/test.rb`.
-   * @param context Test run context
-   * @return The raw output from running the tests.
-   */
-  protected async runTestFile(context: TestRunContext, testItem: vscode.TestItem): Promise<vscode.TestItem[]> {
-    this.log.info(`Running test file: ${testItem.id}`);
-    return await this.runTestFramework(
-      this.getTestFileCommand(testItem, context),
-      "test file",
-      context)
-  }
-
-  /**
-   * Runs the full test suite for the current workspace.
-   *
-   * @param context Test run context
-   * @return The raw output from running the test suite.
-   */
-  protected async runFullTestSuite(context: TestRunContext): Promise<vscode.TestItem[]> {
-    this.log.info(`Running full test suite.`);
-    return await this.runTestFramework(
-      this.getFullTestSuiteCommand(context),
-      "all tests",
-      context)
-  }
-
-  /**
-   * Gets the command to get information about tests.
-   *
-   * @param testItems Optional array of tests to list. If missing, all tests should be
-   *   listed
-   * @return The command to run to get test details
-   */
-  protected abstract getListTestsCommand(testItems?: vscode.TestItem[]): string;
-
-  /**
-   * Gets the command to run a single test.
-   *
-   * @param testItem A TestItem of a single test to be run
-   * @param context Test run context
-   * @return The command to run a single test.
-   */
-  protected abstract getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string;
-
-  /**
-   * Gets the command to run tests in a given file.
-   *
-   * @param testItem A TestItem of a file containing tests
-   * @param context Test run context
-   * @return The command to run all tests in a given file.
-   */
-  protected abstract getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string;
-
-  /**
-   * Gets the command to run the full test suite for the current workspace.
-   *
-   * @param context Test run context
-   * @return The command to run the full test suite for the current workspace.
-   */
-  protected abstract getFullTestSuiteCommand(context: TestRunContext): string;
 
   /**
    * Handles test state based on the output returned by the test command.

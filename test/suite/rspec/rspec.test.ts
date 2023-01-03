@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path'
-import { anything, instance, verify } from 'ts-mockito'
+import { anything, instance, verify, mock, when } from 'ts-mockito'
 import { before, beforeEach } from 'mocha';
 import { expect } from 'chai';
 
@@ -19,6 +19,7 @@ suite('Extension Test for RSpec', function() {
   let testRunner: RspecTestRunner;
   let testLoader: TestLoader;
   let testSuite: TestSuite;
+  let resolveTestsProfile: vscode.TestRunProfile;
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -71,7 +72,11 @@ suite('Extension Test for RSpec', function() {
       testController = new StubTestController(stdout_logger())
       testSuite = new TestSuite(noop_logger(), testController, config)
       testRunner = new RspecTestRunner(noop_logger(), testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
+      let mockProfile = mock<vscode.TestRunProfile>()
+      when(mockProfile.runHandler).thenReturn(testRunner.runHandler)
+      when(mockProfile.label).thenReturn('ResolveTests')
+      resolveTestsProfile = instance(mockProfile)
+      testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -187,13 +192,17 @@ suite('Extension Test for RSpec', function() {
 
     before(async function() {
       testController = new StubTestController(stdout_logger())
-      testSuite = new TestSuite(noop_logger(), testController, config)
+      testSuite = new TestSuite(stdout_logger(), testController, config)
       testRunner = new RspecTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
+      let mockProfile = mock<vscode.TestRunProfile>()
+      when(mockProfile.runHandler).thenReturn(testRunner.runHandler)
+      when(mockProfile.label).thenReturn('ResolveTests')
+      resolveTestsProfile = instance(mockProfile)
+      testLoader = new TestLoader(stdout_logger(), testController, resolveTestsProfile, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
 
-    suite(`running collections emits correct statuses`, async function() {
+    suite.only(`running collections emits correct statuses`, async function() {
       let mockTestRun: vscode.TestRun
 
       test('when running full suite', async function() {

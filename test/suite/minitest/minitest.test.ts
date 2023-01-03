@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path'
-import { anything, instance, verify } from 'ts-mockito'
+import { anything, instance, verify, mock, when } from 'ts-mockito'
 import { expect } from 'chai';
 import { before, beforeEach } from 'mocha';
 
@@ -19,6 +19,7 @@ suite('Extension Test for Minitest', function() {
   let testRunner: MinitestTestRunner;
   let testLoader: TestLoader;
   let testSuite: TestSuite;
+  let resolveTestsProfile: vscode.TestRunProfile;
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -64,6 +65,10 @@ suite('Extension Test for Minitest', function() {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('minitestDirectory', 'test')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_test.rb'])
     config = new MinitestConfig(path.resolve("ruby"), workspaceFolder)
+    let mockProfile = mock<vscode.TestRunProfile>()
+    when(mockProfile.runHandler).thenReturn(testRunner.runHandler)
+    when(mockProfile.label).thenReturn('ResolveTests')
+    resolveTestsProfile = instance(mockProfile)
   })
 
   suite('dry run', function() {
@@ -71,7 +76,7 @@ suite('Extension Test for Minitest', function() {
       testController = new StubTestController(stdout_logger())
       testSuite = new TestSuite(stdout_logger("debug"), testController, config)
       testRunner = new MinitestTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
+      testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -198,7 +203,7 @@ suite('Extension Test for Minitest', function() {
       testController = new StubTestController(stdout_logger())
       testSuite = new TestSuite(noop_logger(), testController, config)
       testRunner = new MinitestTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
+      testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
 

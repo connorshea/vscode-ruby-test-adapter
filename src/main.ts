@@ -67,13 +67,36 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (testFramework !== "none") {
     const controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
-    const testLoaderFactory = new TestFactory(log, controller, testConfig, workspace);
-    context.subscriptions.push(controller);
 
-    // TODO: REMOVE THIS!
-    // Temporary kludge to clear out stale items that have bad data during development
-    // Later on will add context menus to delete test items or force a refresh of everything
-    controller.items.replace([])
+    // TODO: (?) Add a "Profile" profile for profiling tests
+    let profiles: { runProfile: vscode.TestRunProfile, resolveTestsProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile } = {
+      // Default run profile for running tests
+      runProfile: controller.createRunProfile(
+        'Run',
+        vscode.TestRunProfileKind.Run,
+        (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
+        true // Default run profile
+      ),
+
+      // Run profile for dry runs/getting test details
+      resolveTestsProfile: controller.createRunProfile(
+        'ResolveTests',
+        vscode.TestRunProfileKind.Run,
+        (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
+        false
+      ),
+
+      // Run profile for debugging tests
+      debugProfile: controller.createRunProfile(
+        'Debug',
+        vscode.TestRunProfileKind.Debug,
+        (request, token) => testLoaderFactory.getRunner().runHandler(request, token, debuggerConfig),
+        true
+      ),
+    }
+
+    const testLoaderFactory = new TestFactory(log, controller, testConfig, profiles, workspace);
+    context.subscriptions.push(controller);
 
     testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
 
@@ -86,19 +109,6 @@ export async function activate(context: vscode.ExtensionContext) {
         await testLoaderFactory.getLoader().parseTestsInFile(test);
       }
     };
-
-    // TODO: (?) Add a "Profile" profile for profiling tests
-    controller.createRunProfile(
-      'Run',
-      vscode.TestRunProfileKind.Run,
-      (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
-      true // Default run profile
-    );
-    controller.createRunProfile(
-      'Debug',
-      vscode.TestRunProfileKind.Debug,
-      (request, token) => testLoaderFactory.getRunner().runHandler(request, token, debuggerConfig)
-    );
   }
   else {
     log.fatal('No test framework detected. Configure the rubyTestExplorer.testFramework setting if you want to use the Ruby Test Explorer.');

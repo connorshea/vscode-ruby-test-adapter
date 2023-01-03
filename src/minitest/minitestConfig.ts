@@ -57,6 +57,25 @@ export class MinitestConfig extends Config {
       || path.join('.', 'test');
   }
 
+  public getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
+    let line = testItem.id.split(':').pop();
+    let relativeLocation = path.join(this.getAbsoluteTestDirectory(), testItem.id)
+    return `${this.testCommandWithDebugger(debugConfiguration)} '${relativeLocation}:${line}'`
+  };
+
+  public getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
+    let relativeFile = path.join(this.getAbsoluteTestDirectory(), testItem.id)
+    return `${this.testCommandWithDebugger(debugConfiguration)} '${relativeFile}'`
+  };
+
+  public getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string {
+    return this.testCommandWithDebugger(debugConfiguration)
+  };
+
+  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string {
+    return `${this.getTestCommand()} vscode:minitest:list`
+  }
+
   /**
    * Get the env vars to run the subprocess with.
    *

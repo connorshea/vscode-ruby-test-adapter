@@ -84,6 +84,16 @@ export class RspecConfig extends Config {
     return this.testCommandWithFormatterAndDebugger(debugConfiguration)
   };
 
+  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string {
+    let cmd = `${this.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
+
+    testItems?.forEach((item) => {
+      let testPath = path.join(this.getAbsoluteTestDirectory(), item.id)
+      cmd = `${cmd} "${testPath}"`
+    })
+    return cmd
+  }
+
   /**
    * Get the env vars to run the subprocess with.
    *

@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 import { IChildLogger } from '@vscode-logging/logger';
-import { RspecTestRunner } from './rspec/rspecTestRunner';
-import { MinitestTestRunner } from './minitest/minitestTestRunner';
 import { Config } from './config';
 import { TestSuite } from './testSuite';
 
@@ -31,11 +29,12 @@ export type ParsedTest = {
 export class TestLoader implements vscode.Disposable {
   protected disposables: { dispose(): void }[] = [];
   private readonly log: IChildLogger;
+  private readonly cancellationTokenSource = new vscode.CancellationTokenSource()
 
   constructor(
     readonly rootLog: IChildLogger,
     private readonly controller: vscode.TestController,
-    private readonly testRunner: RspecTestRunner | MinitestTestRunner,
+    private readonly resolveTestProfile: vscode.TestRunProfile,
     private readonly config: Config,
     private readonly testSuite: TestSuite,
   ) {
@@ -115,10 +114,8 @@ export class TestLoader implements vscode.Disposable {
     let log = this.log.getChildLogger({label:"loadTests"})
     log.info(`Loading tests for ${testItems.length} items (${this.config.frameworkName()})...`);
     try {
-      let output = await this.testRunner.initTests(testItems);
-
-      log.debug(`Passing raw output from dry-run into getJsonFromOutput: ${output}`);
-      this.testRunner.parseAndHandleTestOutput(output)
+      let request = new vscode.TestRunRequest(testItems, undefined, this.resolveTestProfile)
+      await this.resolveTestProfile.runHandler(request, this.cancellationTokenSource.token)
     } catch (e: any) {
       log.error("Failed to load tests", e)
       return Promise.reject(e)

@@ -1,6 +1,5 @@
 import * as vscode from 'vscode'
 import { IChildLogger } from '@vscode-logging/logger'
-import { Config } from './config'
 
 /**
  * Test run context
@@ -25,7 +24,6 @@ export class TestRunContext {
     public readonly token: vscode.CancellationToken,
     readonly request: vscode.TestRunRequest,
     readonly controller: vscode.TestController,
-    public readonly config: Config,
     public readonly debuggerConfig?: vscode.DebugConfiguration
   ) {
     this.log = rootLog.getChildLogger({ label: "TestRunContext" })

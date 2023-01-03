@@ -1,71 +1,10 @@
-import * as vscode from 'vscode';
-import * as path from 'path'
-import * as childProcess from 'child_process';
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
-import { RspecConfig } from './rspecConfig';
 import { ParsedTest } from 'src/testLoader';
 
 export class RspecTestRunner extends TestRunner {
   // RSpec only notifies on test completion
   canNotifyOnStartingTests: boolean = false
-
-  /**
-   * Perform a dry-run of the test suite to get information about every test.
-   *
-   * @return The raw output from the RSpec JSON formatter.
-   */
-  async initTests(testItems: vscode.TestItem[]): Promise<string> {
-    let cmd = this.getListTestsCommand(testItems)
-
-    this.log.info("Running dry-run of RSpec tests")
-    this.log.debug('command', cmd);
-    this.log.trace('cwd', __dirname)
-    this.log.trace('child process cwd', this.workspace?.uri.fsPath)
-
-    // Allow a buffer of 64MB.
-    const execArgs: childProcess.ExecOptions = {
-      cwd: this.workspace?.uri.fsPath,
-      maxBuffer: 8192 * 8192,
-    };
-
-    let output: Promise<string> = new Promise((resolve, reject) => {
-      childProcess.exec(cmd, execArgs, (err, stdout) => {
-        if (err) {
-          if (err.message.includes('deprecated')) {
-            this.log.warn(`Warning while finding RSpec test suite: ${err.message}`)
-          } else {
-            this.log.error(`Error while finding RSpec test suite: ${err.message}`);
-            // Show an error message.
-            vscode.window.showWarningMessage(
-              "Ruby Test Explorer failed to find an RSpec test suite. Make sure RSpec is installed and your configured RSpec command is correct.",
-              "View error message"
-            ).then(selection => {
-              if (selection === "View error message") {
-                let outputJson = JSON.parse(TestRunner.getJsonFromOutput(stdout));
-                let outputChannel = vscode.window.createOutputChannel('Ruby Test Explorer Error Message');
-
-                if (outputJson.messages.length > 0) {
-                  let outputJsonString = outputJson.messages.join("\n\n");
-                  let outputJsonArray = outputJsonString.split("\n");
-                  outputJsonArray.forEach((line: string) => {
-                    outputChannel.appendLine(line);
-                  })
-                } else {
-                  outputChannel.append(err.message);
-                }
-                outputChannel.show(false);
-              }
-            });
-
-            reject(err);
-          }
-        }
-        resolve(stdout);
-      });
-    });
-    return await output
-  };
 
   /**
    * Handles test state based on the output returned by the custom RSpec formatter.
@@ -131,28 +70,5 @@ export class RspecTestRunner extends TestRunner {
       log.trace("Skipped", testItem.id)
       context.skipped(testItem)
     }
-  };
-
-  protected getListTestsCommand(testItems?: vscode.TestItem[]): string {
-    let cfg = this.config as RspecConfig
-    let cmd = `${cfg.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
-
-    testItems?.forEach((item) => {
-      let testPath = `${cfg.getAbsoluteTestDirectory()}${path.sep}${item.id}`
-      cmd = `${cmd} "${testPath}"`
-    })
-    return cmd
-  }
-
-  protected getSingleTestCommand(testItem: vscode.TestItem, context: TestRunContext): string {
-    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
-  };
-
-  protected getTestFileCommand(testItem: vscode.TestItem, context: TestRunContext): string {
-    return `${(this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)} '${context.config.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
-  };
-
-  protected getFullTestSuiteCommand(context: TestRunContext): string {
-    return (this.config as RspecConfig).testCommandWithFormatterAndDebugger(context.debuggerConfig)
   };
 }
