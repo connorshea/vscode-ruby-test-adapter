@@ -58,6 +58,29 @@ export abstract class Config {
   }
 
   /**
+   * Get the command to run a single spec/test
+   *
+   * @param testItem The testItem representing the test to be run
+   * @param debugConfiguration debug configuration
+   */
+  public abstract getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string
+
+  /**
+   * Get the command to run a spec/test file or folder
+   *
+   * @param testItem The testItem representing the file to be run
+   * @param debugConfiguration debug configuration
+   */
+  public abstract getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string
+
+  /**
+   * Get the command to run all tests in the suite
+   *
+   * @param debugConfiguration debug configuration
+   */
+  public abstract getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string
+
+  /**
    * Get the env vars to run the subprocess with.
    *
    * @return The env

@@ -60,17 +60,29 @@ export class RspecConfig extends Config {
   /**
    * Get test command with formatter and debugger arguments
    *
-   * @param debuggerConfig A VS Code debugger configuration.
+   * @param debugConfiguration A VS Code debugger configuration.
    * @return The test command
    */
-  public testCommandWithFormatterAndDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
+  public testCommandWithFormatterAndDebugger(debugConfiguration?: vscode.DebugConfiguration): string {
     let args = `--require ${this.getCustomFormatterLocation()} --format CustomFormatter`
     let cmd = `${this.getTestCommand()} ${args}`
-    if (debuggerConfig) {
-      cmd = this.getDebugCommand(debuggerConfig, args);
+    if (debugConfiguration) {
+      cmd = this.getDebugCommand(debugConfiguration, args);
     }
     return cmd
   }
+
+  public getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
+    return `${this.testCommandWithFormatterAndDebugger(debugConfiguration)} '${this.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
+  };
+
+  public getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
+    return `${this.testCommandWithFormatterAndDebugger(debugConfiguration)} '${this.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
+  };
+
+  public getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string {
+    return this.testCommandWithFormatterAndDebugger(debugConfiguration)
+  };
 
   /**
    * Get the env vars to run the subprocess with.

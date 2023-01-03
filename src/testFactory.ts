@@ -17,9 +17,9 @@ export class TestFactory implements vscode.Disposable {
 
   constructor(
     private readonly log: IVSCodeExtLogger,
-    private readonly workspace: vscode.WorkspaceFolder | undefined,
     private readonly controller: vscode.TestController,
-    private config: Config
+    private config: Config,
+    private readonly workspace?: vscode.WorkspaceFolder,
   ) {
     this.disposables.push(this.configWatcher());
     this.framework = Config.getTestFramework(this.log);
@@ -38,17 +38,17 @@ export class TestFactory implements vscode.Disposable {
       this.runner = this.framework == "rspec"
         ? new RspecTestRunner(
             this.log,
-            this.workspace,
             this.controller,
             this.config as RspecConfig,
-            this.testSuite
+            this.testSuite,
+            this.workspace,
           )
         : new MinitestTestRunner(
             this.log,
-            this.workspace,
             this.controller,
             this.config as MinitestConfig,
-            this.testSuite
+            this.testSuite,
+            this.workspace,
           )
       this.disposables.push(this.runner);
     }

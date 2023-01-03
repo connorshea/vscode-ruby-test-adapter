@@ -2,13 +2,14 @@ import * as vscode from 'vscode';
 import * as path from 'path'
 import { anything, instance, verify } from 'ts-mockito'
 import { expect } from 'chai';
+import { before, beforeEach } from 'mocha';
 
 import { TestLoader } from '../../../src/testLoader';
 import { TestSuite } from '../../../src/testSuite';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-import { setupMockRequest, stdout_logger, testItemCollectionMatches, testItemMatches, testStateCaptors } from '../helpers';
+import { noop_logger, setupMockRequest, stdout_logger, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {
@@ -59,218 +60,276 @@ suite('Extension Test for Minitest', function() {
     line: 7
   }
 
-  this.beforeEach(async function () {
+  before(function () {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('minitestDirectory', 'test')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_test.rb'])
-    testController = new StubTestController(stdout_logger())
-
-    // Populate controller with test files. This would be done by the filesystem globs in the watchers
-    let createTest = (id: string, label?: string) =>
-      testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
-    testController.items.add(createTest("abs_test.rb"))
-    let squareFolder = createTest("square")
-    testController.items.add(squareFolder)
-    squareFolder.children.add(createTest("square/square_test.rb", "square_test.rb"))
-
     config = new MinitestConfig(path.resolve("ruby"), workspaceFolder)
-
-    testSuite = new TestSuite(stdout_logger(), testController, config)
-    testRunner = new MinitestTestRunner(stdout_logger(), workspaceFolder, testController, config, testSuite)
-    testLoader = new TestLoader(stdout_logger(), testController, testRunner, config, testSuite);
   })
 
-  test('Load tests on file resolve request', async function () {
-    // No tests in suite initially, only test files and folders
-    testItemCollectionMatches(testController.items,
-      [
-        {
-          file: expectedPath("abs_test.rb"),
-          id: "abs_test.rb",
-          label: "abs_test.rb",
-          children: []
-        },
-        {
-          file: expectedPath("square"),
-          id: "square",
-          label: "square",
-          children: [
-            {
-              file: expectedPath("square/square_test.rb"),
-              id: "square/square_test.rb",
-              label: "square_test.rb",
-              children: []
-            },
-          ]
-        },
-      ]
-    )
-
-    // Resolve a file (e.g. by clicking on it in the test explorer)
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
-
-    // Tests in that file have now been added to suite
-    testItemCollectionMatches(testController.items,
-      [
-        {
-          file: expectedPath("abs_test.rb"),
-          id: "abs_test.rb",
-          label: "abs_test.rb",
-          children: [
-            abs_positive_expectation,
-            abs_zero_expectation,
-            abs_negative_expectation
-          ]
-        },
-        {
-          file: expectedPath("square"),
-          id: "square",
-          label: "square",
-          children: [
-            {
-              file: expectedPath("square/square_test.rb"),
-              id: "square/square_test.rb",
-              label: "square_test.rb",
-              children: []
-            },
-          ],
-        },
-      ]
-    )
-  })
-
-  test('Load all tests', async () => {
-    await testLoader.discoverAllFilesInWorkspace()
-
-    const testSuite = testController.items
-
-    testItemCollectionMatches(testSuite,
-      [
-        {
-          file: expectedPath("abs_test.rb"),
-          id: "abs_test.rb",
-          label: "abs_test.rb",
-          children: [
-            abs_positive_expectation,
-            abs_zero_expectation,
-            abs_negative_expectation
-          ]
-        },
-        {
-          file: expectedPath("square"),
-          id: "square",
-          label: "square",
-          children: [
-            {
-              file: expectedPath("square/square_test.rb"),
-              id: "square/square_test.rb",
-              label: "square_test.rb",
-              children: [
-                square_2_expectation,
-                square_3_expectation
-              ]
-            },
-          ],
-        },
-      ]
-    )
-  })
-
-  test('run test success', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square/square_test.rb")))
-
-    let mockRequest = setupMockRequest(testSuite, "square/square_test.rb")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
-
-    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
-
-    let args = testStateCaptors(mockTestRun)
-
-    // Passed called twice per test in file during dry run
-    testItemMatches(args.passedArg(0)["testItem"], square_2_expectation)
-    testItemMatches(args.passedArg(1)["testItem"], square_2_expectation)
-    testItemMatches(args.passedArg(2)["testItem"], square_3_expectation)
-    testItemMatches(args.passedArg(3)["testItem"], square_3_expectation)
-
-    // Passed called again for passing test but not for failing test
-    testItemMatches(args.passedArg(4)["testItem"], square_2_expectation)
-    verify(mockTestRun.passed(anything(), undefined)).times(5)
-  })
-
-  test('run test failure', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("square/square_test.rb")))
-
-    let mockRequest = setupMockRequest(testSuite, "square/square_test.rb")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
-
-    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
-
-    let args = testStateCaptors(mockTestRun).failedArg(0)
-
-    testItemMatches(args.testItem, square_3_expectation)
-
-    expect(args.message.message).to.contain("Expected: 9\n  Actual: 6\n")
-    expect(args.message.actualOutput).to.be.undefined
-    expect(args.message.expectedOutput).to.be.undefined
-    expect(args.message.location?.range.start.line).to.eq(8)
-    expect(args.message.location?.uri.fsPath).to.eq(square_3_expectation.file)
-    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("square/square_test.rb"))
-
-    verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(1)
-  })
-
-  test('run test error', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
-
-    let mockRequest = setupMockRequest(testSuite, "abs_test.rb")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
-
-    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
-
-    let args = testStateCaptors(mockTestRun).erroredArg(0)
-
-    testItemMatches(args.testItem, abs_zero_expectation)
-
-    expect(args.message.message).to.match(/RuntimeError: Abs for zero is not supported/)
-    expect(args.message.actualOutput).to.be.undefined
-    expect(args.message.expectedOutput).to.be.undefined
-    expect(args.message.location?.range.start.line).to.eq(8)
-    expect(args.message.location?.uri.fsPath).to.eq(abs_zero_expectation.file)
-    expect(args.message.location?.uri.fsPath).to.eq(expectedPath("abs_test.rb"))
-    verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.failed(anything(), anything(), undefined)).times(0)
-    verify(mockTestRun.errored(anything(), anything(), undefined)).times(1)
-  })
-
-  test('run test skip', async function() {
-    await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
-
-    let mockRequest = setupMockRequest(testSuite, "abs_test.rb")
-    let request = instance(mockRequest)
-    let cancellationTokenSource = new vscode.CancellationTokenSource()
-    await testRunner.runHandler(request, cancellationTokenSource.token)
-
-    let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
-
-    let args = testStateCaptors(mockTestRun)
-    testItemMatches(args.startedArg(0), {
-      file: expectedPath("abs_test.rb"),
-      id: "abs_test.rb",
-      label: "abs_test.rb",
-      children: [
-        abs_positive_expectation,
-        abs_zero_expectation,
-        abs_negative_expectation
-      ]
+  suite('dry run', function() {
+    beforeEach(function () {
+      testController = new StubTestController(stdout_logger())
+      testSuite = new TestSuite(stdout_logger("debug"), testController, config)
+      testRunner = new MinitestTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
+      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
     })
-    testItemMatches(args.skippedArg(0), abs_negative_expectation)
-    verify(mockTestRun.started(anything())).times(1)
-    verify(mockTestRun.skipped(anything())).times(1)
+
+    test('Load tests on file resolve request', async function () {
+      // Populate controller with test files. This would be done by the filesystem globs in the watchers
+      let createTest = (id: string, label?: string) => {
+        let item = testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
+        item.canResolveChildren = true
+        return item
+      }
+      testController.items.add(createTest("abs_test.rb"))
+      let subfolderItem = createTest("square")
+      testController.items.add(subfolderItem)
+      subfolderItem.children.add(createTest("square/square_test.rb", "square_test.rb"))
+
+      // No tests in suite initially, only test files and folders
+      testItemCollectionMatches(testController.items,
+        [
+          {
+            file: expectedPath("abs_test.rb"),
+            id: "abs_test.rb",
+            label: "abs_test.rb",
+            canResolveChildren: true,
+            children: []
+          },
+          {
+            file: expectedPath("square"),
+            id: "square",
+            label: "square",
+            canResolveChildren: true,
+            children: [
+              {
+                file: expectedPath("square/square_test.rb"),
+                id: "square/square_test.rb",
+                label: "square_test.rb",
+                canResolveChildren: true,
+                children: []
+              },
+            ]
+          },
+        ]
+      )
+
+      // Resolve a file (e.g. by clicking on it in the test explorer)
+      await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
+
+      // Tests in that file have now been added to suite
+      testItemCollectionMatches(testController.items,
+        [
+          {
+            file: expectedPath("abs_test.rb"),
+            id: "abs_test.rb",
+            label: "abs_test.rb",
+            canResolveChildren: true,
+            children: [
+              abs_positive_expectation,
+              abs_zero_expectation,
+              abs_negative_expectation
+            ]
+          },
+          {
+            file: expectedPath("square"),
+            id: "square",
+            label: "square",
+            canResolveChildren: true,
+            children: [
+              {
+                file: expectedPath("square/square_test.rb"),
+                id: "square/square_test.rb",
+                label: "square_test.rb",
+                canResolveChildren: true,
+                children: []
+              },
+            ],
+          },
+        ]
+      )
+    })
+
+    test('Load all tests', async function () {
+      await testLoader.discoverAllFilesInWorkspace()
+
+      const testSuite = testController.items
+
+      testItemCollectionMatches(testSuite,
+        [
+          {
+            file: expectedPath("abs_test.rb"),
+            id: "abs_test.rb",
+            label: "abs_test.rb",
+            canResolveChildren: true,
+            children: [
+              abs_positive_expectation,
+              abs_zero_expectation,
+              abs_negative_expectation
+            ]
+          },
+          {
+            file: expectedPath("square"),
+            id: "square",
+            label: "square",
+            canResolveChildren: true,
+            children: [
+              {
+                file: expectedPath("square/square_test.rb"),
+                id: "square/square_test.rb",
+                label: "square_test.rb",
+                canResolveChildren: true,
+                children: [
+                  square_2_expectation,
+                  square_3_expectation
+                ]
+              },
+            ],
+          },
+        ]
+      )
+    })
+  })
+
+  suite('status events', function() {
+    let cancellationTokenSource = new vscode.CancellationTokenSource();
+
+    before(async function() {
+      testController = new StubTestController(stdout_logger())
+      testSuite = new TestSuite(noop_logger(), testController, config)
+      testRunner = new MinitestTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
+      testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
+      await testLoader.discoverAllFilesInWorkspace()
+    })
+
+    suite(`running collections emits correct statuses`, async function() {
+      let mockTestRun: vscode.TestRun
+
+      test('when running full suite', async function() {
+        let mockRequest = setupMockRequest(testSuite)
+        let request = instance(mockRequest)
+        await testRunner.runHandler(request, cancellationTokenSource.token)
+        mockTestRun = (testController as StubTestController).getMockTestRun(request)!
+
+        verify(mockTestRun.enqueued(anything())).times(8)
+        verify(mockTestRun.started(anything())).times(5)
+        verify(mockTestRun.passed(anything(), anything())).times(4)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(3)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.skipped(anything())).times(2)
+      })
+
+      test('when running all top-level items', async function() {
+        let mockRequest = setupMockRequest(testSuite, ["abs_test.rb", "square"])
+        let request = instance(mockRequest)
+        await testRunner.runHandler(request, cancellationTokenSource.token)
+        mockTestRun = (testController as StubTestController).getMockTestRun(request)!
+
+        verify(mockTestRun.enqueued(anything())).times(8)
+        verify(mockTestRun.started(anything())).times(5)
+        verify(mockTestRun.passed(anything(), anything())).times(4)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(3)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.skipped(anything())).times(2)
+      })
+
+      test('when running all files', async function() {
+        let mockRequest = setupMockRequest(testSuite, ["abs_test.rb", "square/square_test.rb"])
+        let request = instance(mockRequest)
+        await testRunner.runHandler(request, cancellationTokenSource.token)
+        mockTestRun = (testController as StubTestController).getMockTestRun(request)!
+
+        // One less 'started' than the other tests as it doesn't include the 'square' folder
+        verify(mockTestRun.enqueued(anything())).times(7)
+        verify(mockTestRun.started(anything())).times(5)
+        verify(mockTestRun.passed(anything(), anything())).times(4)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(3)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.skipped(anything())).times(2)
+      })
+    })
+
+    suite(`running single tests emits correct statuses`, async function() {
+      let params: {status: string, expectedTest: TestItemExpectation, failureExpectation?: TestFailureExpectation}[] = [
+        {
+          status: "passed",
+          expectedTest: square_2_expectation,
+        },
+        {
+          status: "failed",
+          expectedTest: square_3_expectation,
+          failureExpectation: {
+            message: "Expected: 9\n  Actual: 6\n",
+            line: 8,
+          }
+        },
+        {
+          status: "passed",
+          expectedTest: abs_positive_expectation
+        },
+        {
+          status: "errored",
+          expectedTest: abs_zero_expectation,
+          failureExpectation: {
+            message: "RuntimeError:\nAbs for zero is not supported",
+            line: 8,
+          }
+        },
+        {
+          status: "skipped",
+          expectedTest: abs_negative_expectation
+        }
+      ]
+      for(const {status, expectedTest, failureExpectation} of params) {
+        let mockTestRun: vscode.TestRun
+
+        beforeEach(async function() {
+          let mockRequest = setupMockRequest(testSuite, expectedTest.id)
+          let request = instance(mockRequest)
+          await testRunner.runHandler(request, cancellationTokenSource.token)
+          mockTestRun = (testController as StubTestController).getMockTestRun(request)!
+        })
+
+        test(`id: ${expectedTest.id}, status: ${status}`, function() {
+          switch(status) {
+            case "passed":
+              testItemMatches(testStateCaptors(mockTestRun).passedArg(0).testItem, expectedTest)
+              testItemMatches(testStateCaptors(mockTestRun).passedArg(1).testItem, expectedTest)
+              verify(mockTestRun.passed(anything(), anything())).times(2)
+              verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
+              verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
+              verify(mockTestRun.skipped(anything())).times(0)
+              break;
+            case "failed":
+              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, {line: failureExpectation!.line})
+              verifyFailure(1, testStateCaptors(mockTestRun).failedArgs, expectedTest, failureExpectation!)
+              verify(mockTestRun.passed(anything(), anything())).times(0)
+              verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
+              verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
+              verify(mockTestRun.skipped(anything())).times(0)
+              break;
+            case "errored":
+              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, {line: failureExpectation!.line})
+              verifyFailure(0, testStateCaptors(mockTestRun).erroredArgs, expectedTest, failureExpectation!)
+              verify(mockTestRun.passed(anything(), anything())).times(0)
+              verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
+              verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+              verify(mockTestRun.skipped(anything())).times(0)
+              break;
+            case "skipped":
+              testItemMatches(testStateCaptors(mockTestRun).skippedArg(0), expectedTest)
+              testItemMatches(testStateCaptors(mockTestRun).skippedArg(1), expectedTest)
+              verify(mockTestRun.passed(anything(), anything())).times(0)
+              verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
+              verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
+              verify(mockTestRun.skipped(anything())).times(2)
+              break;
+          }
+          expect(testStateCaptors(mockTestRun).startedArg(0).id).to.eq(expectedTest.id)
+          verify(mockTestRun.started(anything())).times(1)
+          verify(mockTestRun.enqueued(anything())).times(1)
+        })
+      }
+    })
   })
 });

@@ -67,7 +67,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (testFramework !== "none") {
     const controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
-    const testLoaderFactory = new TestFactory(log, workspace, controller, testConfig);
+    const testLoaderFactory = new TestFactory(log, controller, testConfig, workspace);
     context.subscriptions.push(controller);
 
     // TODO: REMOVE THIS!

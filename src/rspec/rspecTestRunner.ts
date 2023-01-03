@@ -7,6 +7,9 @@ import { RspecConfig } from './rspecConfig';
 import { ParsedTest } from 'src/testLoader';
 
 export class RspecTestRunner extends TestRunner {
+  // RSpec only notifies on test completion
+  canNotifyOnStartingTests: boolean = false
+
   /**
    * Perform a dry-run of the test suite to get information about every test.
    *
@@ -15,9 +18,10 @@ export class RspecTestRunner extends TestRunner {
   async initTests(testItems: vscode.TestItem[]): Promise<string> {
     let cmd = this.getListTestsCommand(testItems)
 
-    this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
-    this.log.debug(`cwd: ${__dirname}`)
-    this.log.debug(`child process cwd: ${this.workspace?.uri.fsPath}`)
+    this.log.info("Running dry-run of RSpec tests")
+    this.log.debug('command', cmd);
+    this.log.trace('cwd', __dirname)
+    this.log.trace('child process cwd', this.workspace?.uri.fsPath)
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {

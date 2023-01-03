@@ -32,7 +32,7 @@ suite('TestRunner', function () {
       beforeEach(function () {
         testController = new StubTestController(noop_logger())
         testSuite = new TestSuite(noop_logger(), testController, instance(config))
-        testRunner = new RspecTestRunner(noop_logger(), undefined, testController, instance(config) as RspecConfig, testSuite)
+        testRunner = new RspecTestRunner(noop_logger(), testController, instance(config) as RspecConfig, testSuite)
       })
 
       const expectedTests: TestItemExpectation[] = [
@@ -121,7 +121,7 @@ suite('TestRunner', function () {
       beforeEach(function () {
         testController = new StubTestController(noop_logger())
         testSuite = new TestSuite(noop_logger(), testController, instance(config))
-        testRunner = new MinitestTestRunner(noop_logger(), undefined, testController, instance(config) as MinitestConfig, testSuite)
+        testRunner = new MinitestTestRunner(noop_logger(), testController, instance(config) as MinitestConfig, testSuite)
       })
 
       const expectedTests: TestItemExpectation[] = [

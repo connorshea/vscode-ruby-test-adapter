@@ -29,6 +29,37 @@ suite('Extension Test for RSpec', function() {
       file)
   }
 
+  let abs_positive_expectation = {
+    file: expectedPath("abs_spec.rb"),
+    id: "abs_spec.rb[1:1]",
+    label: "finds the absolute value of 1",
+    line: 3,
+  }
+  let abs_zero_expectation = {
+    file: expectedPath("abs_spec.rb"),
+    id: "abs_spec.rb[1:2]",
+    label: "finds the absolute value of 0",
+    line: 7,
+  }
+  let abs_negative_expectation = {
+    file: expectedPath("abs_spec.rb"),
+    id: "abs_spec.rb[1:3]",
+    label: "finds the absolute value of -1",
+    line: 11,
+  }
+  let square_2_expectation = {
+    file: expectedPath("square/square_spec.rb"),
+    id: "square/square_spec.rb[1:1]",
+    label: "finds the square of 2",
+    line: 3,
+  }
+  let square_3_expectation = {
+    file: expectedPath("square/square_spec.rb"),
+    id: "square/square_spec.rb[1:2]",
+    label: "finds the square of 3",
+    line: 7,
+  }
+
   before(function() {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_spec.rb'])
@@ -39,7 +70,7 @@ suite('Extension Test for RSpec', function() {
     beforeEach(function () {
       testController = new StubTestController(stdout_logger())
       testSuite = new TestSuite(noop_logger(), testController, config)
-      testRunner = new RspecTestRunner(noop_logger(), workspaceFolder, testController, config, testSuite)
+      testRunner = new RspecTestRunner(noop_logger(), testController, config, testSuite, workspaceFolder)
       testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
     })
 
@@ -48,10 +79,9 @@ suite('Extension Test for RSpec', function() {
       let createTest = (id: string, label?: string) =>
       testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
       testController.items.add(createTest("abs_spec.rb"))
-      testController.items.add(createTest("square/square_spec.rb"))
-      let subfolderItem = createTest("subfolder")
+      let subfolderItem = createTest("square")
       testController.items.add(subfolderItem)
-      subfolderItem.children.add(createTest("subfolder/foo_spec.rb", "foo_spec.rb"))
+      subfolderItem.children.add(createTest("square/square_spec.rb", "square_spec.rb"))
 
       // No tests in suite initially, only test files and folders
       testItemCollectionMatches(testController.items,
@@ -63,22 +93,16 @@ suite('Extension Test for RSpec', function() {
             children: []
           },
           {
-            file: expectedPath("square/square_spec.rb"),
-            id: "square/square_spec.rb",
-            label: "square/square_spec.rb",
-            children: []
-          },
-          {
-            file: expectedPath("subfolder"),
-            id: "subfolder",
-            label: "subfolder",
+            file: expectedPath("square"),
+            id: "square",
+            label: "square",
             children: [
               {
-                file: expectedPath(path.join("subfolder", "foo_spec.rb")),
-                id: "subfolder/foo_spec.rb",
-                label: "foo_spec.rb",
+                file: expectedPath("square/square_spec.rb"),
+                id: "square/square_spec.rb",
+                label: "square_spec.rb",
                 children: []
-              }
+              },
             ]
           },
         ]
@@ -95,43 +119,22 @@ suite('Extension Test for RSpec', function() {
             id: "abs_spec.rb",
             label: "abs_spec.rb",
             children: [
-              {
-                file: expectedPath("abs_spec.rb"),
-                id: "abs_spec.rb[1:1]",
-                label: "finds the absolute value of 1",
-                line: 3,
-              },
-              {
-                file: expectedPath("abs_spec.rb"),
-                id: "abs_spec.rb[1:2]",
-                label: "finds the absolute value of 0",
-                line: 7,
-              },
-              {
-                file: expectedPath("abs_spec.rb"),
-                id: "abs_spec.rb[1:3]",
-                label: "finds the absolute value of -1",
-                line: 11,
-              }
+              abs_positive_expectation,
+              abs_zero_expectation,
+              abs_negative_expectation
             ]
           },
           {
-            file: expectedPath("square/square_spec.rb"),
-            id: "square/square_spec.rb",
-            label: "square/square_spec.rb",
-            children: []
-          },
-          {
-            file: expectedPath("subfolder"),
-            id: "subfolder",
-            label: "subfolder",
+            file: expectedPath("square"),
+            id: "square",
+            label: "square",
             children: [
               {
-                file: expectedPath(path.join("subfolder", "foo_spec.rb")),
-                id: "subfolder/foo_spec.rb",
-                label: "foo_spec.rb",
+                file: expectedPath("square/square_spec.rb"),
+                id: "square/square_spec.rb",
+                label: "square_spec.rb",
                 children: []
-              }
+              },
             ]
           },
         ]
@@ -151,24 +154,9 @@ suite('Extension Test for RSpec', function() {
             label: "abs_spec.rb",
             canResolveChildren: true,
             children: [
-              {
-                file: expectedPath("abs_spec.rb"),
-                id: "abs_spec.rb[1:1]",
-                label: "finds the absolute value of 1",
-                line: 3,
-              },
-              {
-                file: expectedPath("abs_spec.rb"),
-                id: "abs_spec.rb[1:2]",
-                label: "finds the absolute value of 0",
-                line: 7,
-              },
-              {
-                file: expectedPath("abs_spec.rb"),
-                id: "abs_spec.rb[1:3]",
-                label: "finds the absolute value of -1",
-                line: 11,
-              }
+              abs_positive_expectation,
+              abs_zero_expectation,
+              abs_negative_expectation
             ]
           },
           {
@@ -183,18 +171,8 @@ suite('Extension Test for RSpec', function() {
                 label: "square_spec.rb",
                 canResolveChildren: true,
                 children: [
-                  {
-                    file: expectedPath("square/square_spec.rb"),
-                    id: "square/square_spec.rb[1:1]",
-                    label: "finds the square of 2",
-                    line: 3,
-                  },
-                  {
-                    file: expectedPath("square/square_spec.rb"),
-                    id: "square/square_spec.rb[1:2]",
-                    label: "finds the square of 3",
-                    line: 7,
-                  }
+                  square_2_expectation,
+                  square_3_expectation
                 ]
               }
             ]
@@ -210,7 +188,7 @@ suite('Extension Test for RSpec', function() {
     before(async function() {
       testController = new StubTestController(stdout_logger())
       testSuite = new TestSuite(noop_logger(), testController, config)
-      testRunner = new RspecTestRunner(stdout_logger("debug"), workspaceFolder, testController, config, testSuite)
+      testRunner = new RspecTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
       testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
@@ -266,21 +244,11 @@ suite('Extension Test for RSpec', function() {
       let params: {status: string, expectedTest: TestItemExpectation, failureExpectation?: TestFailureExpectation}[] = [
         {
           status: "passed",
-          expectedTest: {
-            id: "square/square_spec.rb[1:1]",
-            file: expectedPath("square/square_spec.rb"),
-            label: "finds the square of 2",
-            line: 3
-          },
+          expectedTest: square_2_expectation,
         },
         {
           status: "failed",
-          expectedTest: {
-            id: "square/square_spec.rb[1:2]",
-            file: expectedPath("square/square_spec.rb"),
-            label: "finds the square of 3",
-            line: 7
-          },
+          expectedTest: square_3_expectation,
           failureExpectation: {
             message: "RSpec::Expectations::ExpectationNotMetError:\n expected: 9\n     got: 6\n",
             line: 8,
@@ -288,21 +256,11 @@ suite('Extension Test for RSpec', function() {
         },
         {
           status: "passed",
-          expectedTest: {
-            id: "abs_spec.rb[1:1]",
-            file: expectedPath("abs_spec.rb"),
-            label: "finds the absolute value of 1",
-            line: 3
-          }
+          expectedTest: abs_positive_expectation
         },
         {
           status: "errored",
-          expectedTest: {
-            id: "abs_spec.rb[1:2]",
-            file: expectedPath("abs_spec.rb"),
-            label: "finds the absolute value of 0",
-            line: 7
-          },
+          expectedTest: abs_zero_expectation,
           failureExpectation: {
             message: "RuntimeError:\nAbs for zero is not supported",
             line: 8,
@@ -310,12 +268,7 @@ suite('Extension Test for RSpec', function() {
         },
         {
           status: "skipped",
-          expectedTest: {
-            id: "abs_spec.rb[1:3]",
-            file: expectedPath("abs_spec.rb"),
-            label: "finds the absolute value of -1",
-            line: 11
-          }
+          expectedTest: abs_negative_expectation
         }
       ]
       for(const {status, expectedTest, failureExpectation} of params) {

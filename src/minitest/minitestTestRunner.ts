@@ -6,7 +6,8 @@ import { TestRunContext } from '../testRunContext';
 import { MinitestConfig } from './minitestConfig';
 
 export class MinitestTestRunner extends TestRunner {
-  testFrameworkName = 'Minitest';
+  // Minitest notifies on test start
+  canNotifyOnStartingTests: boolean = true
 
   /**
    * Perform a dry-run of the test suite to get information about every test.
