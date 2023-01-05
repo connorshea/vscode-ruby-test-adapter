@@ -90,23 +90,19 @@ export class TestSuite {
   }
 
   public removeMissingTests(parsedTests: vscode.TestItem[], parent?: vscode.TestItem) {
-    //let log = this.log.getChildLogger({label: `${this.removeMissingTests.name}`})
-    let collection = parent?.children || this.controller.items
-    collection.forEach(item => {
-      if (!item.canResolveChildren) {
-        //log.debug(`Not an item with children - returning`)
-        return
-      }
-      //log.debug(`Checking tests in ${item.id}`)
-      if (parsedTests.find(x => x.id == item.id)) {
-        //log.debug(`Parsed test contains ${item.id}`)
-        let filteredTests = parsedTests.filter(x => x.parent?.id == item.id)
-        this.removeMissingTests(filteredTests, item)
-      } else {
-        //log.debug(`Parsed tests don't contain ${item.id}. Deleting`)
-        collection.delete(item.id)
-      }
-    })
+    let log = this.log.getChildLogger({label: `${this.removeMissingTests.name}`})
+
+    log.debug("Tests to check", parsedTests.length)
+    while (parsedTests.length > 0) {
+      let parent = parsedTests[0].parent
+      log.debug("Checking parent", parent?.id)
+      let parentCollection = parent ? parent.children : this.controller.items
+      let parentCollectionSize = parentCollection.size
+      parentCollection.replace(parsedTests.filter(x => x.parent == parent))
+      log.debug("Removed tests from parent", parentCollectionSize - parentCollection.size)
+      parsedTests = parsedTests.filter(x => x.parent != parent)
+      log.debug("Remaining tests to check", parsedTests.length)
+    }
   }
 
   /**

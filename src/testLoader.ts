@@ -56,7 +56,7 @@ export class TestLoader implements vscode.Disposable {
    * - A test file is deleted
    */
   async createWatcher(pattern: vscode.GlobPattern): Promise<vscode.FileSystemWatcher> {
-    let log = this.log.getChildLogger({label: `createWatcher(${pattern})`})
+    let log = this.log.getChildLogger({label: `createWatcher(${pattern.toString()})`})
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
 
     // When files are created, make sure there's a corresponding "file" node in the tree
@@ -77,11 +77,13 @@ export class TestLoader implements vscode.Disposable {
       this.testSuite.deleteTestItem(uri)
     });
 
-    let testFiles = []
     for (const file of await vscode.workspace.findFiles(pattern)) {
-      testFiles.push(this.testSuite.getOrCreateTestItem(file))
+      log.debug("Found file, creating TestItem", file)
+      this.testSuite.getOrCreateTestItem(file)
     }
-    await this.loadTests(testFiles)
+
+    log.debug("Resolving tests in found files")
+    await this.loadTests()
 
     return watcher;
   }
@@ -110,9 +112,9 @@ export class TestLoader implements vscode.Disposable {
    *
    * @return The full test suite.
    */
-  public async loadTests(testItems: vscode.TestItem[]): Promise<void> {
+  public async loadTests(testItems?: vscode.TestItem[]): Promise<void> {
     let log = this.log.getChildLogger({label:"loadTests"})
-    log.info(`Loading tests for ${testItems.length} items (${this.config.frameworkName()})...`);
+    log.info(`Loading tests for ${testItems ? testItems.length : 'all'} items (${this.config.frameworkName()})...`);
     try {
       let request = new vscode.TestRunRequest(testItems, undefined, this.resolveTestProfile)
       await this.resolveTestProfile.runHandler(request, this.cancellationTokenSource.token)

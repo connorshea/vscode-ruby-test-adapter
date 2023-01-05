@@ -9,7 +9,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
-import { noop_logger, stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors, verifyFailure, TestItemExpectation, TestFailureExpectation } from '../helpers';
+import { stdout_logger, setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors, verifyFailure, TestItemExpectation, TestFailureExpectation } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {
@@ -69,14 +69,14 @@ suite('Extension Test for RSpec', function() {
 
   suite('dry run', function() {
     beforeEach(function () {
-      testController = new StubTestController(stdout_logger())
-      testSuite = new TestSuite(noop_logger(), testController, config)
-      testRunner = new RspecTestRunner(noop_logger(), testController, config, testSuite, workspaceFolder)
+      testController = new StubTestController(stdout_logger("debug"))
+      testSuite = new TestSuite(stdout_logger("debug"), testController, config)
+      testRunner = new RspecTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
       let mockProfile = mock<vscode.TestRunProfile>()
-      when(mockProfile.runHandler).thenReturn(testRunner.runHandler)
+      when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
       when(mockProfile.label).thenReturn('ResolveTests')
       resolveTestsProfile = instance(mockProfile)
-      testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
+      testLoader = new TestLoader(stdout_logger("debug"), testController, resolveTestsProfile, config, testSuite);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -147,6 +147,7 @@ suite('Extension Test for RSpec', function() {
     })
 
     test('Load all tests', async function () {
+      console.log("resolving files in test")
       await testLoader.discoverAllFilesInWorkspace()
 
       const testSuite = testController.items
@@ -193,16 +194,16 @@ suite('Extension Test for RSpec', function() {
     before(async function() {
       testController = new StubTestController(stdout_logger())
       testSuite = new TestSuite(stdout_logger(), testController, config)
-      testRunner = new RspecTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
+      testRunner = new RspecTestRunner(stdout_logger("trace"), testController, config, testSuite, workspaceFolder)
       let mockProfile = mock<vscode.TestRunProfile>()
-      when(mockProfile.runHandler).thenReturn(testRunner.runHandler)
+      when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
       when(mockProfile.label).thenReturn('ResolveTests')
       resolveTestsProfile = instance(mockProfile)
       testLoader = new TestLoader(stdout_logger(), testController, resolveTestsProfile, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
 
-    suite.only(`running collections emits correct statuses`, async function() {
+    suite(`running collections emits correct statuses`, async function() {
       let mockTestRun: vscode.TestRun
 
       test('when running full suite', async function() {

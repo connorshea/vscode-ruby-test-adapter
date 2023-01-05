@@ -58,14 +58,12 @@ export class MinitestConfig extends Config {
   }
 
   public getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
-    let line = testItem.id.split(':').pop();
-    let relativeLocation = path.join(this.getAbsoluteTestDirectory(), testItem.id)
-    return `${this.testCommandWithDebugger(debugConfiguration)} '${relativeLocation}:${line}'`
+    let line = testItem.range!.start.line + 1
+    return `${this.testCommandWithDebugger(debugConfiguration)} '${testItem.uri?.fsPath}:${line}'`
   };
 
   public getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
-    let relativeFile = path.join(this.getAbsoluteTestDirectory(), testItem.id)
-    return `${this.testCommandWithDebugger(debugConfiguration)} '${relativeFile}'`
+    return `${this.testCommandWithDebugger(debugConfiguration)} '${testItem.uri?.fsPath}'`
   };
 
   public getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string {

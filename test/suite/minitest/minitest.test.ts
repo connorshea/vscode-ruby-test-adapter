@@ -66,7 +66,7 @@ suite('Extension Test for Minitest', function() {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_test.rb'])
     config = new MinitestConfig(path.resolve("ruby"), workspaceFolder)
     let mockProfile = mock<vscode.TestRunProfile>()
-    when(mockProfile.runHandler).thenReturn(testRunner.runHandler)
+    when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
     when(mockProfile.label).thenReturn('ResolveTests')
     resolveTestsProfile = instance(mockProfile)
   })
@@ -201,8 +201,8 @@ suite('Extension Test for Minitest', function() {
 
     before(async function() {
       testController = new StubTestController(stdout_logger())
-      testSuite = new TestSuite(noop_logger(), testController, config)
-      testRunner = new MinitestTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
+      testSuite = new TestSuite(stdout_logger("debug"), testController, config)
+      testRunner = new MinitestTestRunner(stdout_logger("trace"), testController, config, testSuite, workspaceFolder)
       testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
@@ -276,7 +276,7 @@ suite('Extension Test for Minitest', function() {
           status: "errored",
           expectedTest: abs_zero_expectation,
           failureExpectation: {
-            message: "RuntimeError:\nAbs for zero is not supported",
+            message: "RuntimeError: Abs for zero is not supported",
             line: 8,
           }
         },

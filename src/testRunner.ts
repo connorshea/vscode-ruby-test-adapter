@@ -114,7 +114,6 @@ export abstract class TestRunner implements vscode.Disposable {
   async handleChildProcess(process: childProcess.ChildProcess, context: TestRunContext): Promise<vscode.TestItem[]> {
     this.currentChildProcess = process;
     let log = this.log.getChildLogger({ label: `ChildProcess(${this.config.frameworkName()})` })
-    let testIdsRun: vscode.TestItem[] = []
 
     process.stderr!.pipe(split2()).on('data', (data) => {
       data = data.toString();
@@ -124,6 +123,7 @@ export abstract class TestRunner implements vscode.Disposable {
       }
     })
 
+    let parsedTests: vscode.TestItem[] = []
     process.stdout!.pipe(split2()).on('data', (data) => {
       let getTest = (testId: string): vscode.TestItem => {
         testId = this.testSuite.normaliseTestId(testId)
@@ -145,23 +145,27 @@ export abstract class TestRunner implements vscode.Disposable {
         context.skipped(getTest(data.replace('PENDING: ', '')))
       } else if (data.includes('START_OF_TEST_JSON')) {
         log.trace("Received test run results", data);
-        testIdsRun = testIdsRun.concat(this.parseAndHandleTestOutput(data, context));
+        parsedTests = this.parseAndHandleTestOutput(data, context);
       } else {
         log.trace("Ignoring unrecognised output", data)
       }
     });
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<{code:number, signal:string}>((resolve, reject) => {
       process.once('exit', (code: number, signal: string) => {
-        log.debug('Child process exited', code, signal)
-        resolve();
+        log.trace('Child process exited', code, signal)
+      });
+      process.once('close', (code: number, signal: string) => {
+        log.debug('Child process exited, and all streams closed', code, signal)
+        resolve({code, signal});
       });
       process.once('error', (err: Error) => {
+        log.debug('Error event from child process', err.message)
         reject(err);
       });
     })
 
-    return testIdsRun
+    return parsedTests
   };
 
   /**
@@ -177,55 +181,57 @@ export abstract class TestRunner implements vscode.Disposable {
     token: vscode.CancellationToken,
     debuggerConfig?: vscode.DebugConfiguration
   ) {
-    const context = new TestRunContext(
-      this.rootLog,
-      token,
-      request,
-      this.controller
-    )
     let log = this.log.getChildLogger({ label: `runHandler` })
-    try {
-      const queue: vscode.TestItem[] = [];
 
-      if (debuggerConfig) {
-        log.debug(`Debugging test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
+    const queue: { context: TestRunContext, test: vscode.TestItem }[] = [];
 
-        if (!this.workspace) {
-          log.error("Cannot debug without a folder opened")
-          context.testRun.end()
-          return
-        }
+    if (debuggerConfig) {
+      log.debug(`Debugging test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
 
-        this.log.info('Starting the debug session');
-        let debugSession: any;
+      if (this.workspace) {
+        log.error("Cannot debug without a folder opened")
+        return
+      }
+
+      this.log.info('Starting the debug session');
+      let debugSession: any;
+      try {
+        await this.debugCommandStarted()
+        debugSession = await this.startDebugging(debuggerConfig);
+      } catch (err) {
+        log.error('Failed starting the debug session - aborting', err);
+        this.killChild();
+        return;
+      }
+
+      const subscription = this.onDidTerminateDebugSession((session) => {
+        if (debugSession != session) return;
+        log.info('Debug session ended');
+        this.killChild(); // terminate the test run
+        subscription.dispose();
+      });
+    }
+    else {
+      log.debug(`Running test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
+    }
+
+    // Loop through all included tests, or all known tests, and add them to our queue
+    if (request.include) {
+      log.debug(`${request.include.length} tests in request`);
+      request.include.forEach(test => queue.push({
+        context: new TestRunContext(
+          this.rootLog,
+          token,
+          request,
+          this.controller
+        ),
+        test: test,
+      }));
+
+      // For every test that was queued, try to run it
+      while (queue.length > 0 && !token.isCancellationRequested) {
+        const {context, test} = queue.pop()!;
         try {
-          await this.debugCommandStarted()
-          debugSession = await this.startDebugging(debuggerConfig);
-        } catch (err) {
-          log.error('Failed starting the debug session - aborting', err);
-          this.killChild();
-          return;
-        }
-
-        const subscription = this.onDidTerminateDebugSession((session) => {
-          if (debugSession != session) return;
-          log.info('Debug session ended');
-          this.killChild(); // terminate the test run
-          subscription.dispose();
-        });
-      }
-      else {
-        log.debug(`Running test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
-      }
-
-      // Loop through all included tests, or all known tests, and add them to our queue
-      if (request.include) {
-        log.trace(`${request.include.length} tests in request`);
-        request.include.forEach(test => queue.push(test));
-
-        // For every test that was queued, try to run it
-        while (queue.length > 0 && !token.isCancellationRequested) {
-          const test = queue.pop()!;
           log.trace(`Running test from queue ${test.id}`);
 
           // Skip tests the user asked to exclude
@@ -236,17 +242,37 @@ export abstract class TestRunner implements vscode.Disposable {
 
           await this.runNode(context, test);
         }
+        catch (err) {
+          log.error("Error running tests", err)
+        }
+        finally {
+          // Make sure to end the run after all tests have been executed:
+          log.info('Ending test run');
+          context.endTestRun();
+        }
         if (token.isCancellationRequested) {
           log.info(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
         }
-      } else {
-        log.trace('Running all tests in suite');
+      }
+    } else {
+      log.debug('Running all tests in suite');
+      const context = new TestRunContext(
+        this.rootLog,
+        token,
+        request,
+        this.controller
+      )
+      try {
         await this.runNode(context);
       }
-    }
-    finally {
-      // Make sure to end the run after all tests have been executed:
-      context.testRun.end();
+      catch (err) {
+        log.error("Error running tests", err)
+      }
+      finally {
+        // Make sure to end the run after all tests have been executed:
+        log.info('Ending test run');
+        context.endTestRun();
+      }
     }
   }
 
@@ -304,7 +330,7 @@ export abstract class TestRunner implements vscode.Disposable {
       let testsRun: vscode.TestItem[]
       let command: string
       if (context.request.profile?.label === 'ResolveTests') {
-        command = this.config.getResolveTestsCommand(context.request.include)
+        command = this.config.getResolveTestsCommand(node ? [node] : context.request.include)
       } else if (node == null) {
         log.debug("Running all tests")
         this.controller.items.forEach((testSuite) => {
@@ -334,7 +360,9 @@ export abstract class TestRunner implements vscode.Disposable {
         }
       }
       testsRun = await this.runTestFramework(command, context)
-      this.testSuite.removeMissingTests(testsRun, node)
+      if (context.request.profile?.label === 'ResolveTests') {
+        this.testSuite.removeMissingTests(testsRun, node)
+      }
     } finally {
       context.testRun.end()
     }
@@ -387,7 +415,7 @@ export abstract class TestRunner implements vscode.Disposable {
         newTestItem.label = description
         newTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
         parsedTests.push(newTestItem)
-        log.trace("Parsed test", test)
+        log.debug("Parsed test", test)
         if(context) {
           // Only handle status if actual test run, not dry run
           this.handleStatus(test, context);

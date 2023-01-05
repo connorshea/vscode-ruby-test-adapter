@@ -160,7 +160,7 @@ suite('TestSuite', function () {
       testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
     })
 
-    test('creates item and parent if parent of nested ID is not found', function () {
+    test('creates item and parent if parent of nested file is not found', function () {
       let id = `folder${path.sep}not-found`
       let testItem = testSuite.getOrCreateTestItem(id)
       expect(testItem).to.not.be.undefined
@@ -170,6 +170,30 @@ suite('TestSuite', function () {
       expect(folder?.children.size).to.eq(1)
       expect(folder?.children.get(id)).to.eq(testItem)
       testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
+    })
+
+    suite('creates full item tree for specs within files', function () {
+      let fileId = `folder${path.sep}not-found.rb`
+
+      for (const {suite, location} of [
+        {suite: 'minitest', location: '[4]'},
+        {suite: 'rspec', location: '[1:2]'},
+      ]) {
+        test(suite, function() {
+          let id = `${fileId}${location}`
+          let testItem = testSuite.getOrCreateTestItem(id)
+          expect(testItem.id).to.eq(id)
+          expect(testItem.parent?.id).to.eq(fileId)
+
+          let folderItem = testSuite.getTestItem('folder')
+          let fileItem = testSuite.getTestItem(fileId)
+          expect(folderItem?.children.size).to.eq(1)
+          expect(fileItem?.children.size).to.eq(1)
+          testUriMatches(folderItem!, path.resolve(config.getAbsoluteTestDirectory(), 'folder'))
+          testUriMatches(fileItem!, path.resolve(config.getAbsoluteTestDirectory(), fileId))
+          testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), fileId))
+        })
+      }
     })
   })
 });
