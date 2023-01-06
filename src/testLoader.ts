@@ -2,23 +2,6 @@ import * as vscode from 'vscode';
 import { IChildLogger } from '@vscode-logging/logger';
 import { TestSuiteManager } from './testSuiteManager';
 
-export type ParsedTest = {
-  id: string,
-  full_description: string,
-  description: string,
-  file_path: string,
-  line_number: number,
-  location?: number,
-  status?: string,
-  pending_message?: string | null,
-  exception?: any,
-  type?: any,
-  full_path?: string, // Minitest
-  klass?: string, // Minitest
-  method?: string, // Minitest
-  runnable?: string, // Minitest
-}
-
 /**
  * Responsible for finding and watching test files, and loading tests from within those
  * files

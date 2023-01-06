@@ -6,7 +6,24 @@ import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
 import { TestSuiteManager } from './testSuiteManager';
-import { ParsedTest } from './testLoader';
+
+// TODO - figure out which of these are RSpec only
+type ParsedTest = {
+  id: string,
+  full_description: string,
+  description: string,
+  file_path: string,
+  line_number: number,
+  location?: number,
+  status?: string,
+  pending_message?: string | null,
+  exception?: any,
+  type?: any,
+  full_path?: string, // Minitest
+  klass?: string, // Minitest
+  method?: string, // Minitest
+  runnable?: string, // Minitest
+}
 
 export abstract class TestRunner implements vscode.Disposable {
   protected currentChildProcess?: childProcess.ChildProcess;
