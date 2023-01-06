@@ -132,7 +132,7 @@ export class TestRunContext {
   }
 
   public endTestRun(): void {
-    this.log.info('Ending test run');
+    this.log.debug('Ending test run');
     this.testRun.end()
   }
 }

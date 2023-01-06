@@ -216,63 +216,62 @@ export abstract class TestRunner implements vscode.Disposable {
     }
 
     // Loop through all included tests, or all known tests, and add them to our queue
-    if (request.include) {
-      log.debug(`${request.include.length} tests in request`);
-      request.include.forEach(test => queue.push({
-        context: new TestRunContext(
-          this.rootLog,
-          token,
-          request,
-          this.controller
-        ),
-        test: test,
-      }));
+    log.debug(`${request.include?.length || 0} tests in request`);
+    let context = new TestRunContext(
+      this.rootLog,
+      token,
+      request,
+      this.controller
+    );
 
-      // For every test that was queued, try to run it
-      while (queue.length > 0 && !token.isCancellationRequested) {
-        const {context, test} = queue.pop()!;
-        try {
-          log.trace(`Running test from queue ${test.id}`);
+    try {
+      log.trace("Included tests in request", request.include?.map(x => x.id));
+      log.trace("Excluded tests in request", request.exclude?.map(x => x.id));
+      let testsToRun = request.exclude ? request.include?.filter(x => !request.exclude!.includes(x)) : request.include
+      log.trace("Running tests", testsToRun?.map(x => x.id));
 
-          // Skip tests the user asked to exclude
-          if (request.exclude?.includes(test)) {
-            log.debug(`Skipping test excluded from test run: ${test.id}`)
-            continue;
+      let command: string
+      if (context.request.profile?.label === 'ResolveTests') {
+        command = this.config.getResolveTestsCommand(testsToRun)
+        let testsRun = await this.runTestFramework(command, context)
+        this.testSuite.removeMissingTests(testsRun, testsToRun)
+      } else if (!testsToRun) {
+        log.debug("Running all tests")
+        this.controller.items.forEach((testSuite) => {
+          // Mark selected tests as started
+          this.enqueTestAndChildren(testSuite, context)
+        })
+        command = this.config.getFullTestSuiteCommand(context.debuggerConfig)
+      } else {
+        log.debug("Running selected tests")
+        command = this.config.getFullTestSuiteCommand(context.debuggerConfig)
+        for (const node of testsToRun) {
+          log.trace("Adding test to command", node.id)
+          // Mark selected tests as started
+          this.enqueTestAndChildren(node, context)
+          command = `${command} ${node.uri?.fsPath}`
+          if (!node.canResolveChildren) {
+            // single test
+            if (!node.range) {
+              throw new Error(`Test item is missing line number: ${node.id}`)
+            }
+            command = `${command}:${node.range!.start.line + 1}`
           }
-
-          await this.runNode(context, test);
-        }
-        catch (err) {
-          log.error("Error running tests", err)
-        }
-        finally {
-          // Make sure to end the run after all tests have been executed:
-          log.info('Ending test run');
-          context.endTestRun();
-        }
-        if (token.isCancellationRequested) {
-          log.info(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
+          log.trace("Current command", command)
         }
       }
-    } else {
-      log.debug('Running all tests in suite');
-      const context = new TestRunContext(
-        this.rootLog,
-        token,
-        request,
-        this.controller
-      )
-      try {
-        await this.runNode(context);
-      }
-      catch (err) {
-        log.error("Error running tests", err)
-      }
-      finally {
-        // Make sure to end the run after all tests have been executed:
-        log.info('Ending test run');
-        context.endTestRun();
-      }
+      await this.runTestFramework(command, context)
+    }
+    catch (err) {
+      log.error("Error running tests", err)
+    }
+    finally {
+      // Make sure to end the run after all tests have been executed:
+      log.info('Ending test run');
+      context.endTestRun();
+    }
+    if (token.isCancellationRequested) {
+      log.info(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
     }
   }
 
@@ -311,61 +310,6 @@ export abstract class TestRunner implements vscode.Disposable {
 
   private onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
     return vscode.debug.onDidTerminateDebugSession(cb);
-  }
-
-  /**
-   * Recursively run a node or its children.
-   *
-   * @param node A test or test suite.
-   * @param context Test run context
-   */
-  protected async runNode(
-    context: TestRunContext,
-    node?: vscode.TestItem,
-  ): Promise<void> {
-    let log = this.log.getChildLogger({label: this.runNode.name})
-    // Special case handling for the root suite, since it can be run
-    // with runFullTestSuite()
-    try {
-      let testsRun: vscode.TestItem[]
-      let command: string
-      if (context.request.profile?.label === 'ResolveTests') {
-        command = this.config.getResolveTestsCommand(node ? [node] : context.request.include)
-      } else if (node == null) {
-        log.debug("Running all tests")
-        this.controller.items.forEach((testSuite) => {
-          // Mark selected tests as started
-          this.enqueTestAndChildren(testSuite, context)
-        })
-        command = this.config.getFullTestSuiteCommand(context.debuggerConfig)
-      } else if (node.canResolveChildren) {
-        // If the suite is a file, run the tests as a file rather than as separate tests.
-        log.debug(`Running test file/folder: ${node.id}`)
-
-        // Mark selected tests as started
-        this.enqueTestAndChildren(node, context)
-
-        command = this.config.getTestFileCommand(node, context.debuggerConfig)
-      } else {
-        if (node.uri !== undefined) {
-          log.debug(`Running single test: ${node.id}`)
-          this.enqueTestAndChildren(node, context)
-
-          // Run the test at the given line, add one since the line is 0-indexed in
-          // VS Code and 1-indexed for RSpec/Minitest.
-          command = this.config.getSingleTestCommand(node, context.debuggerConfig)
-        } else {
-          log.error("test missing file path")
-          return
-        }
-      }
-      testsRun = await this.runTestFramework(command, context)
-      if (context.request.profile?.label === 'ResolveTests') {
-        this.testSuite.removeMissingTests(testsRun, node)
-      }
-    } finally {
-      context.testRun.end()
-    }
   }
 
   public parseAndHandleTestOutput(testOutput: string, context?: TestRunContext): vscode.TestItem[] {

@@ -59,14 +59,38 @@ export function stdout_logger(level: LogLevel = "info"): IVSCodeExtLogger {
     "debug": 4,
     "trace": 5,
   }
+  const divider = '----------'
   let maxLevel = levels[level]
   function writeStdOutLogMsg(level: LogLevel, msg: string, ...args: any[]): void {
     if (levels[level] <= maxLevel) {
-      console.log(`[${level}] ${msg}${args.length > 0 ? ':' : ''}`)
+      let message = `[${level}] ${msg}${args.length > 0 ? ':' : ''}`
       args.forEach((arg) => {
-        console.log(`${JSON.stringify(arg)}`)
+        if (arg instanceof Error) {
+          message = `${message}\n  ${arg.stack ? arg.stack : arg.name + ': ' + arg.message}`
+        } else {
+          message = `${message}\n  ${JSON.stringify(arg)}`
+        }
       })
-      console.log('----------')
+      switch(level) {
+        case "fatal":
+        case "error":
+          console.error(message)
+          console.error(divider)
+          break;
+        case "warn":
+          console.warn(message)
+          console.warn(divider)
+          break;
+        case "info":
+          console.info(message)
+          console.info(divider)
+          break;
+        case "debug":
+        case "trace":
+          console.debug(message)
+          console.debug(divider)
+          break;
+      }
     }
   }
   let logger: IVSCodeExtLogger = {

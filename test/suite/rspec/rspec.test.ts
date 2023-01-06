@@ -21,6 +21,9 @@ suite('Extension Test for RSpec', function() {
   let testSuite: TestSuite;
   let resolveTestsProfile: vscode.TestRunProfile;
 
+  //const logger = noop_logger();
+  const logger = stdout_logger("info");
+
   let expectedPath = (file: string): string => {
     return path.resolve(
       'test',
@@ -69,14 +72,14 @@ suite('Extension Test for RSpec', function() {
 
   suite('dry run', function() {
     beforeEach(function () {
-      testController = new StubTestController(stdout_logger("debug"))
-      testSuite = new TestSuite(stdout_logger("debug"), testController, config)
-      testRunner = new RspecTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
+      testController = new StubTestController(logger)
+      testSuite = new TestSuite(logger, testController, config)
+      testRunner = new RspecTestRunner(logger, testController, config, testSuite, workspaceFolder)
       let mockProfile = mock<vscode.TestRunProfile>()
       when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
       when(mockProfile.label).thenReturn('ResolveTests')
       resolveTestsProfile = instance(mockProfile)
-      testLoader = new TestLoader(stdout_logger("debug"), testController, resolveTestsProfile, config, testSuite);
+      testLoader = new TestLoader(logger, testController, resolveTestsProfile, config, testSuite);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -88,7 +91,7 @@ suite('Extension Test for RSpec', function() {
       testController.items.add(subfolderItem)
       subfolderItem.children.add(createTest("square/square_spec.rb", "square_spec.rb"))
 
-      // No tests in suite initially, only test files and folders
+      // No tests in suite initially, just test files and folders
       testItemCollectionMatches(testController.items,
         [
           {
@@ -192,14 +195,14 @@ suite('Extension Test for RSpec', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource();
 
     before(async function() {
-      testController = new StubTestController(stdout_logger())
-      testSuite = new TestSuite(stdout_logger(), testController, config)
-      testRunner = new RspecTestRunner(stdout_logger("trace"), testController, config, testSuite, workspaceFolder)
+      testController = new StubTestController(logger)
+      testSuite = new TestSuite(logger, testController, config)
+      testRunner = new RspecTestRunner(logger, testController, config, testSuite, workspaceFolder)
       let mockProfile = mock<vscode.TestRunProfile>()
       when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
       when(mockProfile.label).thenReturn('ResolveTests')
       resolveTestsProfile = instance(mockProfile)
-      testLoader = new TestLoader(stdout_logger(), testController, resolveTestsProfile, config, testSuite);
+      testLoader = new TestLoader(logger, testController, resolveTestsProfile, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
 
@@ -282,16 +285,11 @@ suite('Extension Test for RSpec', function() {
         }
       ]
       for(const {status, expectedTest, failureExpectation} of params) {
-        let mockTestRun: vscode.TestRun
-
-        beforeEach(async function() {
+        test(`id: ${expectedTest.id}, status: ${status}`, async function() {
           let mockRequest = setupMockRequest(testSuite, expectedTest.id)
           let request = instance(mockRequest)
           await testRunner.runHandler(request, cancellationTokenSource.token)
-          mockTestRun = (testController as StubTestController).getMockTestRun(request)!
-        })
-
-        test(`id: ${expectedTest.id}, status: ${status}`, function() {
+          let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
           switch(status) {
             case "passed":
               testItemMatches(testStateCaptors(mockTestRun).passedArg(0).testItem, expectedTest)

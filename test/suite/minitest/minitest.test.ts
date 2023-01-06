@@ -9,7 +9,7 @@ import { TestSuite } from '../../../src/testSuite';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-import { noop_logger, setupMockRequest, stdout_logger, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
+import { stdout_logger, setupMockRequest, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {
@@ -20,6 +20,9 @@ suite('Extension Test for Minitest', function() {
   let testLoader: TestLoader;
   let testSuite: TestSuite;
   let resolveTestsProfile: vscode.TestRunProfile;
+
+  //const logger = noop_logger();
+  const logger = stdout_logger("info");
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -73,10 +76,10 @@ suite('Extension Test for Minitest', function() {
 
   suite('dry run', function() {
     beforeEach(function () {
-      testController = new StubTestController(stdout_logger())
-      testSuite = new TestSuite(stdout_logger("debug"), testController, config)
-      testRunner = new MinitestTestRunner(stdout_logger("debug"), testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
+      testController = new StubTestController(logger)
+      testSuite = new TestSuite(logger, testController, config)
+      testRunner = new MinitestTestRunner(logger, testController, config, testSuite, workspaceFolder)
+      testLoader = new TestLoader(logger, testController, resolveTestsProfile, config, testSuite);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -200,10 +203,10 @@ suite('Extension Test for Minitest', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource();
 
     before(async function() {
-      testController = new StubTestController(stdout_logger())
-      testSuite = new TestSuite(stdout_logger("debug"), testController, config)
-      testRunner = new MinitestTestRunner(stdout_logger("trace"), testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(noop_logger(), testController, resolveTestsProfile, config, testSuite);
+      testController = new StubTestController(logger)
+      testSuite = new TestSuite(logger, testController, config)
+      testRunner = new MinitestTestRunner(logger, testController, config, testSuite, workspaceFolder)
+      testLoader = new TestLoader(logger, testController, resolveTestsProfile, config, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
 
@@ -286,16 +289,11 @@ suite('Extension Test for Minitest', function() {
         }
       ]
       for(const {status, expectedTest, failureExpectation} of params) {
-        let mockTestRun: vscode.TestRun
-
-        beforeEach(async function() {
+        test(`id: ${expectedTest.id}, status: ${status}`, async function() {
           let mockRequest = setupMockRequest(testSuite, expectedTest.id)
           let request = instance(mockRequest)
           await testRunner.runHandler(request, cancellationTokenSource.token)
-          mockTestRun = (testController as StubTestController).getMockTestRun(request)!
-        })
-
-        test(`id: ${expectedTest.id}, status: ${status}`, function() {
+          let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
           switch(status) {
             case "passed":
               testItemMatches(testStateCaptors(mockTestRun).passedArg(0).testItem, expectedTest)
