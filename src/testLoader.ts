@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { IChildLogger } from '@vscode-logging/logger';
-import { Config } from './config';
 import { TestSuite } from './testSuite';
 
 export type ParsedTest = {
@@ -33,9 +32,7 @@ export class TestLoader implements vscode.Disposable {
 
   constructor(
     readonly rootLog: IChildLogger,
-    private readonly controller: vscode.TestController,
     private readonly resolveTestProfile: vscode.TestRunProfile,
-    private readonly config: Config,
     private readonly testSuite: TestSuite,
   ) {
     this.log = rootLog.getChildLogger({ label: "TestLoader" });
@@ -94,11 +91,11 @@ export class TestLoader implements vscode.Disposable {
    */
   public async discoverAllFilesInWorkspace(): Promise<vscode.FileSystemWatcher[]> {
     let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
-    let testDir = this.config.getAbsoluteTestDirectory()
+    let testDir = this.testSuite.config.getAbsoluteTestDirectory()
     log.debug(`testDir: ${testDir}`)
 
     let patterns: Array<vscode.GlobPattern> = []
-    this.config.getFilePattern().forEach(pattern => {
+    this.testSuite.config.getFilePattern().forEach(pattern => {
       patterns.push(new vscode.RelativePattern(testDir, '**/' + pattern))
     })
 
@@ -114,7 +111,7 @@ export class TestLoader implements vscode.Disposable {
    */
   public async loadTests(testItems?: vscode.TestItem[]): Promise<void> {
     let log = this.log.getChildLogger({label:"loadTests"})
-    log.info(`Loading tests for ${testItems ? testItems.length : 'all'} items (${this.config.frameworkName()})...`);
+    log.info(`Loading tests for ${testItems ? testItems.length : 'all'} items (${this.testSuite.config.frameworkName()})...`);
     try {
       let request = new vscode.TestRunRequest(testItems, undefined, this.resolveTestProfile)
       await this.resolveTestProfile.runHandler(request, this.cancellationTokenSource.token)
@@ -147,7 +144,7 @@ export class TestLoader implements vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
       if (configChange.affectsConfiguration("rubyTestExplorer")) {
-        this.controller.items.replace([])
+        this.testSuite.controller.items.replace([])
         this.discoverAllFilesInWorkspace();
       }
     })

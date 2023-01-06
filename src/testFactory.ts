@@ -39,15 +39,11 @@ export class TestFactory implements vscode.Disposable {
       this.runner = this.framework == "rspec"
         ? new RspecTestRunner(
             this.log,
-            this.controller,
-            this.config as RspecConfig,
             this.testSuite,
             this.workspace,
           )
         : new MinitestTestRunner(
             this.log,
-            this.controller,
-            this.config as MinitestConfig,
             this.testSuite,
             this.workspace,
           )
@@ -60,9 +56,7 @@ export class TestFactory implements vscode.Disposable {
     if (!this.loader) {
       this.loader = new TestLoader(
         this.log,
-        this.controller,
         this.profiles.resolveTestsProfile,
-        this.config,
         this.testSuite
       )
       this.disposables.push(this.loader)

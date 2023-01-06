@@ -7,12 +7,13 @@ import * as path from 'path'
 import { Config } from "../../../src/config";
 import { TestSuite } from "../../../src/testSuite";
 import { TestRunner } from "../../../src/testRunner";
-import { RspecConfig } from '../../../src/rspec/rspecConfig';
 import { RspecTestRunner } from "../../../src/rspec/rspecTestRunner";
-import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
-import { noop_logger, testItemCollectionMatches, TestItemExpectation } from "../helpers";
+import { testItemCollectionMatches, TestItemExpectation } from "../helpers";
+import { logger } from '../../stubs/logger';
 import { StubTestController } from '../../stubs/stubTestController';
+
+const log = logger("off")
 
 suite('TestRunner', function () {
   let testSuite: TestSuite
@@ -30,9 +31,9 @@ suite('TestRunner', function () {
       })
 
       beforeEach(function () {
-        testController = new StubTestController(noop_logger())
-        testSuite = new TestSuite(noop_logger(), testController, instance(config))
-        testRunner = new RspecTestRunner(noop_logger(), testController, instance(config) as RspecConfig, testSuite)
+        testController = new StubTestController(log)
+        testSuite = new TestSuite(log, testController, instance(config))
+        testRunner = new RspecTestRunner(log, testSuite)
       })
 
       const expectedTests: TestItemExpectation[] = [
@@ -119,9 +120,9 @@ suite('TestRunner', function () {
       })
 
       beforeEach(function () {
-        testController = new StubTestController(noop_logger())
-        testSuite = new TestSuite(noop_logger(), testController, instance(config))
-        testRunner = new MinitestTestRunner(noop_logger(), testController, instance(config) as MinitestConfig, testSuite)
+        testController = new StubTestController(log)
+        testSuite = new TestSuite(log, testController, instance(config))
+        testRunner = new MinitestTestRunner(log, testSuite)
       })
 
       const expectedTests: TestItemExpectation[] = [

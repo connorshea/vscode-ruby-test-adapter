@@ -5,8 +5,6 @@ import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
-import { RspecConfig } from './rspec/rspecConfig';
-import { MinitestConfig } from './minitest/minitestConfig';
 import { TestSuite } from './testSuite';
 import { ParsedTest } from './testLoader';
 
@@ -25,8 +23,6 @@ export abstract class TestRunner implements vscode.Disposable {
    */
   constructor(
     readonly rootLog: IChildLogger,
-    protected controller: vscode.TestController,
-    protected config: RspecConfig | MinitestConfig,
     protected testSuite: TestSuite,
     protected workspace?: vscode.WorkspaceFolder,
   ) {
@@ -113,7 +109,7 @@ export abstract class TestRunner implements vscode.Disposable {
    */
   async handleChildProcess(process: childProcess.ChildProcess, context: TestRunContext): Promise<vscode.TestItem[]> {
     this.currentChildProcess = process;
-    let log = this.log.getChildLogger({ label: `ChildProcess(${this.config.frameworkName()})` })
+    let log = this.log.getChildLogger({ label: `ChildProcess(${this.testSuite.config.frameworkName()})` })
 
     process.stderr!.pipe(split2()).on('data', (data) => {
       data = data.toString();
@@ -221,7 +217,7 @@ export abstract class TestRunner implements vscode.Disposable {
       this.rootLog,
       token,
       request,
-      this.controller
+      this.testSuite.controller
     );
 
     try {
@@ -232,19 +228,19 @@ export abstract class TestRunner implements vscode.Disposable {
 
       let command: string
       if (context.request.profile?.label === 'ResolveTests') {
-        command = this.config.getResolveTestsCommand(testsToRun)
+        command = this.testSuite.config.getResolveTestsCommand(testsToRun)
         let testsRun = await this.runTestFramework(command, context)
         this.testSuite.removeMissingTests(testsRun, testsToRun)
       } else if (!testsToRun) {
         log.debug("Running all tests")
-        this.controller.items.forEach((testSuite) => {
+        this.testSuite.controller.items.forEach((item) => {
           // Mark selected tests as started
-          this.enqueTestAndChildren(testSuite, context)
+          this.enqueTestAndChildren(item, context)
         })
-        command = this.config.getFullTestSuiteCommand(context.debuggerConfig)
+        command = this.testSuite.config.getFullTestSuiteCommand(context.debuggerConfig)
       } else {
         log.debug("Running selected tests")
-        command = this.config.getFullTestSuiteCommand(context.debuggerConfig)
+        command = this.testSuite.config.getFullTestSuiteCommand(context.debuggerConfig)
         for (const node of testsToRun) {
           log.trace("Adding test to command", node.id)
           // Mark selected tests as started
@@ -422,7 +418,7 @@ export abstract class TestRunner implements vscode.Disposable {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
-      env: this.config.getProcessEnv()
+      env: this.testSuite.config.getProcessEnv()
     };
 
     this.log.debug(`Running command: ${testCommand}`);

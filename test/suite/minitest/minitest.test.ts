@@ -9,7 +9,8 @@ import { TestSuite } from '../../../src/testSuite';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-import { stdout_logger, setupMockRequest, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
+import { setupMockRequest, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
+import { logger } from '../..//stubs/logger';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {
@@ -21,8 +22,8 @@ suite('Extension Test for Minitest', function() {
   let testSuite: TestSuite;
   let resolveTestsProfile: vscode.TestRunProfile;
 
-  //const logger = noop_logger();
-  const logger = stdout_logger("info");
+  //const logger = NOOP_LOGGER;
+  const log = logger("info");
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -76,10 +77,10 @@ suite('Extension Test for Minitest', function() {
 
   suite('dry run', function() {
     beforeEach(function () {
-      testController = new StubTestController(logger)
-      testSuite = new TestSuite(logger, testController, config)
-      testRunner = new MinitestTestRunner(logger, testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(logger, testController, resolveTestsProfile, config, testSuite);
+      testController = new StubTestController(log)
+      testSuite = new TestSuite(log, testController, config)
+      testRunner = new MinitestTestRunner(log, testSuite, workspaceFolder)
+      testLoader = new TestLoader(log, resolveTestsProfile, testSuite);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -203,10 +204,10 @@ suite('Extension Test for Minitest', function() {
     let cancellationTokenSource = new vscode.CancellationTokenSource();
 
     before(async function() {
-      testController = new StubTestController(logger)
-      testSuite = new TestSuite(logger, testController, config)
-      testRunner = new MinitestTestRunner(logger, testController, config, testSuite, workspaceFolder)
-      testLoader = new TestLoader(logger, testController, resolveTestsProfile, config, testSuite);
+      testController = new StubTestController(log)
+      testSuite = new TestSuite(log, testController, config)
+      testRunner = new MinitestTestRunner(log, testSuite, workspaceFolder)
+      testLoader = new TestLoader(log, resolveTestsProfile, testSuite);
       await testLoader.discoverAllFilesInWorkspace()
     })
 

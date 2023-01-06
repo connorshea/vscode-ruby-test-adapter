@@ -5,7 +5,9 @@ import * as path from 'path'
 
 import { Config } from "../../../src/config";
 import { RspecConfig } from "../../../src/rspec/rspecConfig";
-import { noop_logger } from "../helpers";
+import { logger } from "../../stubs/logger";
+
+const log = logger("off")
 
 suite('Config', function() {
   let setConfig = (testFramework: string) => {
@@ -19,21 +21,21 @@ suite('Config', function() {
       let testFramework = "rspec"
       setConfig(testFramework)
 
-      expect(Config.getTestFramework(noop_logger())).to.eq(testFramework);
+      expect(Config.getTestFramework(log)).to.eq(testFramework);
     });
 
     test('should return minitest when configuration set to minitest', function() {
       let testFramework = 'minitest'
       setConfig(testFramework)
 
-      expect(Config.getTestFramework(noop_logger())).to.eq(testFramework);
+      expect(Config.getTestFramework(log)).to.eq(testFramework);
     });
 
     test('should return none when configuration set to none', function() {
       let testFramework = 'none'
       setConfig(testFramework)
 
-      expect(Config.getTestFramework(noop_logger())).to.eq(testFramework);
+      expect(Config.getTestFramework(log)).to.eq(testFramework);
     });
   });
 

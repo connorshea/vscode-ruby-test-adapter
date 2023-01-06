@@ -14,8 +14,8 @@ export class TestSuite {
 
   constructor(
     readonly rootLog: IChildLogger,
-    private readonly controller: vscode.TestController,
-    private readonly config: Config
+    public readonly controller: vscode.TestController,
+    public readonly config: Config
   ) {
     this.log = rootLog.getChildLogger({label: "TestSuite"});
   }

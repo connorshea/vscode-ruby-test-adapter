@@ -7,7 +7,8 @@ import path from 'path'
 import { Config } from '../../../src/config';
 import { TestSuite } from '../../../src/testSuite';
 import { StubTestController } from '../../stubs/stubTestController';
-import { noop_logger, testUriMatches } from '../helpers';
+import { NOOP_LOGGER } from '../../stubs/logger';
+import { testUriMatches } from '../helpers';
 
 suite('TestSuite', function () {
   let mockConfig: Config = mock<Config>();
@@ -22,8 +23,8 @@ suite('TestSuite', function () {
   });
 
   beforeEach(function () {
-    controller = new StubTestController(noop_logger())
-    testSuite = new TestSuite(noop_logger(), controller, instance(mockConfig))
+    controller = new StubTestController(NOOP_LOGGER)
+    testSuite = new TestSuite(NOOP_LOGGER, controller, instance(mockConfig))
   });
 
   suite('#normaliseTestId()', function () {
