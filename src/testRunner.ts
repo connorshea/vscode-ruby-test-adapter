@@ -7,18 +7,17 @@ import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
 import { TestSuiteManager } from './testSuiteManager';
 
-// TODO - figure out which of these are RSpec only
 type ParsedTest = {
   id: string,
   full_description: string,
   description: string,
   file_path: string,
   line_number: number,
-  location?: number,
   status?: string,
   pending_message?: string | null,
   exception?: any,
-  type?: any,
+  location?: number, // RSpec
+  type?: any // RSpec - presumably tag name/focus?
   full_path?: string, // Minitest
   klass?: string, // Minitest
   method?: string, // Minitest

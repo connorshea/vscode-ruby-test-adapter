@@ -1,6 +1,24 @@
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
 
+// TODO - figure out which of these are RSpec only
+type ParsedTest = {
+  id: string,
+  // full_description: string,
+  // description: string,
+  file_path: string,
+  line_number: number,
+  // location?: number,
+  status?: string,
+  pending_message?: string | null,
+  exception?: any,
+  // type?: any,
+  full_path?: string, // Minitest
+  klass?: string, // Minitest
+  method?: string, // Minitest
+  runnable?: string, // Minitest
+}
+
 export class MinitestTestRunner extends TestRunner {
   // Minitest notifies on test start
   canNotifyOnStartingTests: boolean = true
@@ -11,7 +29,7 @@ export class MinitestTestRunner extends TestRunner {
    * @param test The test that we want to handle.
    * @param context Test run context
    */
-  handleStatus(test: any, context: TestRunContext): void {
+  handleStatus(test: ParsedTest, context: TestRunContext): void {
     let log = this.log.getChildLogger({ label: "handleStatus" })
     log.trace("Handling status of test", test);
     let testItem = this.manager.getOrCreateTestItem(test.id)

@@ -1,6 +1,19 @@
 import { TestRunner } from '../testRunner';
 import { TestRunContext } from '../testRunContext';
-import { ParsedTest } from 'src/testLoader';
+
+// TODO - figure out which of these are RSpec only
+type ParsedTest = {
+  id: string,
+  full_description: string, // RSpec
+  description: string, // RSpec
+  file_path: string,
+  line_number: number,
+  location?: number, // RSpec
+  status?: string,
+  pending_message?: string | null,
+  exception?: any,
+  type?: any // RSpec - presumably tag name/focus?
+}
 
 export class RspecTestRunner extends TestRunner {
   // RSpec only notifies on test completion
