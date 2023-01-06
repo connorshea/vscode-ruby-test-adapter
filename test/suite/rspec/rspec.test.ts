@@ -5,7 +5,7 @@ import { before, beforeEach } from 'mocha';
 import { expect } from 'chai';
 
 import { TestLoader } from '../../../src/testLoader';
-import { TestSuiteManager } from '../../testSuiteManager';
+import { TestSuiteManager } from '../../../src/testSuiteManager';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 

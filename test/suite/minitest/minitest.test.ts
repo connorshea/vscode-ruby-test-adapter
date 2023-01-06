@@ -5,7 +5,7 @@ import { expect } from 'chai';
 import { before, beforeEach } from 'mocha';
 
 import { TestLoader } from '../../../src/testLoader';
-import { TestSuiteManager } from '../../testSuiteManager';
+import { TestSuiteManager } from '../../../src/testSuiteManager';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
