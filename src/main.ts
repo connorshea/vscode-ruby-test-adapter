@@ -11,12 +11,7 @@ export const guessWorkspaceFolder = async (rootLog: IChildLogger) => {
     return undefined;
   }
 
-  console.debug("Found workspace folders:")
-  log.debug("Found workspace folders:")
-  for (const folder of vscode.workspace.workspaceFolders) {
-    console.debug(` - ${folder.uri.fsPath}`)
-    log.debug(` - ${folder.uri.fsPath}`)
-  }
+  log.debug("Found workspace folders", vscode.workspace.workspaceFolders)
 
   if (vscode.workspace.workspaceFolders.length < 2) {
     return vscode.workspace.workspaceFolders[0];

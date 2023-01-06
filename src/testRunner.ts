@@ -175,15 +175,13 @@ export abstract class TestRunner implements vscode.Disposable {
     token: vscode.CancellationToken,
     debuggerConfig?: vscode.DebugConfiguration
   ) {
-    let log = this.log.getChildLogger({ label: `runHandler` })
-
-    const queue: { context: TestRunContext, test: vscode.TestItem }[] = [];
+    let log = this.log.getChildLogger({ label: 'runHandler' })
 
     if (debuggerConfig) {
-      log.debug(`Debugging test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
+      log.debug('Debugging tests', request.include?.map(x => x.id));
 
       if (this.workspace) {
-        log.error("Cannot debug without a folder opened")
+        log.error('Cannot debug without a folder opened')
         return
       }
 
@@ -206,11 +204,11 @@ export abstract class TestRunner implements vscode.Disposable {
       });
     }
     else {
-      log.debug(`Running test(s) ${JSON.stringify(request.include?.map(x => x.id))}`);
+      log.debug('Running test', request.include?.map(x => x.id));
     }
 
     // Loop through all included tests, or all known tests, and add them to our queue
-    log.debug(`${request.include?.length || 0} tests in request`);
+    log.debug('Number of tests in request', request.include?.length || 0);
     let context = new TestRunContext(
       this.rootLog,
       token,
@@ -265,7 +263,7 @@ export abstract class TestRunner implements vscode.Disposable {
       context.endTestRun();
     }
     if (token.isCancellationRequested) {
-      log.info(`Test run aborted due to cancellation. ${queue.length} tests remain in queue`)
+      log.info('Test run aborted due to cancellation')
     }
   }
 
@@ -309,8 +307,7 @@ export abstract class TestRunner implements vscode.Disposable {
   public parseAndHandleTestOutput(testOutput: string, context?: TestRunContext): vscode.TestItem[] {
     let log = this.log.getChildLogger({label: this.parseAndHandleTestOutput.name})
     testOutput = TestRunner.getJsonFromOutput(testOutput);
-    log.trace('Parsing the below JSON:');
-    log.trace(`${testOutput}`);
+    log.trace('Parsing the below JSON:', testOutput);
     let testMetadata = JSON.parse(testOutput);
     let tests: Array<ParsedTest> = testMetadata.examples;
 
@@ -348,12 +345,12 @@ export abstract class TestRunner implements vscode.Disposable {
 
         let newTestItem = this.manager.getOrCreateTestItem(test.id)
         newTestItem.canResolveChildren = !test.id.endsWith(']')
-        log.trace(`canResolveChildren (${test.id}): ${newTestItem.canResolveChildren}`)
-        log.trace(`Setting test ${newTestItem.id} label to "${description}"`)
+        log.trace('canResolveChildren', test.id, newTestItem.canResolveChildren)
+        log.trace('label', test.id, description)
         newTestItem.label = description
         newTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
         parsedTests.push(newTestItem)
-        log.debug("Parsed test", test)
+        log.debug('Parsed test', test)
         if(context) {
           // Only handle status if actual test run, not dry run
           this.handleStatus(test, context);
@@ -409,7 +406,7 @@ export abstract class TestRunner implements vscode.Disposable {
    */
   protected async runTestFramework (testCommand: string, context: TestRunContext): Promise<vscode.TestItem[]> {
     context.token.onCancellationRequested(() => {
-      this.log.debug("Cancellation requested")
+      this.log.debug('Cancellation requested')
       this.killChild()
     })
 
@@ -419,7 +416,7 @@ export abstract class TestRunner implements vscode.Disposable {
       env: this.manager.config.getProcessEnv()
     };
 
-    this.log.debug(`Running command: ${testCommand}`);
+    this.log.debug('Running command', testCommand);
 
     let testProcess = childProcess.spawn(
       testCommand,

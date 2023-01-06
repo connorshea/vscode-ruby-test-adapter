@@ -109,7 +109,7 @@ export abstract class Config {
    * Detect the current test framework using 'bundle list'.
    */
   private static detectTestFramework(log: IVSCodeExtLogger): string {
-    log.info(`Getting a list of Bundler dependencies with 'bundle list'.`);
+    log.info("Getting a list of Bundler dependencies with 'bundle list'.");
 
     const execArgs: childProcess.ExecOptions = {
       cwd: (vscode.workspace.workspaceFolders || [])[0].uri.fsPath,
@@ -122,8 +122,8 @@ export abstract class Config {
       let err, stdout = childProcess.execSync('bundle list', execArgs);
 
       if (err) {
-        log.error(`Error while listing Bundler dependencies: ${err}`);
-        log.error(`Output: ${stdout}`);
+        log.error('Error while listing Bundler dependencies', err);
+        log.error('Output', stdout);
         throw err;
       }
 
@@ -132,17 +132,17 @@ export abstract class Config {
       // Search for rspec or minitest in the output of 'bundle list'.
       // The search function returns the index where the string is found, or -1 otherwise.
       if (bundlerList.search('rspec-core') >= 0) {
-        log.info(`Detected RSpec test framework.`);
+        log.info('Detected RSpec test framework.');
         return 'rspec';
       } else if (bundlerList.search('minitest') >= 0) {
-        log.info(`Detected Minitest test framework.`);
+        log.info('Detected Minitest test framework.');
         return 'minitest';
       } else {
-        log.info(`Unable to automatically detect a test framework.`);
+        log.info('Unable to automatically detect a test framework.');
         return 'none';
       }
     } catch (error: any) {
-      log.error(error);
+      log.error('Error while detecting test suite', error);
       return 'none';
     }
   }

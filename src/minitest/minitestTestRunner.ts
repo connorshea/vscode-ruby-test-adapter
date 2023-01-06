@@ -12,7 +12,8 @@ export class MinitestTestRunner extends TestRunner {
    * @param context Test run context
    */
   handleStatus(test: any, context: TestRunContext): void {
-    this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
+    let log = this.log.getChildLogger({ label: "handleStatus" })
+    log.trace("Handling status of test", test);
     let testItem = this.manager.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
       context.passed(testItem)

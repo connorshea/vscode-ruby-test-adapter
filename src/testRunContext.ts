@@ -37,7 +37,7 @@ export class TestRunContext {
    * @param test Test item to update.
    */
   public enqueued(test: vscode.TestItem): void {
-    this.log.debug(`Enqueued: ${test.id}`)
+    this.log.debug('Enqueued test', test.id)
     this.testRun.enqueued(test)
   }
 
@@ -64,11 +64,11 @@ export class TestRunContext {
         testItem.uri ?? vscode.Uri.file(file),
         new vscode.Position(line, 0)
       )
-      this.log.debug(`Errored: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''}`)
-      this.log.trace(`Error message: ${message}`)
+      this.log.debug('Errored test', test.id, file, line, duration)
+      this.log.trace('Error message', message)
       this.testRun.errored(testItem, testMessage, duration)
     } catch (e: any) {
-      this.log.error(`Failed to set test ${test} as Errored`, e)
+      this.log.error('Failed to report error state for test', test.id, e)
     }
   }
 
@@ -93,8 +93,8 @@ export class TestRunContext {
       test.uri ?? vscode.Uri.file(file),
       new vscode.Position(line, 0)
     )
-    this.log.debug(`Failed: ${test.id} (${file}:${line})${duration ? `, duration: ${duration}ms` : ''}`)
-    this.log.trace(`Failure message: ${message}`)
+    this.log.debug('Failed test', test.id, file, line, duration)
+    this.log.trace('Failure message', message)
     this.testRun.failed(test, testMessage, duration)
   }
 
@@ -107,7 +107,7 @@ export class TestRunContext {
   public passed(test: vscode.TestItem,
     duration?: number | undefined
   ): void {
-    this.log.debug(`Passed: ${test.id}${duration ? `, duration: ${duration}ms` : ''}`)
+    this.log.debug('Passed test', test.id, duration)
     this.testRun.passed(test, duration)
   }
 
@@ -117,7 +117,7 @@ export class TestRunContext {
    * @param test ID of the test item to update, or the test item.
    */
   public skipped(test: vscode.TestItem): void {
-    this.log.debug(`Skipped: ${test.id}`)
+    this.log.debug('Skipped test', test.id)
     this.testRun.skipped(test)
   }
 
@@ -127,7 +127,7 @@ export class TestRunContext {
    * @param test Test item to update, or the test item.
    */
   public started(test: vscode.TestItem): void {
-    this.log.debug(`Started: ${test.id}`)
+    this.log.debug('Started test', test.id)
     this.testRun.started(test)
   }
 
