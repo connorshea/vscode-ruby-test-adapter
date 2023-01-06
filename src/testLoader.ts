@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { IChildLogger } from '@vscode-logging/logger';
-import { TestSuite } from './testSuite';
+import { TestSuiteManager } from './testSuiteManager';
 
 export type ParsedTest = {
   id: string,
@@ -33,7 +33,7 @@ export class TestLoader implements vscode.Disposable {
   constructor(
     readonly rootLog: IChildLogger,
     private readonly resolveTestProfile: vscode.TestRunProfile,
-    private readonly testSuite: TestSuite,
+    private readonly manager: TestSuiteManager,
   ) {
     this.log = rootLog.getChildLogger({ label: "TestLoader" });
     this.disposables.push(this.configWatcher());
@@ -59,7 +59,7 @@ export class TestLoader implements vscode.Disposable {
     // When files are created, make sure there's a corresponding "file" node in the tree
     watcher.onDidCreate(uri => {
       log.debug(`onDidCreate ${uri.fsPath}`)
-      this.testSuite.getOrCreateTestItem(uri)
+      this.manager.getOrCreateTestItem(uri)
     })
     // When files change, re-parse them. Note that you could optimize this so
     // that you only re-parse children that have been resolved in the past.
@@ -71,12 +71,12 @@ export class TestLoader implements vscode.Disposable {
     // we use the URI as the TestItem's ID.
     watcher.onDidDelete(uri => {
       log.debug(`onDidDelete ${uri.fsPath}`)
-      this.testSuite.deleteTestItem(uri)
+      this.manager.deleteTestItem(uri)
     });
 
     for (const file of await vscode.workspace.findFiles(pattern)) {
       log.debug("Found file, creating TestItem", file)
-      this.testSuite.getOrCreateTestItem(file)
+      this.manager.getOrCreateTestItem(file)
     }
 
     log.debug("Resolving tests in found files")
@@ -91,11 +91,11 @@ export class TestLoader implements vscode.Disposable {
    */
   public async discoverAllFilesInWorkspace(): Promise<vscode.FileSystemWatcher[]> {
     let log = this.log.getChildLogger({ label: `${this.discoverAllFilesInWorkspace.name}` })
-    let testDir = this.testSuite.config.getAbsoluteTestDirectory()
+    let testDir = this.manager.config.getAbsoluteTestDirectory()
     log.debug(`testDir: ${testDir}`)
 
     let patterns: Array<vscode.GlobPattern> = []
-    this.testSuite.config.getFilePattern().forEach(pattern => {
+    this.manager.config.getFilePattern().forEach(pattern => {
       patterns.push(new vscode.RelativePattern(testDir, '**/' + pattern))
     })
 
@@ -111,7 +111,7 @@ export class TestLoader implements vscode.Disposable {
    */
   public async loadTests(testItems?: vscode.TestItem[]): Promise<void> {
     let log = this.log.getChildLogger({label:"loadTests"})
-    log.info(`Loading tests for ${testItems ? testItems.length : 'all'} items (${this.testSuite.config.frameworkName()})...`);
+    log.info(`Loading tests for ${testItems ? testItems.length : 'all'} items (${this.manager.config.frameworkName()})...`);
     try {
       let request = new vscode.TestRunRequest(testItems, undefined, this.resolveTestProfile)
       await this.resolveTestProfile.runHandler(request, this.cancellationTokenSource.token)
@@ -125,7 +125,7 @@ export class TestLoader implements vscode.Disposable {
     let log = this.log.getChildLogger({label: "parseTestsInFile"})
     let testItem: vscode.TestItem
     if ("fsPath" in uri) {
-      let test = this.testSuite.getTestItem(uri)
+      let test = this.manager.getTestItem(uri)
       if (!test) {
         return
       }
@@ -144,7 +144,7 @@ export class TestLoader implements vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
       if (configChange.affectsConfiguration("rubyTestExplorer")) {
-        this.testSuite.controller.items.replace([])
+        this.manager.controller.items.replace([])
         this.discoverAllFilesInWorkspace();
       }
     })

@@ -5,7 +5,7 @@ import { before, beforeEach } from 'mocha';
 import { expect } from 'chai';
 
 import { TestLoader } from '../../../src/testLoader';
-import { TestSuite } from '../../../src/testSuite';
+import { TestSuiteManager } from '../../testSuiteManager';
 import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
@@ -19,7 +19,7 @@ suite('Extension Test for RSpec', function() {
   let config: RspecConfig
   let testRunner: RspecTestRunner;
   let testLoader: TestLoader;
-  let testSuite: TestSuite;
+  let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
 
   const log = logger("info");
@@ -77,9 +77,9 @@ suite('Extension Test for RSpec', function() {
   suite('dry run', function() {
     beforeEach(function () {
       testController = new StubTestController(log)
-      testSuite = new TestSuite(log, testController, config)
-      testRunner = new RspecTestRunner(log, testSuite, workspaceFolder)
-      testLoader = new TestLoader(log, resolveTestsProfile, testSuite);
+      manager = new TestSuiteManager(log, testController, config)
+      testRunner = new RspecTestRunner(log, manager, workspaceFolder)
+      testLoader = new TestLoader(log, resolveTestsProfile, manager);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -153,9 +153,9 @@ suite('Extension Test for RSpec', function() {
       console.log("resolving files in test")
       await testLoader.discoverAllFilesInWorkspace()
 
-      const testSuite = testController.items
+      const manager = testController.items
 
-      testItemCollectionMatches(testSuite,
+      testItemCollectionMatches(manager,
         [
           {
             file: expectedPath("abs_spec.rb"),
@@ -196,9 +196,9 @@ suite('Extension Test for RSpec', function() {
 
     before(async function() {
       testController = new StubTestController(log)
-      testSuite = new TestSuite(log, testController, config)
-      testRunner = new RspecTestRunner(log, testSuite, workspaceFolder)
-      testLoader = new TestLoader(log, resolveTestsProfile, testSuite);
+      manager = new TestSuiteManager(log, testController, config)
+      testRunner = new RspecTestRunner(log, manager, workspaceFolder)
+      testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader.discoverAllFilesInWorkspace()
     })
 
@@ -206,7 +206,7 @@ suite('Extension Test for RSpec', function() {
       let mockTestRun: vscode.TestRun
 
       test('when running full suite', async function() {
-        let mockRequest = setupMockRequest(testSuite)
+        let mockRequest = setupMockRequest(manager)
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
@@ -220,7 +220,7 @@ suite('Extension Test for RSpec', function() {
       })
 
       test('when running all top-level items', async function() {
-        let mockRequest = setupMockRequest(testSuite, ["abs_spec.rb", "square"])
+        let mockRequest = setupMockRequest(manager, ["abs_spec.rb", "square"])
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
@@ -234,7 +234,7 @@ suite('Extension Test for RSpec', function() {
       })
 
       test('when running all files', async function() {
-        let mockRequest = setupMockRequest(testSuite, ["abs_spec.rb", "square/square_spec.rb"])
+        let mockRequest = setupMockRequest(manager, ["abs_spec.rb", "square/square_spec.rb"])
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
@@ -282,7 +282,7 @@ suite('Extension Test for RSpec', function() {
       ]
       for(const {status, expectedTest, failureExpectation} of params) {
         test(`id: ${expectedTest.id}, status: ${status}`, async function() {
-          let mockRequest = setupMockRequest(testSuite, expectedTest.id)
+          let mockRequest = setupMockRequest(manager, expectedTest.id)
           let request = instance(mockRequest)
           await testRunner.runHandler(request, cancellationTokenSource.token)
           let mockTestRun = (testController as StubTestController).getMockTestRun(request)!

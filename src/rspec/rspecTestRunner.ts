@@ -15,7 +15,7 @@ export class RspecTestRunner extends TestRunner {
   handleStatus(test: ParsedTest, context: TestRunContext): void {
     let log = this.log.getChildLogger({ label: "handleStatus" })
     log.trace(`Handling status of test: ${JSON.stringify(test)}`);
-    let testItem = this.testSuite.getOrCreateTestItem(test.id)
+    let testItem = this.manager.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
       log.trace("Passed", testItem.id)
       context.passed(testItem)

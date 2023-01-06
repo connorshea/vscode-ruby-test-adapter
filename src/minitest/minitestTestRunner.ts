@@ -13,7 +13,7 @@ export class MinitestTestRunner extends TestRunner {
    */
   handleStatus(test: any, context: TestRunContext): void {
     this.log.debug(`Handling status of test: ${JSON.stringify(test)}`);
-    let testItem = this.testSuite.getOrCreateTestItem(test.id)
+    let testItem = this.manager.getOrCreateTestItem(test.id)
     if (test.status === "passed") {
       context.passed(testItem)
     } else if (test.status === "failed" && test.pending_message === null) {

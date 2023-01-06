@@ -5,7 +5,7 @@ import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
-import { TestSuite } from './testSuite';
+import { TestSuiteManager } from './testSuiteManager';
 import { ParsedTest } from './testLoader';
 
 export abstract class TestRunner implements vscode.Disposable {
@@ -17,13 +17,11 @@ export abstract class TestRunner implements vscode.Disposable {
   /**
    * @param rootLog The Test Adapter logger, for logging.
    * @param workspace Open workspace folder
-   * @param controller Test controller that holds the test suite
-   * @param config Configuration provider
-   * @param testSuite TestSuite instance
+   * @param manager TestSuiteManager instance
    */
   constructor(
     readonly rootLog: IChildLogger,
-    protected testSuite: TestSuite,
+    protected manager: TestSuiteManager,
     protected workspace?: vscode.WorkspaceFolder,
   ) {
     this.log = rootLog.getChildLogger({label: "TestRunner"})
@@ -109,7 +107,7 @@ export abstract class TestRunner implements vscode.Disposable {
    */
   async handleChildProcess(process: childProcess.ChildProcess, context: TestRunContext): Promise<vscode.TestItem[]> {
     this.currentChildProcess = process;
-    let log = this.log.getChildLogger({ label: `ChildProcess(${this.testSuite.config.frameworkName()})` })
+    let log = this.log.getChildLogger({ label: `ChildProcess(${this.manager.config.frameworkName()})` })
 
     process.stderr!.pipe(split2()).on('data', (data) => {
       data = data.toString();
@@ -122,8 +120,8 @@ export abstract class TestRunner implements vscode.Disposable {
     let parsedTests: vscode.TestItem[] = []
     process.stdout!.pipe(split2()).on('data', (data) => {
       let getTest = (testId: string): vscode.TestItem => {
-        testId = this.testSuite.normaliseTestId(testId)
-        return this.testSuite.getOrCreateTestItem(testId)
+        testId = this.manager.normaliseTestId(testId)
+        return this.manager.getOrCreateTestItem(testId)
       }
       if (data.startsWith('PASSED:')) {
         log.debug(`Received test status - PASSED`, data)
@@ -217,7 +215,7 @@ export abstract class TestRunner implements vscode.Disposable {
       this.rootLog,
       token,
       request,
-      this.testSuite.controller
+      this.manager.controller
     );
 
     try {
@@ -228,19 +226,19 @@ export abstract class TestRunner implements vscode.Disposable {
 
       let command: string
       if (context.request.profile?.label === 'ResolveTests') {
-        command = this.testSuite.config.getResolveTestsCommand(testsToRun)
+        command = this.manager.config.getResolveTestsCommand(testsToRun)
         let testsRun = await this.runTestFramework(command, context)
-        this.testSuite.removeMissingTests(testsRun, testsToRun)
+        this.manager.removeMissingTests(testsRun, testsToRun)
       } else if (!testsToRun) {
         log.debug("Running all tests")
-        this.testSuite.controller.items.forEach((item) => {
+        this.manager.controller.items.forEach((item) => {
           // Mark selected tests as started
           this.enqueTestAndChildren(item, context)
         })
-        command = this.testSuite.config.getFullTestSuiteCommand(context.debuggerConfig)
+        command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
       } else {
         log.debug("Running selected tests")
-        command = this.testSuite.config.getFullTestSuiteCommand(context.debuggerConfig)
+        command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
         for (const node of testsToRun) {
           log.trace("Adding test to command", node.id)
           // Mark selected tests as started
@@ -319,7 +317,7 @@ export abstract class TestRunner implements vscode.Disposable {
     let parsedTests: vscode.TestItem[] = []
     if (tests && tests.length > 0) {
       tests.forEach((test: ParsedTest) => {
-        test.id = this.testSuite.normaliseTestId(test.id)
+        test.id = this.manager.normaliseTestId(test.id)
 
         // RSpec provides test ids like "file_name.rb[1:2:3]".
         // This uses the digits at the end of the id to create
@@ -327,7 +325,7 @@ export abstract class TestRunner implements vscode.Disposable {
         // test in the file.
         let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
         let testNumber = test_location_array[test_location_array.length - 1];
-        test.file_path = this.testSuite.normaliseTestId(test.file_path).replace(/\[.*/, '')
+        test.file_path = this.manager.normaliseTestId(test.file_path).replace(/\[.*/, '')
         let currentFileLabel = test.file_path.split(path.sep).slice(-1)[0]
         let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
         // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
@@ -348,7 +346,7 @@ export abstract class TestRunner implements vscode.Disposable {
         let test_location_string: string = test_location_array.join('');
         test.location = parseInt(test_location_string);
 
-        let newTestItem = this.testSuite.getOrCreateTestItem(test.id)
+        let newTestItem = this.manager.getOrCreateTestItem(test.id)
         newTestItem.canResolveChildren = !test.id.endsWith(']')
         log.trace(`canResolveChildren (${test.id}): ${newTestItem.canResolveChildren}`)
         log.trace(`Setting test ${newTestItem.id} label to "${description}"`)
@@ -418,7 +416,7 @@ export abstract class TestRunner implements vscode.Disposable {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
-      env: this.testSuite.config.getProcessEnv()
+      env: this.manager.config.getProcessEnv()
     };
 
     this.log.debug(`Running command: ${testCommand}`);

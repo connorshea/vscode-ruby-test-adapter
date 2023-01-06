@@ -5,7 +5,7 @@ import * as vscode from 'vscode'
 import * as path from 'path'
 
 import { Config } from "../../../src/config";
-import { TestSuite } from "../../../src/testSuite";
+import { TestSuiteManager } from "../../testSuiteManager";
 import { TestRunner } from "../../../src/testRunner";
 import { RspecTestRunner } from "../../../src/rspec/rspecTestRunner";
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
@@ -16,7 +16,7 @@ import { StubTestController } from '../../stubs/stubTestController';
 const log = logger("off")
 
 suite('TestRunner', function () {
-  let testSuite: TestSuite
+  let manager: TestSuiteManager
   let testController: vscode.TestController
   let testRunner: TestRunner
 
@@ -32,8 +32,8 @@ suite('TestRunner', function () {
 
       beforeEach(function () {
         testController = new StubTestController(log)
-        testSuite = new TestSuite(log, testController, instance(config))
-        testRunner = new RspecTestRunner(log, testSuite)
+        manager = new TestSuiteManager(log, testController, instance(config))
+        testRunner = new RspecTestRunner(log, manager)
       })
 
       const expectedTests: TestItemExpectation[] = [
@@ -121,8 +121,8 @@ suite('TestRunner', function () {
 
       beforeEach(function () {
         testController = new StubTestController(log)
-        testSuite = new TestSuite(log, testController, instance(config))
-        testRunner = new MinitestTestRunner(log, testSuite)
+        manager = new TestSuiteManager(log, testController, instance(config))
+        testRunner = new MinitestTestRunner(log, manager)
       })
 
       const expectedTests: TestItemExpectation[] = [

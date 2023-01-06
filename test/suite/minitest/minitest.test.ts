@@ -5,7 +5,7 @@ import { expect } from 'chai';
 import { before, beforeEach } from 'mocha';
 
 import { TestLoader } from '../../../src/testLoader';
-import { TestSuite } from '../../../src/testSuite';
+import { TestSuiteManager } from '../../testSuiteManager';
 import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
@@ -19,7 +19,7 @@ suite('Extension Test for Minitest', function() {
   let config: MinitestConfig
   let testRunner: MinitestTestRunner;
   let testLoader: TestLoader;
-  let testSuite: TestSuite;
+  let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
 
   //const logger = NOOP_LOGGER;
@@ -78,9 +78,9 @@ suite('Extension Test for Minitest', function() {
   suite('dry run', function() {
     beforeEach(function () {
       testController = new StubTestController(log)
-      testSuite = new TestSuite(log, testController, config)
-      testRunner = new MinitestTestRunner(log, testSuite, workspaceFolder)
-      testLoader = new TestLoader(log, resolveTestsProfile, testSuite);
+      manager = new TestSuiteManager(log, testController, config)
+      testRunner = new MinitestTestRunner(log, manager, workspaceFolder)
+      testLoader = new TestLoader(log, resolveTestsProfile, manager);
     })
 
     test('Load tests on file resolve request', async function () {
@@ -162,9 +162,9 @@ suite('Extension Test for Minitest', function() {
     test('Load all tests', async function () {
       await testLoader.discoverAllFilesInWorkspace()
 
-      const testSuite = testController.items
+      const manager = testController.items
 
-      testItemCollectionMatches(testSuite,
+      testItemCollectionMatches(manager,
         [
           {
             file: expectedPath("abs_test.rb"),
@@ -205,9 +205,9 @@ suite('Extension Test for Minitest', function() {
 
     before(async function() {
       testController = new StubTestController(log)
-      testSuite = new TestSuite(log, testController, config)
-      testRunner = new MinitestTestRunner(log, testSuite, workspaceFolder)
-      testLoader = new TestLoader(log, resolveTestsProfile, testSuite);
+      manager = new TestSuiteManager(log, testController, config)
+      testRunner = new MinitestTestRunner(log, manager, workspaceFolder)
+      testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader.discoverAllFilesInWorkspace()
     })
 
@@ -215,7 +215,7 @@ suite('Extension Test for Minitest', function() {
       let mockTestRun: vscode.TestRun
 
       test('when running full suite', async function() {
-        let mockRequest = setupMockRequest(testSuite)
+        let mockRequest = setupMockRequest(manager)
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
@@ -229,7 +229,7 @@ suite('Extension Test for Minitest', function() {
       })
 
       test('when running all top-level items', async function() {
-        let mockRequest = setupMockRequest(testSuite, ["abs_test.rb", "square"])
+        let mockRequest = setupMockRequest(manager, ["abs_test.rb", "square"])
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
@@ -243,7 +243,7 @@ suite('Extension Test for Minitest', function() {
       })
 
       test('when running all files', async function() {
-        let mockRequest = setupMockRequest(testSuite, ["abs_test.rb", "square/square_test.rb"])
+        let mockRequest = setupMockRequest(manager, ["abs_test.rb", "square/square_test.rb"])
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
@@ -291,7 +291,7 @@ suite('Extension Test for Minitest', function() {
       ]
       for(const {status, expectedTest, failureExpectation} of params) {
         test(`id: ${expectedTest.id}, status: ${status}`, async function() {
-          let mockRequest = setupMockRequest(testSuite, expectedTest.id)
+          let mockRequest = setupMockRequest(manager, expectedTest.id)
           let request = instance(mockRequest)
           await testRunner.runHandler(request, cancellationTokenSource.token)
           let mockTestRun = (testController as StubTestController).getMockTestRun(request)!

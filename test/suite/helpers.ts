@@ -6,7 +6,7 @@ import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCa
 
 import { NOOP_LOGGER } from '../stubs/logger';
 import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
-import { TestSuite } from '../../src/testSuite';
+import { TestSuiteManager } from '../testSuiteManager';
 
 
 /**
@@ -147,18 +147,18 @@ export function setupMockTestController(rootLog?: IChildLogger): vscode.TestCont
   return mockTestController
 }
 
-export function setupMockRequest(testSuite: TestSuite, testId?: string | string[]): vscode.TestRunRequest {
+export function setupMockRequest(manager: TestSuiteManager, testId?: string | string[]): vscode.TestRunRequest {
   let mockRequest = mock<vscode.TestRunRequest>()
   if (testId) {
     if (Array.isArray(testId)) {
       let testItems: vscode.TestItem[] = []
       testId.forEach(id => {
-        let testItem = testSuite.getOrCreateTestItem(id)
+        let testItem = manager.getOrCreateTestItem(id)
         testItems.push(testItem)
       })
       when(mockRequest.include).thenReturn(testItems)
     } else {
-      let testItem = testSuite.getOrCreateTestItem(testId as string)
+      let testItem = manager.getOrCreateTestItem(testId as string)
       when(mockRequest.include).thenReturn([testItem])
     }
   } else {

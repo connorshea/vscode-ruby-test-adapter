@@ -5,7 +5,7 @@ import * as vscode from 'vscode'
 import path from 'path'
 
 import { Config } from '../../../src/config';
-import { TestSuite } from '../../../src/testSuite';
+import { TestSuiteManager } from '../../testSuiteManager';
 import { StubTestController } from '../../stubs/stubTestController';
 import { NOOP_LOGGER } from '../../stubs/logger';
 import { testUriMatches } from '../helpers';
@@ -14,7 +14,7 @@ suite('TestSuite', function () {
   let mockConfig: Config = mock<Config>();
   const config: Config = instance(mockConfig)
   let controller: vscode.TestController;
-  let testSuite: TestSuite;
+  let manager: TestSuiteManager;
 
   before(function () {
     let relativeTestPath = 'path/to/spec'
@@ -24,7 +24,7 @@ suite('TestSuite', function () {
 
   beforeEach(function () {
     controller = new StubTestController(NOOP_LOGGER)
-    testSuite = new TestSuite(NOOP_LOGGER, controller, instance(mockConfig))
+    manager = new TestSuiteManager(NOOP_LOGGER, controller, instance(mockConfig))
   });
 
   suite('#normaliseTestId()', function () {
@@ -43,7 +43,7 @@ suite('TestSuite', function () {
 
     parameters.forEach(({ arg, expected }) => {
       test(`correctly normalises ${arg} to ${expected}`, function () {
-        expect(testSuite.normaliseTestId(arg)).to.eq(expected);
+        expect(manager.normaliseTestId(arg)).to.eq(expected);
       });
     });
   });
@@ -61,7 +61,7 @@ suite('TestSuite', function () {
       controller.items.add(secondTestItem)
       expect(controller.items.size).to.eq(2)
 
-      testSuite.deleteTestItem(id)
+      manager.deleteTestItem(id)
 
       expect(controller.items.size).to.eq(1)
       expect(controller.items.get('test-id-2')).to.eq(secondTestItem)
@@ -70,7 +70,7 @@ suite('TestSuite', function () {
     test('does nothing if ID not found', function () {
       expect(controller.items.size).to.eq(1)
 
-      testSuite.deleteTestItem('test-id-2')
+      manager.deleteTestItem('test-id-2')
 
       expect(controller.items.size).to.eq(1)
     })
@@ -97,23 +97,23 @@ suite('TestSuite', function () {
     })
 
     test('gets the specified test if ID is found', function () {
-      expect(testSuite.getTestItem(id)).to.eq(testItem)
+      expect(manager.getTestItem(id)).to.eq(testItem)
     })
 
     test('returns undefined if ID is not found', function () {
-      expect(testSuite.getTestItem('not-found')).to.be.undefined
+      expect(manager.getTestItem('not-found')).to.be.undefined
     })
 
     test('gets the specified nested test if ID is found', function () {
-      expect(testSuite.getTestItem(childId)).to.eq(childItem)
+      expect(manager.getTestItem(childId)).to.eq(childItem)
     })
 
     test('returns undefined if nested ID is not found', function () {
-      expect(testSuite.getTestItem('folder/not-found')).to.be.undefined
+      expect(manager.getTestItem('folder/not-found')).to.be.undefined
     })
 
     test('returns undefined if parent of nested ID is not found', function () {
-      expect(testSuite.getTestItem('not-found/child-test')).to.be.undefined
+      expect(manager.getTestItem('not-found/child-test')).to.be.undefined
     })
   })
 
@@ -131,11 +131,11 @@ suite('TestSuite', function () {
 
     test('gets the specified item if ID is found', function () {
       controller.items.add(testItem)
-      expect(testSuite.getOrCreateTestItem(id)).to.eq(testItem)
+      expect(manager.getOrCreateTestItem(id)).to.eq(testItem)
     })
 
     test('creates item if ID is not found', function () {
-      let testItem = testSuite.getOrCreateTestItem('not-found')
+      let testItem = manager.getOrCreateTestItem('not-found')
       expect(testItem).to.not.be.undefined
       expect(testItem?.id).to.eq('not-found')
       testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), 'not-found'))
@@ -147,7 +147,7 @@ suite('TestSuite', function () {
       folderItem.children.add(childItem)
       controller.items.add(folderItem)
 
-      expect(testSuite.getOrCreateTestItem(childId)).to.eq(childItem)
+      expect(manager.getOrCreateTestItem(childId)).to.eq(childItem)
     })
 
     test('creates item if nested ID is not found', function () {
@@ -155,7 +155,7 @@ suite('TestSuite', function () {
       let folderItem = controller.createTestItem('folder', 'folder')
       controller.items.add(folderItem)
 
-      let testItem = testSuite.getOrCreateTestItem(id)
+      let testItem = manager.getOrCreateTestItem(id)
       expect(testItem).to.not.be.undefined
       expect(testItem?.id).to.eq(id)
       testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
@@ -163,11 +163,11 @@ suite('TestSuite', function () {
 
     test('creates item and parent if parent of nested file is not found', function () {
       let id = `folder${path.sep}not-found`
-      let testItem = testSuite.getOrCreateTestItem(id)
+      let testItem = manager.getOrCreateTestItem(id)
       expect(testItem).to.not.be.undefined
       expect(testItem?.id).to.eq(id)
 
-      let folder = testSuite.getOrCreateTestItem('folder')
+      let folder = manager.getOrCreateTestItem('folder')
       expect(folder?.children.size).to.eq(1)
       expect(folder?.children.get(id)).to.eq(testItem)
       testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
@@ -182,12 +182,12 @@ suite('TestSuite', function () {
       ]) {
         test(suite, function() {
           let id = `${fileId}${location}`
-          let testItem = testSuite.getOrCreateTestItem(id)
+          let testItem = manager.getOrCreateTestItem(id)
           expect(testItem.id).to.eq(id)
           expect(testItem.parent?.id).to.eq(fileId)
 
-          let folderItem = testSuite.getTestItem('folder')
-          let fileItem = testSuite.getTestItem(fileId)
+          let folderItem = manager.getTestItem('folder')
+          let fileItem = manager.getTestItem(fileId)
           expect(folderItem?.children.size).to.eq(1)
           expect(fileItem?.children.size).to.eq(1)
           testUriMatches(folderItem!, path.resolve(config.getAbsoluteTestDirectory(), 'folder'))
