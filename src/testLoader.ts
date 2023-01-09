@@ -22,13 +22,18 @@ export class TestLoader implements vscode.Disposable {
   ) {
     this.log = rootLog.getChildLogger({ label: 'TestLoader' });
     this.resolveQueue = new LoaderQueue(rootLog, async (testItems?: vscode.TestItem[]) => await this.loadTests(testItems))
+    this.disposables.push(this.cancellationTokenSource)
     this.disposables.push(this.resolveQueue)
     this.disposables.push(this.configWatcher());
   }
 
   dispose(): void {
     for (const disposable of this.disposables) {
-      disposable.dispose();
+      try {
+        disposable.dispose();
+      } catch (err) {
+        this.log.error("Error disposing object", disposable, err)
+      }
     }
     this.disposables = [];
   }
@@ -42,6 +47,7 @@ export class TestLoader implements vscode.Disposable {
    */
   createFileWatcher(pattern: vscode.GlobPattern): vscode.FileSystemWatcher {
     const watcher = vscode.workspace.createFileSystemWatcher(pattern);
+    this.disposables.push(watcher)
 
     // When files are created, make sure there's a corresponding "file" node in the test item tree
     watcher.onDidCreate(uri => {
@@ -98,7 +104,6 @@ export class TestLoader implements vscode.Disposable {
 
       // TODO - skip if filewatcher for this pattern exists and dispose filewatchers for patterns no longer in config
       let fileWatcher = this.createFileWatcher(pattern)
-      this.disposables.push(fileWatcher)
       return fileWatcher
     }))
     await Promise.all(resolveFilesPromises)

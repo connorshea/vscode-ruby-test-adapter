@@ -48,7 +48,11 @@ export abstract class TestRunner implements vscode.Disposable {
   public dispose() {
     this.killChild();
     for (const disposable of this.disposables) {
-      disposable.dispose();
+      try {
+        disposable.dispose();
+      } catch (err) {
+        this.log.error('Error disposing object', err)
+      }
     }
     this.disposables = [];
   }
@@ -193,36 +197,6 @@ export abstract class TestRunner implements vscode.Disposable {
   ) {
     let log = this.log.getChildLogger({ label: 'runHandler' })
 
-    if (debuggerConfig) {
-      log.debug('Debugging tests', request.include?.map(x => x.id));
-
-      if (this.workspace) {
-        log.error('Cannot debug without a folder opened')
-        return
-      }
-
-      this.log.info('Starting the debug session');
-      let debugSession: any;
-      try {
-        await this.debugCommandStarted()
-        debugSession = await this.startDebugging(debuggerConfig);
-      } catch (err) {
-        log.error('Failed starting the debug session - aborting', err);
-        this.killChild();
-        return;
-      }
-
-      const subscription = this.onDidTerminateDebugSession((session) => {
-        if (debugSession != session) return;
-        log.info('Debug session ended');
-        this.killChild(); // terminate the test run
-        subscription.dispose();
-      });
-    }
-    else {
-      log.debug('Running test', request.include?.map(x => x.id));
-    }
-
     // Loop through all included tests, or all known tests, and add them to our queue
     log.debug('Number of tests in request', request.include?.length || 0);
     let context = new TestRunContext(
@@ -268,7 +242,14 @@ export abstract class TestRunner implements vscode.Disposable {
           log.trace("Current command", command)
         }
       }
-      await this.runTestFramework(command, context)
+      if (debuggerConfig) {
+        log.debug('Debugging tests', request.include?.map(x => x.id));
+        await Promise.all([this.startDebugSession(debuggerConfig), this.runTestFramework(command, context)])
+      }
+      else {
+        log.debug('Running test', request.include?.map(x => x.id));
+        await this.runTestFramework(command, context)
+      }
     }
     catch (err) {
       log.error("Error running tests", err)
@@ -283,41 +264,55 @@ export abstract class TestRunner implements vscode.Disposable {
     }
   }
 
-  private async startDebugging(debuggerConfig: vscode.DebugConfiguration): Promise<vscode.DebugSession> {
-    const debugSessionPromise = new Promise<vscode.DebugSession>((resolve, reject) => {
+  private async startDebugSession(debuggerConfig: vscode.DebugConfiguration): Promise<void> {
+    let log = this.log.getChildLogger({label: 'startDebugSession'})
 
-      let subscription: vscode.Disposable | undefined;
-      subscription = vscode.debug.onDidStartDebugSession(debugSession => {
-        if ((debugSession.name === debuggerConfig.name) && subscription) {
-          resolve(debugSession);
-          subscription.dispose();
-          subscription = undefined;
-        }
-      });
-
-      setTimeout(() => {
-        if (subscription) {
-          reject(new Error('Debug session failed to start within 5 seconds'));
-          subscription.dispose();
-          subscription = undefined;
-        }
-      }, 5000);
-    });
-
-    if (!this.workspace) {
-      throw new Error("Cannot debug without a folder open")
+    if (this.workspace) {
+      log.error('Cannot debug without a folder opened')
+      return
     }
 
-    const started = await vscode.debug.startDebugging(this.workspace, debuggerConfig);
-    if (started) {
-      return await debugSessionPromise;
-    } else {
-      throw new Error('Debug session couldn\'t be started');
-    }
-  }
+    this.log.info('Starting the debug session');
 
-  private onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
-    return vscode.debug.onDidTerminateDebugSession(cb);
+    const debugCommandStartedPromise = new Promise<void>((resolve, _) => {
+      this.debugCommandStartedResolver = resolve
+    })
+    try {
+      let activeDebugSession: vscode.DebugSession
+      const debugStartSessionSubscription = vscode.debug.onDidStartDebugSession(debugSession => {
+        if (debugSession.name === debuggerConfig.name) {
+          log.info('Debug session started', debugSession.name);
+          activeDebugSession = debugSession
+        }
+      })
+      try {
+        await Promise.race(
+          [
+            // Wait for either timeout or for the child process to notify us that it has started
+            debugCommandStartedPromise,
+            new Promise<void>((_, reject) => setTimeout(() => reject(new Error('Debug session failed to start within 5 seconds')), 5000))
+          ]
+        )
+      } finally {
+        debugStartSessionSubscription.dispose()
+      }
+
+      const debugSessionStarted = await vscode.debug.startDebugging(this.workspace, debuggerConfig);
+      if (!debugSessionStarted) {
+        throw new Error('Debug session failed to start')
+      }
+
+      const debugStopSubscription = vscode.debug.onDidTerminateDebugSession(session => {
+        if (session === activeDebugSession) {
+          log.info('Debug session ended', session.name);
+          this.killChild(); // terminate the test run
+          debugStopSubscription.dispose();
+        }
+      })
+    } catch (err) {
+      log.error('Error starting debug session', err)
+      this.killChild()
+    }
   }
 
   public parseAndHandleTestOutput(testOutput: string, context?: TestRunContext): vscode.TestItem[] {
@@ -390,13 +385,6 @@ export abstract class TestRunner implements vscode.Disposable {
     return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
   }
 
-  public async debugCommandStarted(): Promise<string> {
-    return new Promise<string>(async (resolve, reject) => {
-      this.debugCommandStartedResolver = resolve;
-      setTimeout(() => { reject("debugCommandStarted timed out") }, 10000)
-    })
-  }
-
   /**
    * Mark a test node and all its children as being queued for execution
    */
@@ -420,11 +408,15 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context for the cancellation token
    * @returns Raw output from process
    */
-  protected async runTestFramework (testCommand: string, context: TestRunContext): Promise<vscode.TestItem[]> {
-    context.token.onCancellationRequested(() => {
-      this.log.debug('Cancellation requested')
-      this.killChild()
-    })
+  private async runTestFramework (testCommand: string, context: TestRunContext): Promise<vscode.TestItem[]> {
+    context.token.onCancellationRequested(
+      () => {
+        this.log.debug('Cancellation requested')
+        this.killChild()
+      },
+      this,
+      this.disposables
+    )
 
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,

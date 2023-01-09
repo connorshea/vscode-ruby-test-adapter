@@ -32,11 +32,13 @@ export const guessWorkspaceFolder = async (rootLog: IChildLogger) => {
 export async function activate(context: vscode.ExtensionContext) {
   let extensionConfig = vscode.workspace.getConfiguration('rubyTestExplorer', null)
 
+  let logOutputChannel = vscode.window.createOutputChannel("Ruby Test Explorer log")
+  context.subscriptions.push(logOutputChannel)
   const log = getExtensionLogger({
     extName: "RubyTestExplorer",
     level: "debug", // See LogLevel type in @vscode-logging/types for possible logLevels
     logPath: context.logUri.fsPath, // The logPath is only available from the `vscode.ExtensionContext`
-    logOutputChannel: vscode.window.createOutputChannel("Ruby Test Explorer log"), // OutputChannel for the logger
+    logOutputChannel: logOutputChannel, // OutputChannel for the logger
     sourceLocationTracking: false,
     logConsole: (extensionConfig.get('logPanel') as boolean) // define if messages should be logged to the consol
   });
@@ -64,12 +66,12 @@ export async function activate(context: vscode.ExtensionContext) {
     const controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
 
     // TODO: (?) Add a "Profile" profile for profiling tests
-    let profiles: { runProfile: vscode.TestRunProfile, resolveTestsProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile } = {
+    const profiles: { runProfile: vscode.TestRunProfile, resolveTestsProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile } = {
       // Default run profile for running tests
       runProfile: controller.createRunProfile(
         'Run',
         vscode.TestRunProfileKind.Run,
-        (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
+        (request, token) => factory.getRunner().runHandler(request, token),
         true // Default run profile
       ),
 
@@ -77,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
       resolveTestsProfile: controller.createRunProfile(
         'ResolveTests',
         vscode.TestRunProfileKind.Run,
-        (request, token) => testLoaderFactory.getRunner().runHandler(request, token),
+        (request, token) => factory.getRunner().runHandler(request, token),
         false
       ),
 
@@ -85,23 +87,29 @@ export async function activate(context: vscode.ExtensionContext) {
       debugProfile: controller.createRunProfile(
         'Debug',
         vscode.TestRunProfileKind.Debug,
-        (request, token) => testLoaderFactory.getRunner().runHandler(request, token, debuggerConfig),
+        (request, token) => factory.getRunner().runHandler(request, token, debuggerConfig),
         true
       ),
     }
 
-    const testLoaderFactory = new TestFactory(log, controller, testConfig, profiles, workspace);
-    context.subscriptions.push(controller);
+    const factory = new TestFactory(log, controller, testConfig, profiles, workspace);
 
-    testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
+    // Ensure disposables are registered with VSC to be disposed of when the extension is deactivated
+    context.subscriptions.push(controller);
+    context.subscriptions.push(profiles.runProfile);
+    context.subscriptions.push(profiles.debugProfile);
+    context.subscriptions.push(profiles.resolveTestsProfile);
+    context.subscriptions.push(factory);
+
+    factory.getLoader().discoverAllFilesInWorkspace();
 
     controller.resolveHandler = async test => {
       log.debug('resolveHandler called', test)
       if (!test) {
-        await testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
+        await factory.getLoader().discoverAllFilesInWorkspace();
       } else if (test.id.endsWith(".rb")) {
         // Only parse files
-        await testLoaderFactory.getLoader().loadTestItem(test);
+        await factory.getLoader().loadTestItem(test);
       }
     };
   }

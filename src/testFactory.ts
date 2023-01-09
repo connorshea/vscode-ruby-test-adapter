@@ -8,7 +8,13 @@ import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
 import { TestSuiteManager } from './testSuiteManager';
 
+/**
+ * Factory for (re)creating {@link TestRunner} and {@link TestLoader} instances
+ *
+ * Also takes care of disposing them when required
+ */
 export class TestFactory implements vscode.Disposable {
+  private isDisposed = false;
   private loader: TestLoader | null = null;
   private runner: RspecTestRunner | MinitestTestRunner | null = null;
   protected disposables: { dispose(): void }[] = [];
@@ -28,13 +34,29 @@ export class TestFactory implements vscode.Disposable {
   }
 
   dispose(): void {
+    this.isDisposed = true
     for (const disposable of this.disposables) {
-      disposable.dispose();
+      try {
+        this.log.debug('Disposing object', disposable)
+        disposable.dispose();
+      } catch (error) {
+        this.log.error('Error when disposing object', disposable, error)
+      }
     }
     this.disposables = [];
   }
 
+  /**
+   * Returns the current {@link RspecTestRunner} or {@link MinitestTestRunner} instance
+   *
+   * If one does not exist, a new instance is created according to the current configured test framework,
+   * which is then returned
+   *
+   * @returns Either {@link RspecTestRunner} or {@link MinitestTestRunner}
+   * @throws if this factory has been disposed
+   */
   public getRunner(): RspecTestRunner | MinitestTestRunner {
+    this.checkIfDisposed()
     if (!this.runner) {
       this.runner = this.framework == "rspec"
         ? new RspecTestRunner(
@@ -52,7 +74,16 @@ export class TestFactory implements vscode.Disposable {
     return this.runner
   }
 
+  /**
+   * Returns the current {@link TestLoader} instance
+   *
+   * If one does not exist, a new instance is created which is then returned
+   *
+   * @returns {@link TestLoader}
+   * @throws if this factory has been disposed
+   */
   public getLoader(): TestLoader {
+    this.checkIfDisposed()
     if (!this.loader) {
       this.loader = new TestLoader(
         this.log,
@@ -64,10 +95,28 @@ export class TestFactory implements vscode.Disposable {
     return this.loader
   }
 
+  /**
+   * Helper method to check the current value of the isDisposed flag and to throw an error
+   * if it is set, to prevent objects being created after {@link dispose()} has been called
+   */
+  private checkIfDisposed(): void {
+    if (this.isDisposed) {
+      throw new Error("Factory has been disposed")
+    }
+  }
+
+  /**
+   * Registers a listener with VSC to be notified if the configuration is changed to use a different test framework.
+   *
+   * If an event is received, we dispose the current loader, runner and config so that they can be recreated
+   * for the new framework
+   *
+   * @returns A {@link Disposable} that is used to unregister the config watcher from receiving events
+   */
   private configWatcher(): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
-      if (configChange.affectsConfiguration("rubyTestExplorer")) {
+      if (configChange.affectsConfiguration("rubyTestExplorer.testFramework")) {
         let newFramework = Config.getTestFramework(this.log);
         if (newFramework !== this.framework) {
           // Config has changed to a different framework - recreate test loader and runner
@@ -87,6 +136,11 @@ export class TestFactory implements vscode.Disposable {
     })
   }
 
+  /**
+   * Helper method to dispose of an object and remove it from the list of disposables
+   *
+   * @param instance the object to be disposed
+   */
   private disposeInstance(instance: vscode.Disposable) {
     let index = this.disposables.indexOf(instance);
     if (index !== -1) {
