@@ -22,7 +22,6 @@ suite('Extension Test for Minitest', function() {
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
 
-  //const logger = NOOP_LOGGER;
   const log = logger("info");
 
   let expectedPath = (file: string): string => {
@@ -90,7 +89,8 @@ suite('Extension Test for Minitest', function() {
         item.canResolveChildren = true
         return item
       }
-      testController.items.add(createTest("abs_test.rb"))
+      let absTestItem = createTest("abs_test.rb")
+      testController.items.add(absTestItem)
       let subfolderItem = createTest("square")
       testController.items.add(subfolderItem)
       subfolderItem.children.add(createTest("square/square_test.rb", "square_test.rb"))
@@ -124,7 +124,7 @@ suite('Extension Test for Minitest', function() {
       )
 
       // Resolve a file (e.g. by clicking on it in the test explorer)
-      await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_test.rb")))
+      await testLoader.loadTestItem(absTestItem)
 
       // Tests in that file have now been added to suite
       testItemCollectionMatches(testController.items,

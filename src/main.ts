@@ -101,7 +101,7 @@ export async function activate(context: vscode.ExtensionContext) {
         await testLoaderFactory.getLoader().discoverAllFilesInWorkspace();
       } else if (test.id.endsWith(".rb")) {
         // Only parse files
-        await testLoaderFactory.getLoader().parseTestsInFile(test);
+        await testLoaderFactory.getLoader().loadTestItem(test);
       }
     };
   }

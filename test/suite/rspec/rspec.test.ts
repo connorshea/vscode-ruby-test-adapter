@@ -86,7 +86,8 @@ suite('Extension Test for RSpec', function() {
       // Populate controller with test files. This would be done by the filesystem globs in the watchers
       let createTest = (id: string, label?: string) =>
       testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
-      testController.items.add(createTest("abs_spec.rb"))
+      let absSpecItem = createTest("abs_spec.rb")
+      testController.items.add(absSpecItem)
       let subfolderItem = createTest("square")
       testController.items.add(subfolderItem)
       subfolderItem.children.add(createTest("square/square_spec.rb", "square_spec.rb"))
@@ -117,7 +118,7 @@ suite('Extension Test for RSpec', function() {
       )
 
       // Resolve a file (e.g. by clicking on it in the test explorer)
-      await testLoader.parseTestsInFile(vscode.Uri.file(expectedPath("abs_spec.rb")))
+      await testLoader.loadTestItem(absSpecItem)
 
       // Tests in that file have now been added to suite
       testItemCollectionMatches(testController.items,
