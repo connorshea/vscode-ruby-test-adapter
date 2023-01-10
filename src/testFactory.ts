@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
 import { IVSCodeExtLogger } from "@vscode-logging/logger";
-import { RspecTestRunner } from './rspec/rspecTestRunner';
-import { MinitestTestRunner } from './minitest/minitestTestRunner';
 import { Config } from './config';
 import { TestLoader } from './testLoader';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
 import { TestSuiteManager } from './testSuiteManager';
+import { TestRunner } from './testRunner';
 
 /**
  * Factory for (re)creating {@link TestRunner} and {@link TestLoader} instances
@@ -16,7 +15,7 @@ import { TestSuiteManager } from './testSuiteManager';
 export class TestFactory implements vscode.Disposable {
   private isDisposed = false;
   private loader: TestLoader | null = null;
-  private runner: RspecTestRunner | MinitestTestRunner | null = null;
+  private runner: TestRunner | null = null;
   protected disposables: { dispose(): void }[] = [];
   protected framework: string;
   private manager: TestSuiteManager
@@ -47,28 +46,23 @@ export class TestFactory implements vscode.Disposable {
   }
 
   /**
-   * Returns the current {@link RspecTestRunner} or {@link MinitestTestRunner} instance
+   * Returns the current {@link TestRunner} instance
    *
    * If one does not exist, a new instance is created according to the current configured test framework,
    * which is then returned
    *
-   * @returns Either {@link RspecTestRunner} or {@link MinitestTestRunner}
+   * @returns The current {@link TestRunner} instance
    * @throws if this factory has been disposed
    */
-  public getRunner(): RspecTestRunner | MinitestTestRunner {
+  public getRunner(): TestRunner {
     this.checkIfDisposed()
     if (!this.runner) {
-      this.runner = this.framework == "rspec"
-        ? new RspecTestRunner(
-            this.log,
-            this.manager,
-            this.workspace,
-          )
-        : new MinitestTestRunner(
-            this.log,
-            this.manager,
-            this.workspace,
-          )
+      this.runner = new TestRunner(
+        this.log,
+        this.manager,
+        this.framework == "minitest",
+        this.workspace,
+      )
       this.disposables.push(this.runner);
     }
     return this.runner

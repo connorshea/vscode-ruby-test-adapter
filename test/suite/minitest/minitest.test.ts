@@ -6,7 +6,7 @@ import { before, beforeEach } from 'mocha';
 
 import { TestLoader } from '../../../src/testLoader';
 import { TestSuiteManager } from '../../../src/testSuiteManager';
-import { MinitestTestRunner } from '../../../src/minitest/minitestTestRunner';
+import { TestRunner } from '../../../src/testRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
 import { setupMockRequest, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
@@ -17,7 +17,7 @@ suite('Extension Test for Minitest', function() {
   let testController: vscode.TestController
   let workspaceFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders![0]
   let config: MinitestConfig
-  let testRunner: MinitestTestRunner;
+  let testRunner: TestRunner;
   let testLoader: TestLoader;
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
@@ -78,7 +78,7 @@ suite('Extension Test for Minitest', function() {
     beforeEach(function () {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new MinitestTestRunner(log, manager, workspaceFolder)
+      testRunner = new TestRunner(log, manager, true, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
     })
 
@@ -206,7 +206,7 @@ suite('Extension Test for Minitest', function() {
     before(async function() {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new MinitestTestRunner(log, manager, workspaceFolder)
+      testRunner = new TestRunner(log, manager, true, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader.discoverAllFilesInWorkspace()
     })

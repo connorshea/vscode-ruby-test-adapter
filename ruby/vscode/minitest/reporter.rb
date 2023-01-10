@@ -57,7 +57,8 @@ module VSCode
             pending_count: skips,
             errors_outside_of_examples_count: errors
           },
-          summary_line: "Total time: #{total_time}, Runs: #{count}, Assertions: #{assertions}, Failures: #{failures}, Errors: #{errors}, Skips: #{skips}",
+          summary_line: "Total time: #{total_time}, Runs: #{count}, Assertions: #{assertions}, " \
+                        "Failures: #{failures}, Errors: #{errors}, Skips: #{skips}",
           examples: results.map { |r| vscode_result(r) }
         }
       end
@@ -65,14 +66,14 @@ module VSCode
       def vscode_result(r)
         base = VSCode::Minitest.tests.find_by(klass: r.klass, method: r.name).dup
         if r.skipped?
-          base[:status] = "failed"
+          base[:status] = 'skipped'
           base[:pending_message] = r.failure.message
         elsif r.passed?
-          base[:status] = "passed"
+          base[:status] = 'passed'
         else
-          base[:status] = "failed"
-          base[:pending_message] = nil
           e = r.failure.exception
+          base[:status] = e.class.instance_of?('Minitest::UnexpectedError') ? 'errored' : 'failed'
+          base[:pending_message] = nil
           backtrace = expand_backtrace(e.backtrace)
           base[:exception] = {
             class: e.class.name,
@@ -82,6 +83,7 @@ module VSCode
             position: exception_position(backtrace, base[:full_path]) || base[:line_number]
           }
         end
+        base[:duration] = r.time
         base
       end
 

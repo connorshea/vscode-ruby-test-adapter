@@ -6,7 +6,7 @@ import { expect } from 'chai';
 
 import { TestLoader } from '../../../src/testLoader';
 import { TestSuiteManager } from '../../../src/testSuiteManager';
-import { RspecTestRunner } from '../../../src/rspec/rspecTestRunner';
+import { TestRunner } from '../../../src/testRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
 import { setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors, verifyFailure, TestItemExpectation, TestFailureExpectation } from '../helpers';
@@ -17,7 +17,7 @@ suite('Extension Test for RSpec', function() {
   let testController: vscode.TestController
   let workspaceFolder: vscode.WorkspaceFolder = vscode.workspace.workspaceFolders![0]
   let config: RspecConfig
-  let testRunner: RspecTestRunner;
+  let testRunner: TestRunner;
   let testLoader: TestLoader;
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
@@ -78,7 +78,7 @@ suite('Extension Test for RSpec', function() {
     beforeEach(function () {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new RspecTestRunner(log, manager, workspaceFolder)
+      testRunner = new TestRunner(log, manager, false, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
     })
 
@@ -198,7 +198,7 @@ suite('Extension Test for RSpec', function() {
     before(async function() {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new RspecTestRunner(log, manager, workspaceFolder)
+      testRunner = new TestRunner(log, manager, false, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader.discoverAllFilesInWorkspace()
     })

@@ -1,34 +1,16 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as childProcess from 'child_process';
-import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
 import { TestSuiteManager } from './testSuiteManager';
+import { FrameworkProcess } from './frameworkProcess';
 
-type ParsedTest = {
-  id: string,
-  full_description: string,
-  description: string,
-  file_path: string,
-  line_number: number,
-  status?: string,
-  pending_message?: string | null,
-  exception?: any,
-  location?: number, // RSpec
-  type?: any // RSpec - presumably tag name/focus?
-  full_path?: string, // Minitest
-  klass?: string, // Minitest
-  method?: string, // Minitest
-  runnable?: string, // Minitest
-}
-
-export abstract class TestRunner implements vscode.Disposable {
-  protected currentChildProcess?: childProcess.ChildProcess;
-  protected debugCommandStartedResolver?: Function;
+export class TestRunner implements vscode.Disposable {
+  protected debugCommandStartedResolver?: () => void;
   protected disposables: { dispose(): void }[] = [];
   protected readonly log: IChildLogger;
+  private readonly testProcessMap: Map<vscode.TestRunProfileKind, FrameworkProcess>
 
   /**
    * @param rootLog The Test Adapter logger, for logging.
@@ -38,15 +20,14 @@ export abstract class TestRunner implements vscode.Disposable {
   constructor(
     readonly rootLog: IChildLogger,
     protected manager: TestSuiteManager,
+    private readonly canNotifyOnStartingTests: boolean,
     protected workspace?: vscode.WorkspaceFolder,
   ) {
     this.log = rootLog.getChildLogger({label: "TestRunner"})
+    this.testProcessMap = new Map<vscode.TestRunProfileKind, FrameworkProcess>()
   }
 
-  abstract canNotifyOnStartingTests: boolean
-
   public dispose() {
-    this.killChild();
     for (const disposable of this.disposables) {
       try {
         disposable.dispose();
@@ -58,31 +39,19 @@ export abstract class TestRunner implements vscode.Disposable {
   }
 
   /**
-   * Kills the current child process if one exists.
+   * Helper method to dispose of an object and remove it from the list of disposables
+   *
+   * @param instance the object to be disposed
    */
-  public killChild(): void {
-    if (this.currentChildProcess) {
-      this.currentChildProcess.kill();
+  private disposeInstance(instance: vscode.Disposable) {
+    let index = this.disposables.indexOf(instance);
+    if (index !== -1) {
+      this.disposables.splice(index)
     }
-  }
-
-  /**
-   * Pull JSON out of the test framework output.
-   *
-   * RSpec and Minitest frequently return bad data even when they're told to
-   * format the output as JSON, e.g. due to code coverage messages and other
-   * injections from gems. This gets the JSON by searching for
-   * `START_OF_TEST_JSON` and an opening curly brace, as well as a closing
-   * curly brace and `END_OF_TEST_JSON`. These are output by the custom
-   * RSpec formatter or Minitest Rake task as part of the final JSON output.
-   *
-   * @param output The output returned by running a command.
-   * @return A string representation of the JSON found in the output.
-   */
-  static getJsonFromOutput(output: string): string {
-    output = output.substring(output.indexOf('START_OF_TEST_JSON{'), output.lastIndexOf('}END_OF_TEST_JSON') + 1);
-    // Get rid of the `START_OF_TEST_JSON` and `END_OF_TEST_JSON` to verify that the JSON is valid.
-    return output.substring(output.indexOf("{"), output.lastIndexOf("}") + 1);
+    else {
+      this.log.debug("Factory instance not null but missing from disposables when configuration changed");
+    }
+    instance.dispose()
   }
 
   /**
@@ -120,69 +89,6 @@ export abstract class TestRunner implements vscode.Disposable {
   // }
 
   /**
-   * Assigns the process to currentChildProcess and handles its output and what happens when it exits.
-   *
-   * @param process A process running the tests.
-   * @return A promise that resolves when the test run completes.
-   */
-  async handleChildProcess(process: childProcess.ChildProcess, context: TestRunContext): Promise<vscode.TestItem[]> {
-    this.currentChildProcess = process;
-    let log = this.log.getChildLogger({ label: `ChildProcess(${this.manager.config.frameworkName()})` })
-
-    process.stderr!.pipe(split2()).on('data', (data) => {
-      data = data.toString();
-      log.trace(data);
-      if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
-        this.debugCommandStartedResolver()
-      }
-    })
-
-    let parsedTests: vscode.TestItem[] = []
-    process.stdout!.pipe(split2()).on('data', (data) => {
-      let getTest = (testId: string): vscode.TestItem => {
-        testId = this.manager.normaliseTestId(testId)
-        return this.manager.getOrCreateTestItem(testId)
-      }
-      if (data.startsWith('PASSED:')) {
-        log.debug(`Received test status - PASSED`, data)
-        context.passed(getTest(data.replace('PASSED: ', '')))
-      } else if (data.startsWith('FAILED:')) {
-        log.debug(`Received test status - FAILED`, data)
-        let testItem = getTest(data.replace('FAILED: ', ''))
-        let line = testItem.range?.start?.line ? testItem.range.start.line + 1 : 0
-        context.failed(testItem, "", testItem.uri?.fsPath || "", line)
-      } else if (data.startsWith('RUNNING:')) {
-        log.debug(`Received test status - RUNNING`, data)
-        context.started(getTest(data.replace('RUNNING: ', '')))
-      } else if (data.startsWith('PENDING:')) {
-        log.debug(`Received test status - PENDING`, data)
-        context.skipped(getTest(data.replace('PENDING: ', '')))
-      } else if (data.includes('START_OF_TEST_JSON')) {
-        log.trace("Received test run results", data);
-        parsedTests = this.parseAndHandleTestOutput(data, context);
-      } else {
-        log.trace("Ignoring unrecognised output", data)
-      }
-    });
-
-    await new Promise<{code:number, signal:string}>((resolve, reject) => {
-      process.once('exit', (code: number, signal: string) => {
-        log.trace('Child process exited', code, signal)
-      });
-      process.once('close', (code: number, signal: string) => {
-        log.debug('Child process exited, and all streams closed', code, signal)
-        resolve({code, signal});
-      });
-      process.once('error', (err: Error) => {
-        log.debug('Error event from child process', err.message)
-        reject(err);
-      });
-    })
-
-    return parsedTests
-  };
-
-  /**
    * Test run handler
    *
    * Called by VSC when a user requests a test run
@@ -215,8 +121,7 @@ export abstract class TestRunner implements vscode.Disposable {
       let command: string
       if (context.request.profile?.label === 'ResolveTests') {
         command = this.manager.config.getResolveTestsCommand(testsToRun)
-        let testsRun = await this.runTestFramework(command, context)
-        this.manager.removeMissingTests(testsRun, testsToRun)
+        await this.runTestFramework(command, context)
       } else if (!testsToRun) {
         log.debug("Running all tests")
         this.manager.controller.items.forEach((item) => {
@@ -244,7 +149,7 @@ export abstract class TestRunner implements vscode.Disposable {
       }
       if (debuggerConfig) {
         log.debug('Debugging tests', request.include?.map(x => x.id));
-        await Promise.all([this.startDebugSession(debuggerConfig), this.runTestFramework(command, context)])
+        await Promise.all([this.startDebugSession(debuggerConfig, context), this.runTestFramework(command, context)])
       }
       else {
         log.debug('Running test', request.include?.map(x => x.id));
@@ -264,7 +169,7 @@ export abstract class TestRunner implements vscode.Disposable {
     }
   }
 
-  private async startDebugSession(debuggerConfig: vscode.DebugConfiguration): Promise<void> {
+  private async startDebugSession(debuggerConfig: vscode.DebugConfiguration, context: TestRunContext): Promise<void> {
     let log = this.log.getChildLogger({label: 'startDebugSession'})
 
     if (this.workspace) {
@@ -275,7 +180,7 @@ export abstract class TestRunner implements vscode.Disposable {
     this.log.info('Starting the debug session');
 
     const debugCommandStartedPromise = new Promise<void>((resolve, _) => {
-      this.debugCommandStartedResolver = resolve
+      this.debugCommandStartedResolver = () => resolve()
     })
     try {
       let activeDebugSession: vscode.DebugSession
@@ -305,84 +210,14 @@ export abstract class TestRunner implements vscode.Disposable {
       const debugStopSubscription = vscode.debug.onDidTerminateDebugSession(session => {
         if (session === activeDebugSession) {
           log.info('Debug session ended', session.name);
-          this.killChild(); // terminate the test run
+          this.killProfileTestRun(context) // terminate the test run
           debugStopSubscription.dispose();
         }
       })
     } catch (err) {
       log.error('Error starting debug session', err)
-      this.killChild()
+      this.killProfileTestRun(context)
     }
-  }
-
-  public parseAndHandleTestOutput(testOutput: string, context?: TestRunContext): vscode.TestItem[] {
-    let log = this.log.getChildLogger({label: this.parseAndHandleTestOutput.name})
-    testOutput = TestRunner.getJsonFromOutput(testOutput);
-    log.trace('Parsing the below JSON:', testOutput);
-    let testMetadata = JSON.parse(testOutput);
-    let tests: Array<ParsedTest> = testMetadata.examples;
-
-    let parsedTests: vscode.TestItem[] = []
-    if (tests && tests.length > 0) {
-      tests.forEach((test: ParsedTest) => {
-        test.id = this.manager.normaliseTestId(test.id)
-
-        // RSpec provides test ids like "file_name.rb[1:2:3]".
-        // This uses the digits at the end of the id to create
-        // an array of numbers representing the location of the
-        // test in the file.
-        let test_location_array: Array<string> = test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':');
-        let testNumber = test_location_array[test_location_array.length - 1];
-        test.file_path = this.manager.normaliseTestId(test.file_path).replace(/\[.*/, '')
-        let currentFileLabel = test.file_path.split(path.sep).slice(-1)[0]
-        let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
-        // If the test doesn't have a name (because it uses the 'it do' syntax), "test #n"
-        // is appended to the test description to distinguish between separate tests.
-        let description: string = test.description.startsWith('example at ') ? `${test.full_description}test #${testNumber}` : test.full_description;
-
-        // If the current file label doesn't have a slash in it and it starts with the PascalCase'd
-        // file name, remove the from the start of the description. This turns, e.g.
-        // `ExternalAccount Validations blah blah blah' into 'Validations blah blah blah'.
-        if (!pascalCurrentFileLabel.includes('/') && description.startsWith(pascalCurrentFileLabel)) {
-          // Optional check for a space following the PascalCase file name. In some
-          // cases, e.g. 'FileName#method_name` there's no space after the file name.
-          let regexString = `${pascalCurrentFileLabel}[ ]?`;
-          let regex = new RegExp(regexString, "g");
-          description = description.replace(regex, '');
-        }
-        test.description = description
-        let test_location_string: string = test_location_array.join('');
-        test.location = parseInt(test_location_string);
-
-        let newTestItem = this.manager.getOrCreateTestItem(test.id)
-        newTestItem.canResolveChildren = !test.id.endsWith(']')
-        log.trace('canResolveChildren', test.id, newTestItem.canResolveChildren)
-        log.trace('label', test.id, description)
-        newTestItem.label = description
-        newTestItem.range = new vscode.Range(test.line_number - 1, 0, test.line_number, 0);
-        parsedTests.push(newTestItem)
-        log.debug('Parsed test', test)
-        if(context) {
-          // Only handle status if actual test run, not dry run
-          this.handleStatus(test, context);
-        }
-      });
-      return parsedTests
-    }
-    return []
-  }
-
-  /**
-   * Convert a string from snake_case to PascalCase.
-   * Note that the function will return the input string unchanged if it
-   * includes a '/'.
-   *
-   * @param string The string to convert to PascalCase.
-   * @return The converted string.
-   */
-  private snakeToPascalCase(string: string): string {
-    if (string.includes('/')) { return string }
-    return string.split("_").map(substr => substr.charAt(0).toUpperCase() + substr.slice(1)).join("");
   }
 
   /**
@@ -408,16 +243,7 @@ export abstract class TestRunner implements vscode.Disposable {
    * @param context Test run context for the cancellation token
    * @returns Raw output from process
    */
-  private async runTestFramework (testCommand: string, context: TestRunContext): Promise<vscode.TestItem[]> {
-    context.token.onCancellationRequested(
-      () => {
-        this.log.debug('Cancellation requested')
-        this.killChild()
-      },
-      this,
-      this.disposables
-    )
-
+  private async runTestFramework (testCommand: string, context: TestRunContext): Promise<void> {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
@@ -425,20 +251,29 @@ export abstract class TestRunner implements vscode.Disposable {
     };
 
     this.log.debug('Running command', testCommand);
+    let testProfileKind = context.request.profile!.kind
 
-    let testProcess = childProcess.spawn(
-      testCommand,
-      spawnArgs
-    );
+    if (this.testProcessMap.get(testProfileKind)) {
+      this.log.warn('Test run already in progress for profile kind', testProfileKind)
+      return
+    }
+    let testProcess = new FrameworkProcess(this.log, testCommand, spawnArgs, context, this.manager)
+    this.disposables.push(testProcess)
+    this.testProcessMap.set(testProfileKind, testProcess);
 
-    return await this.handleChildProcess(testProcess, context);
+    try {
+      await testProcess.startProcess(this.debugCommandStartedResolver)
+    } finally {
+      this.testProcessMap.delete(testProfileKind)
+    }
   }
 
-  /**
-   * Handles test state based on the output returned by the test command.
-   *
-   * @param test The parsed output from running the test
-   * @param context Test run context
-   */
-  protected abstract handleStatus(test: ParsedTest, context: TestRunContext): void;
+  private killProfileTestRun(context: TestRunContext) {
+    let profileKind = context.request.profile!.kind
+    let process = this.testProcessMap.get(profileKind)
+    if (process) {
+      this.disposeInstance(process)
+      this.testProcessMap.delete(profileKind)
+    }
+  }
 }

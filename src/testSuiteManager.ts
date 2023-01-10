@@ -3,6 +3,8 @@ import path from 'path'
 import { IChildLogger } from '@vscode-logging/logger';
 import { Config } from './config';
 
+export type TestItemCallback = (item: vscode.TestItem) => void
+
 /**
  * Manages the contents and state of the test suite
  *
@@ -44,17 +46,16 @@ export class TestSuiteManager {
   /**
    * Get the {@link vscode.TestItem} for a test ID
    * @param testId Test ID to lookup
+   * @param onItemCreated Optional callback to be notified when test items are created
    * @returns The test item for the ID
    * @throws if test item could not be found
    */
-  public getOrCreateTestItem(testId: string | vscode.Uri): vscode.TestItem {
+  public getOrCreateTestItem(testId: string | vscode.Uri, onItemCreated?: TestItemCallback): vscode.TestItem {
     let log = this.log.getChildLogger({label: 'getOrCreateTestItem'})
-    testId = this.uriToTestId(testId)
-    if (testId.startsWith(`.${path.sep}`)) {
-      testId = testId.substring(2)
-    }
+    testId = this.normaliseTestId(this.uriToTestId(testId))
+
     log.debug('Looking for test', testId)
-    let parent = this.getOrCreateParent(testId, true)
+    let parent = this.getOrCreateParent(testId, true, onItemCreated)
     let testItem = (parent?.children || this.controller.items).get(testId)
     if (!testItem) {
       // Create a basic test item with what little info we have to be filled in later
@@ -66,7 +67,8 @@ export class TestSuiteManager {
         testId,
         label,
         parent,
-        !this.locationPattern.test(testId)
+        onItemCreated,
+        !this.locationPattern.test(testId),
       );
     }
     return testItem
@@ -87,29 +89,6 @@ export class TestSuiteManager {
       return undefined
     }
     return testItem
-  }
-
-  public removeMissingTests(parsedTests: vscode.TestItem[], requestedTests?: readonly vscode.TestItem[]) {
-    let log = this.log.getChildLogger({label: `${this.removeMissingTests.name}`})
-
-    log.debug('Tests to check', JSON.stringify(parsedTests.map(x => x.id)))
-
-    // Files and folders are removed by the filesystem watchers so we only need to clear out single tests
-    parsedTests = parsedTests.filter(x => !x.canResolveChildren && x.parent)
-    while (parsedTests.length > 0) {
-      let parent = parsedTests[0].parent
-      if (!requestedTests || requestedTests.includes(parent!)) {
-        // If full suite was resolved we can always replace. If partial suite was resolved, we should
-        // only replace children if parent was resolved, else we might remove tests that do exist
-        log.debug('Checking parent', parent?.id)
-        let parentCollection = parent ? parent.children : this.controller.items
-        let parentCollectionSize = parentCollection.size
-        parentCollection.replace(parsedTests.filter(x => x.parent == parent))
-        log.debug('Removed tests from parent', parentCollectionSize - parentCollection.size)
-      }
-      parsedTests = parsedTests.filter(x => x.parent != parent)
-      log.debug('Remaining tests to check', parsedTests.length)
-    }
   }
 
   /**
@@ -161,7 +140,7 @@ export class TestSuiteManager {
    * @param createIfMissing Create parent test collections if missing
    * @returns Parent collection of the given test ID
    */
-  private getOrCreateParent(testId: string, createIfMissing: boolean): vscode.TestItem | undefined {
+  private getOrCreateParent(testId: string, createIfMissing: boolean, onItemCreated?: TestItemCallback): vscode.TestItem | undefined {
     let log = this.log.getChildLogger({label: `${this.getOrCreateParent.name}(${testId}, createIfMissing: ${createIfMissing})`})
     let idSegments = this.splitTestId(testId)
     let parent: vscode.TestItem | undefined
@@ -175,7 +154,9 @@ export class TestSuiteManager {
         if (!createIfMissing) return undefined
         child = this.createTestItem(
           collectionId,
-          idSegments[i]
+          idSegments[i],
+          undefined,
+          onItemCreated
         )
       }
       parent = child
@@ -197,6 +178,7 @@ export class TestSuiteManager {
           fileId,
           fileId.substring(fileId.lastIndexOf(path.sep) + 1),
           parent,
+          onItemCreated
         )
       }
       log.debug('Got TestItem for file from parent collection', fileId)
@@ -219,7 +201,8 @@ export class TestSuiteManager {
     testId: string,
     label: string,
     parent?: vscode.TestItem,
-    canResolveChildren: boolean = true
+    onItemCreated: TestItemCallback = (_) => {},
+    canResolveChildren: boolean = true,
   ): vscode.TestItem {
     let log = this.log.getChildLogger({ label: `${this.createTestItem.name}(${testId})` })
     let uri = this.testIdToUri(testId)
@@ -228,6 +211,7 @@ export class TestSuiteManager {
     item.canResolveChildren = canResolveChildren;
     (parent?.children || this.controller.items).add(item);
     log.debug('Added test', item.id)
+    onItemCreated(item)
     return item
   }
 

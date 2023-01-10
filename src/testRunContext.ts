@@ -14,14 +14,14 @@ export class TestRunContext {
    * Create a new context
    *
    * @param log Logger
-   * @param token Cancellation token triggered when the user cancels a test operation
+   * @param cancellationToken Cancellation token triggered when the user cancels a test operation
    * @param request Test run request for creating test run object
    * @param controller Test controller to look up tests for status reporting
    * @param debuggerConfig A VS Code debugger configuration.
    */
   constructor(
     readonly rootLog: IChildLogger,
-    public readonly token: vscode.CancellationToken,
+    public readonly cancellationToken: vscode.CancellationToken,
     readonly request: vscode.TestRunRequest,
     readonly controller: vscode.TestController,
     public readonly debuggerConfig?: vscode.DebugConfiguration
