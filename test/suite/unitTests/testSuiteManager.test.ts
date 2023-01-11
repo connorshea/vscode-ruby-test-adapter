@@ -5,7 +5,7 @@ import * as vscode from 'vscode'
 import path from 'path'
 
 import { Config } from '../../../src/config';
-import { TestSuiteManager } from '../../testSuiteManager';
+import { TestSuiteManager } from '../../../src/testSuiteManager';
 import { StubTestController } from '../../stubs/stubTestController';
 import { NOOP_LOGGER } from '../../stubs/logger';
 import { testUriMatches } from '../helpers';

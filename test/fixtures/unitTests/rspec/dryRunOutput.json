@@ -1,0 +1,68 @@
+{
+  "version": "3.10.1",
+  "examples": [
+    {
+      "id": "./spec/abs_spec.rb[1:1]",
+      "description": "finds the absolute value of 1",
+      "full_description": "Abs finds the absolute value of 1",
+      "status": "passed",
+      "file_path": "./spec/abs_spec.rb",
+      "line_number": 4,
+      "type": null,
+      "pending_message": null,
+      "duration": 2.9555e-05
+    },
+    {
+      "id": "./spec/abs_spec.rb[1:2]",
+      "description": "finds the absolute value of 0",
+      "full_description": "Abs finds the absolute value of 0",
+      "status": "passed",
+      "file_path": "./spec/abs_spec.rb",
+      "line_number": 8,
+      "type": null,
+      "pending_message": null,
+      "duration": 1.1982e-05
+    },
+    {
+      "id": "./spec/abs_spec.rb[1:3]",
+      "description": "finds the absolute value of -1",
+      "full_description": "Abs finds the absolute value of -1",
+      "status": "passed",
+      "file_path": "./spec/abs_spec.rb",
+      "line_number": 12,
+      "type": null,
+      "pending_message": null,
+      "duration": 1.0685e-05
+    },
+    {
+      "id": "./spec/square/square_spec.rb[1:1]",
+      "description": "finds the square of 2",
+      "full_description": "Square finds the square of 2",
+      "status": "passed",
+      "file_path": "./spec/square/square_spec.rb",
+      "line_number": 4,
+      "type": null,
+      "pending_message": null,
+      "duration": 1.7352e-05
+    },
+    {
+      "id": "./spec/square/square_spec.rb[1:2]",
+      "description": "finds the square of 3",
+      "full_description": "Square finds the square of 3",
+      "status": "passed",
+      "file_path": "./spec/square/square_spec.rb",
+      "line_number": 8,
+      "type": null,
+      "pending_message": null,
+      "duration": 1.2148e-05
+    }
+  ],
+  "summary": {
+    "duration": 0.002985345,
+    "example_count": 5,
+    "failure_count": 0,
+    "pending_count": 0,
+    "errors_outside_of_examples_count": 0
+  },
+  "summary_line": "5 examples, 0 failures"
+}

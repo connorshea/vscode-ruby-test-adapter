@@ -13,7 +13,14 @@ import { testItemCollectionMatches, TestItemExpectation } from "../helpers";
 import { logger } from '../../stubs/logger';
 import { StubTestController } from '../../stubs/stubTestController';
 
-const log = logger("info")
+// JSON Fixtures
+import rspecDryRunOutput from '../../fixtures/unitTests/rspec/dryRunOutput.json'
+import rspecTestRunOutput from '../../fixtures/unitTests/rspec/testRunOutput.json'
+import minitestDryRunOutput from '../../fixtures/unitTests/minitest/dryRunOutput.json'
+import minitestTestRunOutput from '../../fixtures/unitTests/minitest/testRunOutput.json'
+
+const log = logger("debug")
+const cancellationTokenSoure = new vscode.CancellationTokenSource()
 
 suite('FrameworkProcess', function () {
   let manager: TestSuiteManager
@@ -24,13 +31,17 @@ suite('FrameworkProcess', function () {
 
   const config = mock<Config>()
 
+  before(function () {
+    mockContext = mock<TestRunContext>()
+    when(mockContext.cancellationToken).thenReturn(cancellationTokenSoure.token)
+  })
+
   suite('#parseAndHandleTestOutput()', function () {
-    suite('RSpec output - dry run', function () {
+    suite('RSpec output', function () {
       before(function () {
         let relativeTestPath = "spec"
         when(config.getRelativeTestDirectory()).thenReturn(relativeTestPath)
         when(config.getAbsoluteTestDirectory()).thenReturn(path.resolve(relativeTestPath))
-        mockContext = mock<TestRunContext>()
       })
 
       beforeEach(function () {
@@ -95,32 +106,25 @@ suite('FrameworkProcess', function () {
           ]
         }
       ]
-      const outputJson = {
-        "version":"3.10.1",
-        "examples":[
-          {"id":"./spec/square/square_spec.rb[1:1]","description":"finds the square of 2","full_description":"Square finds the square of 2","status":"passed","file_path":"./spec/square/square_spec.rb","line_number":4,"type":null,"pending_message":null},
-          {"id":"./spec/square/square_spec.rb[1:2]","description":"finds the square of 3","full_description":"Square finds the square of 3","status":"passed","file_path":"./spec/square/square_spec.rb","line_number":8,"type":null,"pending_message":null},
-          {"id":"./spec/abs_spec.rb[1:1]","description":"finds the absolute value of 1","full_description":"Abs finds the absolute value of 1","status":"passed","file_path":"./spec/abs_spec.rb","line_number":4,"type":null,"pending_message":null},
-          {"id":"./spec/abs_spec.rb[1:2]","description":"finds the absolute value of 0","full_description":"Abs finds the absolute value of 0","status":"passed","file_path":"./spec/abs_spec.rb","line_number":8,"type":null,"pending_message":null},
-          {"id":"./spec/abs_spec.rb[1:3]","description":"finds the absolute value of -1","full_description":"Abs finds the absolute value of -1","status":"passed","file_path":"./spec/abs_spec.rb","line_number":12,"type":null,"pending_message":null}
-        ],
-        "summary":{"duration":0.006038228,"example_count":6,"failure_count":0,"pending_count":0,"errors_outside_of_examples_count":0},
-        "summary_line":"6 examples, 0 failures"
-      }
-      const output = `START_OF_TEST_JSON${JSON.stringify(outputJson)}END_OF_TEST_JSON`
 
-      test('parses specs correctly', function () {
+      test('parses dry run output correctly', function () {
+        const output = `START_OF_TEST_JSON${JSON.stringify(rspecDryRunOutput)}END_OF_TEST_JSON`
+        frameworkProcess['parseAndHandleTestOutput'](output)
+        testItemCollectionMatches(testController.items, expectedTests)
+      })
+
+      test('parses test run output correctly', function () {
+        const output = `START_OF_TEST_JSON${JSON.stringify(rspecTestRunOutput)}END_OF_TEST_JSON`
         frameworkProcess['parseAndHandleTestOutput'](output)
         testItemCollectionMatches(testController.items, expectedTests)
       })
     })
 
-    suite('Minitest output', function () {
+    suite('Minitest output - dry run', function () {
       before(function () {
         let relativeTestPath = "test"
         when(config.getRelativeTestDirectory()).thenReturn(relativeTestPath)
         when(config.getAbsoluteTestDirectory()).thenReturn(path.resolve(relativeTestPath))
-        mockContext = mock<TestRunContext>()
       })
 
       beforeEach(function () {
@@ -185,71 +189,18 @@ suite('FrameworkProcess', function () {
           ]
         },
       ]
-      const outputJson = {
-        "version":"5.14.4",
-        "examples":[
-          {"description":"abs positive","full_description":"abs positive","file_path":"./test/abs_test.rb","full_path":"/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/abs_test.rb","line_number":4,"klass":"AbsTest","method":"test_abs_positive","runnable":"AbsTest","id":"./test/abs_test.rb[4]"},
-          {"description":"abs 0","full_description":"abs 0","file_path":"./test/abs_test.rb","full_path":"/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/abs_test.rb","line_number":8,"klass":"AbsTest","method":"test_abs_0","runnable":"AbsTest","id":"./test/abs_test.rb[8]"},
-          {"description":"abs negative","full_description":"abs negative","file_path":"./test/abs_test.rb","full_path":"/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/abs_test.rb","line_number":12,"klass":"AbsTest","method":"test_abs_negative","runnable":"AbsTest","id":"./test/abs_test.rb[12]"},
-          {"description":"square 2","full_description":"square 2","file_path":"./test/square/square_test.rb","full_path":"/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/square/square_test.rb","line_number":4,"klass":"SquareTest","method":"test_square_2","runnable":"SquareTest","id":"./test/square/square_test.rb[4]"},
-          {"description":"square 3","full_description":"square 3","file_path":"./test/square/square_test.rb","full_path":"/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/square/square_test.rb","line_number":8,"klass":"SquareTest","method":"test_square_3","runnable":"SquareTest","id":"./test/square/square_test.rb[8]"}
-        ]
-      }
-      const output = `START_OF_TEST_JSON${JSON.stringify(outputJson)}END_OF_TEST_JSON`
 
-      test('parses specs correctly', function () {
+      test('parses dry run output correctly', function () {
+        const output = `START_OF_TEST_JSON${JSON.stringify(minitestDryRunOutput)}END_OF_TEST_JSON`
+        frameworkProcess['parseAndHandleTestOutput'](output)
+        testItemCollectionMatches(testController.items, expectedTests)
+      })
+
+      test('parses test run output correctly', function () {
+        const output = `START_OF_TEST_JSON${JSON.stringify(minitestTestRunOutput)}END_OF_TEST_JSON`
         frameworkProcess['parseAndHandleTestOutput'](output)
         testItemCollectionMatches(testController.items, expectedTests)
       })
     })
   })
-
-  // suite('getTestSuiteForFile', function() {
-  //   let mockTestRunner: RspecTestRunner
-  //   let testRunner: RspecTestRunner
-  //   let testLoader: TestLoader
-  //   let parsedTests = [{"id":"abs_spec.rb[1:1]","description":"finds the absolute value of 1","full_description":"Abs finds the absolute value of 1","status":"passed","file_path":"abs_spec.rb","line_number":4,"type":null,"pending_message":null,"location":11}]
-  //   let expectedPath = path.resolve('test', 'fixtures', 'rspec', 'spec')
-  //   let id = "abs_spec.rb"
-  //   let abs_spec_item: vscode.TestItem
-  //   let createTestItem = (id: string): vscode.TestItem => {
-  //     return testController.createTestItem(id, id, vscode.Uri.file(path.resolve(expectedPath, id)))
-  //   }
-
-  //   this.beforeAll(function () {
-  //     when(config.getRelativeTestDirectory()).thenReturn('spec')
-  //     when(config.getAbsoluteTestDirectory()).thenReturn(expectedPath)
-  //   })
-
-  //   this.beforeEach(function () {
-  //     mockTestRunner = mock(RspecTestRunner)
-  //     testRunner = instance(mockTestRunner)
-  //     testController = new StubTestController()
-  //     testSuite = new TestSuite(noop_logger(), testController, instance(config))
-  //     testLoader = new TestLoader(noop_logger(), testController, testRunner, config, testSuite)
-  //     abs_spec_item = createTestItem(id)
-  //     testController.items.add(abs_spec_item)
-  //   })
-
-  //   test('creates test items from output', function () {
-  //     expect(abs_spec_item.children.size).to.eq(0)
-
-  //     testLoader.getTestSuiteForFile(parsedTests, abs_spec_item)
-
-  //     expect(abs_spec_item.children.size).to.eq(1)
-  //   })
-
-  //   test('removes test items not in output', function () {
-  //     let missing_id = "abs_spec.rb[3:1]"
-  //     let missing_child_item = createTestItem(missing_id)
-  //     abs_spec_item.children.add(missing_child_item)
-  //     expect(abs_spec_item.children.size).to.eq(1)
-
-  //     testLoader.getTestSuiteForFile(parsedTests, abs_spec_item)
-
-  //     expect(abs_spec_item.children.size).to.eq(1)
-  //     expect(abs_spec_item.children.get(missing_id)).to.be.undefined
-  //     expect(abs_spec_item.children.get("abs_spec.rb[1:1]")).to.not.be.undefined
-  //   })
-  // })
 })

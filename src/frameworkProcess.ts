@@ -30,8 +30,9 @@ export class FrameworkProcess implements vscode.Disposable {
   protected readonly log: IChildLogger;
   private readonly disposables: vscode.Disposable[] = []
   private isDisposed = false;
-  private readonly testStatusEmitter: vscode.EventEmitter<TestStatus> = new vscode.EventEmitter<TestStatus>()
-  private readonly statusPattern = new RegExp(/(?<status>RUNNING|PASSED|FAILED|ERRORED|SKIPPED): (?<id>.*)/)
+  public readonly testStatusEmitter: vscode.EventEmitter<TestStatus> = new vscode.EventEmitter<TestStatus>()
+  private readonly statusPattern =
+    new RegExp(/(?<status>RUNNING|PASSED|FAILED|ERRORED|SKIPPED)(:?\((:?(?<exceptionClass>(:?\w*(:?::)?)*)\:)?\s*(?<exceptionMessage>.*)\))?\: (?<id>.*)/)
 
   constructor(
     readonly rootLog: IChildLogger,
@@ -67,55 +68,47 @@ export class FrameworkProcess implements vscode.Disposable {
     }
 
     try {
+      this.log.debug('Starting child process')
       this.childProcess = childProcess.spawn(
         this.testCommand,
         this.spawnArgs
       )
 
       this.childProcess.stderr!.pipe(split2()).on('data', (data) => {
+        let log = this.log.getChildLogger({label: 'stderr'})
         data = data.toString();
-        this.log.trace(data);
+        log.trace(data);
         if (data.startsWith('Fast Debugger') && onDebugStarted) {
           onDebugStarted()
         }
       })
 
-      let outputParsedResolver: (value: void | PromiseLike<void>) => void
-      let outputParsedRejecter: (reason?: any) => void
-      let outputParsedPromise = new Promise<void>((resolve, reject) => {
-        outputParsedResolver = resolve
-        outputParsedRejecter = reject
-      })
-      process.stdout!.pipe(split2()).on('data', (data) => {
-        this.onDataReceived(data, outputParsedResolver, outputParsedRejecter)
+      this.childProcess.stdout!.pipe(split2()).on('data', (data) => {
+        let log = this.log.getChildLogger({label: 'stdout'})
+        data = data.toString()
+        log.trace(data)
+        this.onDataReceived(data)
       });
 
-      return (await Promise.all([
-        new Promise<{code:number, signal:string}>((resolve, reject) => {
-          process.once('exit', (code: number, signal: string) => {
-            this.log.trace('Child process exited', code, signal)
-          });
-          process.once('close', (code: number, signal: string) => {
-            this.log.debug('Child process exited, and all streams closed', code, signal)
-            resolve({code, signal});
-          });
-          process.once('error', (err: Error) => {
-            this.log.debug('Error event from child process', err.message)
-            reject(err);
-          });
-        }),
-        outputParsedPromise
-      ]))[0]
+      return await new Promise<{code:number, signal:string}>((resolve, reject) => {
+        this.childProcess!.once('exit', (code: number, signal: string) => {
+          this.log.trace('Child process exited', code, signal)
+        });
+        this.childProcess!.once('close', (code: number, signal: string) => {
+          this.log.debug('Child process exited, and all streams closed', code, signal)
+          resolve({code, signal});
+        });
+        this.childProcess!.once('error', (err: Error) => {
+          this.log.debug('Error event from child process', err.message)
+          reject(err);
+        });
+      })
     } finally {
       this.dispose()
     }
   }
 
-  private onDataReceived(
-    data: string,
-    outputParsedResolver: (value: void | PromiseLike<void>) => void,
-    outputParsedRejecter: (reason?: any) => void
-  ): void {
+  private onDataReceived(data: string): void {
     let log = this.log.getChildLogger({label: 'onDataReceived'})
 
     let getTest = (testId: string): vscode.TestItem => {
@@ -126,29 +119,42 @@ export class FrameworkProcess implements vscode.Disposable {
       if (data.includes('START_OF_TEST_JSON')) {
         log.trace("Received test run results", data);
         this.parseAndHandleTestOutput(data);
-        outputParsedResolver()
       } else {
         const match = this.statusPattern.exec(data)
         if (match && match.groups) {
+          log.trace("Received test status event", data);
           const id = match.groups['id']
           const status = match.groups['status']
-          this.testStatusEmitter.fire(
-            new TestStatus(
-              getTest(id),
-              Status[status.toLocaleLowerCase() as keyof typeof Status]
-            )
-          )
+          const exception = match.groups['exceptionClass']
+          const message = match.groups['exceptionMessage']
+          let testItem = getTest(id)
+          let testMessage: vscode.TestMessage | undefined = undefined
+          if (message) {
+            testMessage = new vscode.TestMessage(exception ? `${exception}: ${message}` : message)
+            // TODO?: get actual exception location, not test location
+            if (testItem.uri && testItem.range) {
+              // it should always have a uri, but just to be safe...
+              testMessage.location = new vscode.Location(testItem.uri, testItem.range)
+            } else {
+              log.error('Test missing location details', testItem.id, testItem.uri)
+            }
+          }
+          this.testStatusEmitter.fire(new TestStatus(
+            testItem,
+            Status[status.toLocaleLowerCase() as keyof typeof Status],
+            undefined, // TODO?: get duration info here if possible
+            testMessage
+          ))
         } else {
           log.trace("Ignoring unrecognised output", data)
         }
       }
     } catch (err) {
       log.error('Error parsing output', err)
-      outputParsedRejecter(err)
     }
   }
 
-  private parseAndHandleTestOutput(testOutput: string): vscode.TestItem[] {
+  private parseAndHandleTestOutput(testOutput: string): void {
     let log = this.log.getChildLogger({label: this.parseAndHandleTestOutput.name})
     testOutput = this.getJsonFromOutput(testOutput);
     log.trace('Parsing the below JSON:', testOutput);
@@ -166,8 +172,7 @@ export class FrameworkProcess implements vscode.Disposable {
         testItem.canResolveChildren = !test.id.endsWith(']')
         log.trace('canResolveChildren', test.id, testItem.canResolveChildren)
 
-        testItem.description = this.parseDescription(test)
-        testItem.label = testItem.description
+        testItem.label = this.parseDescription(test)
         log.trace('label', test.id, testItem.description)
 
         testItem.range = this.parseRange(test)
@@ -178,7 +183,9 @@ export class FrameworkProcess implements vscode.Disposable {
         }
         log.debug('Parsed test', test)
 
-        this.handleStatus(testItem, test)
+        if (test.status) {
+          this.handleStatus(testItem, test)
+        }
       });
       for (const testFile of existingContainers) {
         /*
@@ -191,7 +198,6 @@ export class FrameworkProcess implements vscode.Disposable {
         testFile.children.replace(parsedTests.filter(x => !x.canResolveChildren && x.parent == testFile))
       }
     }
-    return []
   }
 
   private parseDescription(test: ParsedTest): string {

@@ -14,7 +14,7 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   }
 
   replace(items: readonly vscode.TestItem[]): void {
-    //this.log.debug(`Replacing all tests`, JSON.stringify(Object.keys(this.testIds)), JSON.stringify(items.map(x => x.id)))
+    this.log.debug(`Replacing all tests`, JSON.stringify(Object.keys(this.testIds)), JSON.stringify(items.map(x => x.id)))
     this.testIds = {}
     items.forEach(item => {
       this.testIds[item.id] = item

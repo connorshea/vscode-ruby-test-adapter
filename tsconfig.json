@@ -13,6 +13,7 @@
     "removeComments": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "baseUrl": "./",
   }
 }

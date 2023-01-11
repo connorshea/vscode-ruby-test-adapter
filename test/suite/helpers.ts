@@ -25,7 +25,7 @@ export type TestItemExpectation = {
  * Object to simplify describing a {@link vscode.TestItem TestItem} for testing its values
  */
 export type TestFailureExpectation = {
-  message?: string,
+  message?: RegExp,
   actualOutput?: string,
   expectedOutput?: string,
   line?: number,
@@ -97,7 +97,7 @@ export function testItemCollectionMatches(
     if(!expectedItem) {
       expect.fail(`${testItem.id} not found in expected items`)
     }
-    testItemMatches(testItem, expectedItem)
+    testItemMatches(testItem, expectedItem, parent ? `collection(${parent.id})` : undefined)
   })
 }
 
@@ -111,12 +111,13 @@ export function verifyFailure(
   let failure = captor.byCallIndex(index)
   let testItem = failure[0]
   let failureDetails = failure[1]
-  let messagePrefix = message ? `${message} - ${testItem.id}` : testItem.id
+  let messagePrefix = `${testItem.id} (call: ${index})`
+  messagePrefix = message ? `${message} - ${messagePrefix}` : messagePrefix
   testItemMatches(testItem, expectedTestItem)
   if (expectation.message) {
-    expect(failureDetails.message).to.contain(expectation.message, `${messagePrefix}: message`)
+    expect(failureDetails.message).to.match(expectation.message, `${messagePrefix}: message`)
   } else {
-    expect(failureDetails.message).to.eq('')
+    expect(failureDetails.message).to.eq('', "Expected not to receive an exception backtrace")
   }
   expect(failureDetails.actualOutput).to.eq(expectation.actualOutput, `${messagePrefix}: actualOutput`)
   expect(failureDetails.expectedOutput).to.eq(expectation.expectedOutput, `${messagePrefix}: expectedOutput`)

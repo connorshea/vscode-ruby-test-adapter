@@ -5,6 +5,7 @@ import { __asyncDelegator } from 'tslib';
 import { TestRunContext } from './testRunContext';
 import { TestSuiteManager } from './testSuiteManager';
 import { FrameworkProcess } from './frameworkProcess';
+import { Status, TestStatus } from './testStatus';
 
 export class TestRunner implements vscode.Disposable {
   protected debugCommandStartedResolver?: () => void;
@@ -261,6 +262,33 @@ export class TestRunner implements vscode.Disposable {
     this.disposables.push(testProcess)
     this.testProcessMap.set(testProfileKind, testProcess);
 
+    testProcess.testStatusEmitter.event((event: TestStatus) => {
+      let log = this.log.getChildLogger({label: 'testStatusListener'})
+      switch(event.status) {
+        case Status.skipped:
+          log.debug('Received test skipped event', event.testItem.id)
+          context.skipped(event.testItem)
+          break;
+        case Status.passed:
+          log.debug('Received test passed event', event.testItem.id, event.duration)
+          context.passed(event.testItem, event.duration)
+          break;
+        case Status.errored:
+          log.debug('Received test errored event', event.testItem.id, event.duration, event.message)
+          context.errored(event.testItem, event.message!, event.duration)
+          break;
+        case Status.failed:
+          log.debug('Received test failed event', event.testItem.id, event.duration, event.message)
+          context.failed(event.testItem, event.message!, event.duration)
+          break;
+        case Status.running:
+          log.debug('Received test started event', event.testItem.id)
+          context.started(event.testItem)
+          break;
+        default:
+          log.warn('Unexpected status', event.status)
+      }
+    })
     try {
       await testProcess.startProcess(this.debugCommandStartedResolver)
     } finally {

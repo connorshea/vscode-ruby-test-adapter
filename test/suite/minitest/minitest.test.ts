@@ -22,7 +22,7 @@ suite('Extension Test for Minitest', function() {
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
 
-  const log = logger("info");
+  const log = logger("debug");
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -223,8 +223,8 @@ suite('Extension Test for Minitest', function() {
         verify(mockTestRun.enqueued(anything())).times(8)
         verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
-        verify(mockTestRun.failed(anything(), anything(), anything())).times(3)
-        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
         verify(mockTestRun.skipped(anything())).times(2)
       })
 
@@ -237,8 +237,8 @@ suite('Extension Test for Minitest', function() {
         verify(mockTestRun.enqueued(anything())).times(8)
         verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
-        verify(mockTestRun.failed(anything(), anything(), anything())).times(3)
-        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
         verify(mockTestRun.skipped(anything())).times(2)
       })
 
@@ -252,8 +252,8 @@ suite('Extension Test for Minitest', function() {
         verify(mockTestRun.enqueued(anything())).times(7)
         verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
-        verify(mockTestRun.failed(anything(), anything(), anything())).times(3)
-        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
         verify(mockTestRun.skipped(anything())).times(2)
       })
     })
@@ -268,7 +268,7 @@ suite('Extension Test for Minitest', function() {
           status: "failed",
           expectedTest: square_3_expectation,
           failureExpectation: {
-            message: "Expected: 9\n  Actual: 6\n",
+            message: /Expected: 9\s*Actual: 6/,
             line: 8,
           }
         },
@@ -280,7 +280,7 @@ suite('Extension Test for Minitest', function() {
           status: "errored",
           expectedTest: abs_zero_expectation,
           failureExpectation: {
-            message: "RuntimeError: Abs for zero is not supported",
+            message: /RuntimeError: Abs for zero is not supported/,
             line: 8,
           }
         },
@@ -305,7 +305,7 @@ suite('Extension Test for Minitest', function() {
               verify(mockTestRun.skipped(anything())).times(0)
               break;
             case "failed":
-              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, {line: failureExpectation!.line})
+              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, {...failureExpectation!, line: failureExpectation!.line! - 1})
               verifyFailure(1, testStateCaptors(mockTestRun).failedArgs, expectedTest, failureExpectation!)
               verify(mockTestRun.passed(anything(), anything())).times(0)
               verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
@@ -313,16 +313,15 @@ suite('Extension Test for Minitest', function() {
               verify(mockTestRun.skipped(anything())).times(0)
               break;
             case "errored":
-              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, {line: failureExpectation!.line})
-              verifyFailure(0, testStateCaptors(mockTestRun).erroredArgs, expectedTest, failureExpectation!)
+              verifyFailure(0, testStateCaptors(mockTestRun).erroredArgs, expectedTest, {...failureExpectation!, line: failureExpectation!.line! - 1})
+              verifyFailure(1, testStateCaptors(mockTestRun).erroredArgs, expectedTest, failureExpectation!)
               verify(mockTestRun.passed(anything(), anything())).times(0)
-              verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
-              verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
+              verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
+              verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
               verify(mockTestRun.skipped(anything())).times(0)
               break;
             case "skipped":
               testItemMatches(testStateCaptors(mockTestRun).skippedArg(0), expectedTest)
-              testItemMatches(testStateCaptors(mockTestRun).skippedArg(1), expectedTest)
               verify(mockTestRun.passed(anything(), anything())).times(0)
               verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
               verify(mockTestRun.errored(anything(), anything(), anything())).times(0)

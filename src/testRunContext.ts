@@ -52,24 +52,11 @@ export class TestRunContext {
    */
   public errored(
     test: vscode.TestItem,
-    message: string,
-    file: string,
-    line: number,
-    duration?: number | undefined
+    message: vscode.TestMessage,
+    duration?: number
   ): void {
-    let testMessage = new vscode.TestMessage(message)
-    try {
-      let testItem = test
-      testMessage.location = new vscode.Location(
-        testItem.uri ?? vscode.Uri.file(file),
-        new vscode.Position(line, 0)
-      )
-      this.log.debug('Errored test', test.id, file, line, duration)
-      this.log.trace('Error message', message)
-      this.testRun.errored(testItem, testMessage, duration)
-    } catch (e: any) {
-      this.log.error('Failed to report error state for test', test.id, e)
-    }
+    this.log.debug('Errored test', test.id, duration, message.message)
+    this.testRun.errored(test, message, duration)
   }
 
   /**
@@ -83,19 +70,11 @@ export class TestRunContext {
    */
   public failed(
     test: vscode.TestItem,
-    message: string,
-    file: string,
-    line: number,
-    duration?: number | undefined
+    message: vscode.TestMessage,
+    duration?: number
   ): void {
-    let testMessage = new vscode.TestMessage(message)
-    testMessage.location = new vscode.Location(
-      test.uri ?? vscode.Uri.file(file),
-      new vscode.Position(line, 0)
-    )
-    this.log.debug('Failed test', test.id, file, line, duration)
-    this.log.trace('Failure message', message)
-    this.testRun.failed(test, testMessage, duration)
+    this.log.debug('Failed test', test.id, duration, message.message)
+    this.testRun.failed(test, message, duration)
   }
 
   /**

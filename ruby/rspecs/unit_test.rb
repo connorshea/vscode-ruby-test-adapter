@@ -16,6 +16,6 @@ describe Square do
   end
 
   it "finds the square of 3" do
-    expect(@calculator.square_of(3)).to eq(9)
+    expect(@calculator.square_of(3)).to eq
   end
 end
