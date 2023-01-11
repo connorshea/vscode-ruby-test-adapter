@@ -43,7 +43,7 @@ async function runTestSuite(vscodeExecutablePath: string, suite: string) {
     extensionDevelopmentPath,
     extensionTestsPath: testsPath,
     extensionTestsEnv: { "TEST_SUITE": suite },
-    launchArgs: [fixturesPath],
+    launchArgs: ['--disable-gpu', fixturesPath],
     vscodeExecutablePath: vscodeExecutablePath
   }).catch((error: any) => {
     console.error(error);
