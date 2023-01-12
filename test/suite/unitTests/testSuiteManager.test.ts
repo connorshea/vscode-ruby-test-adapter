@@ -7,8 +7,10 @@ import path from 'path'
 import { Config } from '../../../src/config';
 import { TestSuiteManager } from '../../../src/testSuiteManager';
 import { StubTestController } from '../../stubs/stubTestController';
-import { NOOP_LOGGER } from '../../stubs/logger';
+import { logger } from '../../stubs/logger';
 import { testUriMatches } from '../helpers';
+
+const log = logger("trace")
 
 suite('TestSuite', function () {
   let mockConfig: Config = mock<Config>();
@@ -23,8 +25,8 @@ suite('TestSuite', function () {
   });
 
   beforeEach(function () {
-    controller = new StubTestController(NOOP_LOGGER)
-    manager = new TestSuiteManager(NOOP_LOGGER, controller, instance(mockConfig))
+    controller = new StubTestController(log)
+    manager = new TestSuiteManager(log, controller, instance(mockConfig))
   });
 
   suite('#normaliseTestId()', function () {
@@ -151,7 +153,7 @@ suite('TestSuite', function () {
     })
 
     test('creates item if nested ID is not found', function () {
-      let id = `folder${path.sep}not-found`
+      let id = path.join('folder', 'not-found.rb')
       let folderItem = controller.createTestItem('folder', 'folder')
       controller.items.add(folderItem)
 
@@ -171,7 +173,7 @@ suite('TestSuite', function () {
       expect(testItem).to.not.be.undefined
       expect(testItem?.id).to.eq(testId)
       expect(testItem.canResolveChildren).to.eq(false)
-      testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), testId))
+      testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), fileId))
 
       let contextItem = manager.getTestItem(contextId)
       expect(contextItem).to.not.be.undefined
@@ -187,7 +189,7 @@ suite('TestSuite', function () {
     })
 
     test('creates item and parent if parent of nested file is not found', function () {
-      let id = `folder${path.sep}not-found`
+      let id = path.join('folder', 'not-found.rb')
       let testItem = manager.getOrCreateTestItem(id)
       expect(testItem).to.not.be.undefined
       expect(testItem?.id).to.eq(id)
@@ -199,7 +201,7 @@ suite('TestSuite', function () {
     })
 
     suite('creates full item tree for specs within files', function () {
-      let fileId = `folder${path.sep}not-found.rb`
+      let fileId = path.join('folder', 'not-found.rb')
 
       for (const {suite, location} of [
         {suite: 'minitest', location: '[4]'},
@@ -208,8 +210,8 @@ suite('TestSuite', function () {
         test(suite, function() {
           let id = `${fileId}${location}`
           let testItem = manager.getOrCreateTestItem(id)
-          expect(testItem.id).to.eq(id)
-          expect(testItem.parent?.id).to.eq(fileId)
+          expect(testItem.id).to.eq(id, 'testItem ID')
+          expect(testItem.parent?.id).to.eq(fileId, 'file ID')
 
           let folderItem = manager.getTestItem('folder')
           let fileItem = manager.getTestItem(fileId)
@@ -221,5 +223,58 @@ suite('TestSuite', function () {
         })
       }
     })
+  })
+
+  suite('#getParentIdsFromId', function() {
+    test('does nothing for a top level file ID', function() {
+      let id = "some-file.rb"
+      expect(manager["getParentIdsFromId"](id)).to.eql([id])
+    })
+
+    test('splits file path segments from folder structure', function() {
+      let id = path.join("path", "to", "some-file.rb")
+      expect(manager["getParentIdsFromId"](id)).to.eql(
+        ['path', path.join("path", "to"), id]
+      )
+    });
+
+    test('splits RSpec location array', function() {
+      let id = "some-file.rb[1:2:3]"
+      expect(manager["getParentIdsFromId"](id)).to.eql(
+        ['some-file.rb', 'some-file.rb[1:2]', 'some-file.rb[1:2:3]']
+      )
+    });
+
+    test('splits file path segments and RSpec location array', function() {
+      let id = path.join('path', 'to', 'some-file.rb[1:2:3]')
+      expect(manager['getParentIdsFromId'](id)).to.eql(
+        [
+          'path',
+          path.join('path', 'to'),
+          path.join('path', 'to', 'some-file.rb'),
+          path.join('path', 'to', 'some-file.rb[1:2]'),
+          path.join('path', 'to', 'some-file.rb[1:2:3]')
+        ]
+      )
+    });
+
+    test('splits Minitest location array', function() {
+      let id = "some-file.rb[7]"
+      expect(manager["getParentIdsFromId"](id)).to.eql(
+        ['some-file.rb', 'some-file.rb[7]']
+      )
+    });
+
+    test('splits file path segments and Minitest location array', function() {
+      let id = path.join('path', 'to', 'some-file.rb[7]')
+      expect(manager["getParentIdsFromId"](id)).to.eql(
+        [
+          'path',
+          path.join('path', 'to'),
+          path.join('path', 'to', 'some-file.rb'),
+          path.join('path', 'to', 'some-file.rb[7]')
+        ]
+      )
+    });
   })
 });

@@ -12,7 +12,6 @@ export type TestItemCallback = (item: vscode.TestItem) => void
  */
 export class TestSuiteManager {
   private readonly log: IChildLogger;
-  private readonly locationPattern = /\[[0-9]*(?::[0-9]*)*\]$/
 
   constructor(
     readonly rootLog: IChildLogger,
@@ -26,20 +25,17 @@ export class TestSuiteManager {
     let log = this.log.getChildLogger({label: 'deleteTestItem'})
     testId = this.uriToTestId(testId)
     log.debug('Deleting test', testId)
-    let parent = this.getOrCreateParent(testId, false)
-    let collection: vscode.TestItemCollection | undefined
-    if (!parent) {
-      log.debug('Parent is controller')
-      collection = this.controller.items
-    } else {
-      log.debug('Parent', parent.id)
-      collection = parent.children
+    let testItem = this.getTestItem(testId)
+    if (!testItem) {
+      log.error('No test item found with given ID', testId)
+      return
     }
+    let collection = testItem.parent ? testItem.parent.children : this.controller.items
     if (collection) {
       collection.delete(testId);
       log.debug('Removed test', testId)
     } else {
-      log.error('Collection not found')
+      log.error('Parent collection not found')
     }
   }
 
@@ -52,26 +48,7 @@ export class TestSuiteManager {
    */
   public getOrCreateTestItem(testId: string | vscode.Uri, onItemCreated?: TestItemCallback): vscode.TestItem {
     let log = this.log.getChildLogger({label: 'getOrCreateTestItem'})
-    testId = this.normaliseTestId(this.uriToTestId(testId))
-
-    log.debug('Looking for test', testId)
-    let parent = this.getOrCreateParent(testId, true, onItemCreated)
-    let testItem = (parent?.children || this.controller.items).get(testId)
-    if (!testItem) {
-      // Create a basic test item with what little info we have to be filled in later
-      let label = testId.substring(testId.lastIndexOf(path.sep) + 1)
-      if (this.locationPattern.test(testId)) {
-        label = this.getPlaceholderLabelForSingleTest(testId)
-      }
-      testItem = this.createTestItem(
-        testId,
-        label,
-        parent,
-        onItemCreated,
-        !this.locationPattern.test(testId),
-      );
-    }
-    return testItem
+    return this.getTestItemInternal(log, testId, true, onItemCreated)!
   }
 
   /**
@@ -81,14 +58,7 @@ export class TestSuiteManager {
    */
   public getTestItem(testId: string | vscode.Uri): vscode.TestItem | undefined {
     let log = this.log.getChildLogger({label: 'getTestItem'})
-    testId = this.uriToTestId(testId)
-    let parent = this.getOrCreateParent(testId, false)
-    let testItem = (parent?.children || this.controller.items).get(testId)
-    if (!testItem) {
-      log.debug("Couldn't find test with ID", testId)
-      return undefined
-    }
-    return testItem
+    return this.getTestItemInternal(log, testId, false)
   }
 
   /**
@@ -135,60 +105,6 @@ export class TestSuiteManager {
   }
 
   /**
-   * Searches the collection of tests for the TestItemCollection that contains the given test ID
-   * @param testId ID of the test to get the parent collection of
-   * @param createIfMissing Create parent test collections if missing
-   * @returns Parent collection of the given test ID
-   */
-  private getOrCreateParent(testId: string, createIfMissing: boolean, onItemCreated?: TestItemCallback): vscode.TestItem | undefined {
-    let log = this.log.getChildLogger({label: `${this.getOrCreateParent.name}(${testId}, createIfMissing: ${createIfMissing})`})
-    let idSegments = this.splitTestId(testId)
-    let parent: vscode.TestItem | undefined
-
-    // Walk through test folders to find the collection containing our test file
-    for (let i = 0; i < idSegments.length - 1; i++) {
-      let collectionId = this.getPartialId(idSegments, i)
-      log.debug('Getting parent collection', collectionId)
-      let child = this.controller.items.get(collectionId)
-      if (!child) {
-        if (!createIfMissing) return undefined
-        child = this.createTestItem(
-          collectionId,
-          idSegments[i],
-          undefined,
-          onItemCreated
-        )
-      }
-      parent = child
-    }
-
-    // TODO: This might not handle nested describe/context/etc blocks?
-    if (this.locationPattern.test(testId)) {
-      // Test item is a test within a file
-      // Need to make sure we strip locations from file id to get final collection
-      let fileId = testId.replace(this.locationPattern, '')
-      if (fileId.startsWith(path.sep)) {
-        fileId = fileId.substring(1)
-      }
-      let child = (parent?.children || this.controller.items).get(fileId)
-      if (!child) {
-        log.debug('TestItem for file not in parent collection', fileId)
-        if (!createIfMissing) return undefined
-        child = this.createTestItem(
-          fileId,
-          fileId.substring(fileId.lastIndexOf(path.sep) + 1),
-          parent,
-          onItemCreated
-        )
-      }
-      log.debug('Got TestItem for file from parent collection', fileId)
-      parent = child
-    }
-    // else test item is the file so return the file's parent
-    return parent
-  }
-
-  /**
    * Creates a TestItem and adds it to a TestItemCollection
    * @param collection
    * @param testId
@@ -216,34 +132,98 @@ export class TestSuiteManager {
   }
 
   /**
-   * Builds the testId of a parent folder from the parts of a child ID up to the given depth
-   * @param idSegments array of segments of a test ID (e.g. ['foo', 'bar', 'bat.rb'] would be the segments for the test item 'foo/bar/bat.rb')
-   * @param depth number of segments to use to build the ID
-   * @returns test ID of a parent folder
+   * Splits a test ID into an array of all parent IDs to reach the given ID from the test tree root
+   * @param testId test ID to split
+   * @returns array of test IDs
    */
-  private getPartialId(idSegments: string[], depth: number): string {
-    return (depth == 0)
-      ? idSegments[0]
-      : idSegments.slice(0, depth + 1).join(path.sep)
-  }
-
-  /**
-   * Splits a test ID into segments by path separator
-   * @param testId
-   * @returns
-   */
-  private splitTestId(testId: string): string[] {
-    let log = this.log.getChildLogger({label: `splitTestId(${testId})`})
+  private getParentIdsFromId(testId: string): string[] {
+    let log = this.log.getChildLogger({label: `${this.getParentIdsFromId.name}(${testId})`})
     testId = this.normaliseTestId(testId)
+
+    // Split path segments
     let idSegments = testId.split(path.sep)
     log.debug('id segments', idSegments)
     if (idSegments[0] === "") {
       idSegments.splice(0, 1)
     }
+    log.trace('ID segments split by path', idSegments)
+    for (let i = 1; i < idSegments.length - 1; i++) {
+      let currentSegment = idSegments[i]
+      let precedingSegments = idSegments.slice(0, i + 1)
+      log.trace(`segment: ${currentSegment}. preceding segments`, precedingSegments)
+      idSegments[i] = path.join(...precedingSegments)
+    }
+    log.trace('ID segments joined with preceding segments', idSegments)
+
+    // Split location
+    const match = idSegments.at(-1)?.match(/(?<fileId>[^\[]*)(?:\[(?<location>[0-9:]+)\])?/)
+    if (match && match.groups) {
+      // Get file ID (with path to it if there is one)
+      let fileId = match.groups["fileId"]
+      log.trace('Filename', fileId)
+      if (idSegments.length > 1) {
+        fileId = path.join(idSegments.at(-2)!, fileId)
+        log.trace('Filename with path', fileId)
+      }
+      // Add file ID to array
+      idSegments.splice(-1, 1, fileId)
+      log.trace('ID segments with file ID inserted', idSegments)
+
+      if (match.groups["location"]) {
+        let locations = match.groups["location"].split(':')
+        log.trace('ID location segments', locations)
+        if (locations.length == 1) {
+          // Insert ID for minitest location
+          let contextId = `${fileId}[${locations[0]}]`
+          idSegments.push(contextId)
+        } else {
+          // Insert IDs for each nested RSpec context if there are any
+          for (let i = 1; i < locations.length; i++) {
+            let contextId = `${fileId}[${locations.slice(0, i + 1).join(':')}]`
+            idSegments.push(contextId)
+          }
+        }
+        log.trace('ID segments with location IDs appended', idSegments)
+      }
+    }
     return idSegments
   }
 
-  private getPlaceholderLabelForSingleTest(testId: string): string {
-    return `Awaiting test details... (location: ${this.locationPattern.exec(testId)})`
+  private getTestItemInternal(
+    log: IChildLogger,
+    testId: string | vscode.Uri,
+    createIfMissing: boolean,
+    onItemCreated?: TestItemCallback
+  ): vscode.TestItem | undefined {
+    testId = this.normaliseTestId(this.uriToTestId(testId))
+
+    log.debug('Looking for test', testId)
+    let parentIds = this.getParentIdsFromId(testId)
+    let item: vscode.TestItem | undefined = undefined
+    let itemCollection: vscode.TestItemCollection = this.controller.items
+
+    // Walk through test folders to find the collection containing our test file,
+    // creating parent items as needed
+    for (const id of parentIds) {
+      log.debug('Getting item from parent collection', id, item?.id || 'controller')
+      let child = itemCollection.get(id)
+      if (!child) {
+        if (createIfMissing) {
+          child = this.createTestItem(
+            id,
+            id, // Temporary label
+            item,
+            onItemCreated,
+            !(id == testId) // Only the test ID will be a test case. All parents need this set to true
+          )
+        } else {
+          return undefined
+        }
+      }
+      item = child
+      itemCollection = child.children
+    }
+
+    return item
   }
 }
