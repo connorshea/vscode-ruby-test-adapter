@@ -19,7 +19,7 @@ import rspecTestRunOutput from '../../fixtures/unitTests/rspec/testRunOutput.jso
 import minitestDryRunOutput from '../../fixtures/unitTests/minitest/dryRunOutput.json'
 import minitestTestRunOutput from '../../fixtures/unitTests/minitest/testRunOutput.json'
 
-const log = logger("debug")
+const log = logger("trace")
 const cancellationTokenSoure = new vscode.CancellationTokenSource()
 
 suite('FrameworkProcess', function () {
@@ -59,7 +59,7 @@ suite('FrameworkProcess', function () {
           children: [
             {
               id: "square/square_spec.rb",
-              label: "square_spec.rb",
+              label: "Square",
               file: path.resolve("spec", "square", "square_spec.rb"),
               canResolveChildren: true,
               children: [
@@ -81,7 +81,7 @@ suite('FrameworkProcess', function () {
         },
         {
           id: "abs_spec.rb",
-          label: "abs_spec.rb",
+          label: "Abs",
           file: path.resolve("spec", "abs_spec.rb"),
           canResolveChildren: true,
           children: [
@@ -142,7 +142,7 @@ suite('FrameworkProcess', function () {
           children: [
             {
               id: "square/square_test.rb",
-              label: "square_test.rb",
+              label: "Square",
               file: path.resolve("test", "square", "square_test.rb"),
               canResolveChildren: true,
               children: [
@@ -164,7 +164,7 @@ suite('FrameworkProcess', function () {
         },
         {
           id: "abs_test.rb",
-          label: "abs_test.rb",
+          label: "Abs",
           file: path.resolve("test", "abs_test.rb"),
           canResolveChildren: true,
           children: [

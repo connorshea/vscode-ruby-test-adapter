@@ -63,6 +63,18 @@ suite('Extension Test for RSpec', function() {
     label: "finds the square of 3",
     line: 7,
   }
+  let contexts_many_expectation = {
+    file: expectedPath('contexts_spec.rb'),
+    id: 'contexts_spec.rb[1:1:1:1:1:1:1:1:1:1]',
+    label: "doesn't break the extension",
+    line: 13,
+  }
+  let contexts_fewer_expectation = {
+    file: expectedPath('contexts_spec.rb'),
+    id: 'contexts_spec.rb[1:1:1:1:2:1]',
+    label: "still doesn't break the extension",
+    line: 23,
+  }
 
   before(function() {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
@@ -88,6 +100,8 @@ suite('Extension Test for RSpec', function() {
       testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
       let absSpecItem = createTest("abs_spec.rb")
       testController.items.add(absSpecItem)
+      let contextsSpecItem = createTest("contexts_spec.rb")
+      testController.items.add(contextsSpecItem)
       let subfolderItem = createTest("square")
       testController.items.add(subfolderItem)
       subfolderItem.children.add(createTest("square/square_spec.rb", "square_spec.rb"))
@@ -99,6 +113,12 @@ suite('Extension Test for RSpec', function() {
             file: expectedPath("abs_spec.rb"),
             id: "abs_spec.rb",
             label: "abs_spec.rb",
+            children: []
+          },
+          {
+            file: expectedPath("contexts_spec.rb"),
+            id: "contexts_spec.rb",
+            label: "contexts_spec.rb",
             children: []
           },
           {
@@ -127,6 +147,7 @@ suite('Extension Test for RSpec', function() {
             file: expectedPath("abs_spec.rb"),
             id: "abs_spec.rb",
             label: "abs_spec.rb",
+            canResolveChildren: true,
             children: [
               abs_positive_expectation,
               abs_zero_expectation,
@@ -134,9 +155,17 @@ suite('Extension Test for RSpec', function() {
             ]
           },
           {
+            file: expectedPath("contexts_spec.rb"),
+            id: "contexts_spec.rb",
+            label: "contexts_spec.rb",
+            canResolveChildren: true,
+            children: []
+          },
+          {
             file: expectedPath("square"),
             id: "square",
             label: "square",
+            canResolveChildren: true,
             children: [
               {
                 file: expectedPath("square/square_spec.rb"),
@@ -161,12 +190,86 @@ suite('Extension Test for RSpec', function() {
           {
             file: expectedPath("abs_spec.rb"),
             id: "abs_spec.rb",
-            label: "abs_spec.rb",
+            label: "Abs",
             canResolveChildren: true,
             children: [
               abs_positive_expectation,
               abs_zero_expectation,
               abs_negative_expectation
+            ]
+          },
+          {
+            file: expectedPath("contexts_spec.rb"),
+            id: "contexts_spec.rb",
+            label: "Contexts",
+            canResolveChildren: true,
+            children: [
+              {
+                file: expectedPath("contexts_spec.rb"),
+                id: "contexts_spec.rb[1:1]",
+                label: "when",
+                canResolveChildren: true,
+                children: [
+                  {
+                    file: expectedPath("contexts_spec.rb"),
+                    id: "contexts_spec.rb[1:1:1]",
+                    label: "there",
+                    canResolveChildren: true,
+                    children: [
+                      {
+                        file: expectedPath("contexts_spec.rb"),
+                        id: "contexts_spec.rb[1:1:1:1]",
+                        label: "many",
+                        canResolveChildren: true,
+                        children: [
+                          {
+                            file: expectedPath("contexts_spec.rb"),
+                            id: "contexts_spec.rb[1:1:1:1:1]",
+                            label: "levels",
+                            canResolveChildren: true,
+                            children: [
+                              {
+                                file: expectedPath("contexts_spec.rb"),
+                                id: "contexts_spec.rb[1:1:1:1:1:1]",
+                                label: "of",
+                                canResolveChildren: true,
+                                children: [
+                                  {
+                                    file: expectedPath("contexts_spec.rb"),
+                                    id: "contexts_spec.rb[1:1:1:1:1:1:1]",
+                                    label: "nested",
+                                    canResolveChildren: true,
+                                    children: [
+                                      {
+                                        file: expectedPath("contexts_spec.rb"),
+                                        id: "contexts_spec.rb[1:1:1:1:1:1:1:1]",
+                                        label: "contexts",
+                                        canResolveChildren: true,
+                                        children: [
+                                          contexts_many_expectation,
+                                        ]
+                                      },
+                                    ]
+                                  },
+                                ]
+                              },
+                            ]
+                          },
+                          {
+                            file: expectedPath("contexts_spec.rb"),
+                            id: "contexts_spec.rb[1:1:1:1:2]",
+                            label: "fewer levels of nested contexts",
+                            canResolveChildren: true,
+                            children: [
+                              contexts_fewer_expectation,
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
             ]
           },
           {
@@ -178,7 +281,7 @@ suite('Extension Test for RSpec', function() {
               {
                 file: expectedPath("square/square_spec.rb"),
                 id: "square/square_spec.rb",
-                label: "square_spec.rb",
+                label: "Square",
                 canResolveChildren: true,
                 children: [
                   square_2_expectation,

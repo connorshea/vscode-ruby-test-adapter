@@ -101,7 +101,7 @@ suite('Extension Test for Minitest', function() {
           {
             file: expectedPath("abs_test.rb"),
             id: "abs_test.rb",
-            label: "abs_test.rb",
+            label: "Abs",
             canResolveChildren: true,
             children: []
           },
@@ -114,7 +114,7 @@ suite('Extension Test for Minitest', function() {
               {
                 file: expectedPath("square/square_test.rb"),
                 id: "square/square_test.rb",
-                label: "square_test.rb",
+                label: "Square",
                 canResolveChildren: true,
                 children: []
               },

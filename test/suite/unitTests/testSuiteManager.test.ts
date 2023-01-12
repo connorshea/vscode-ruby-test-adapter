@@ -161,6 +161,31 @@ suite('TestSuite', function () {
       testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), id))
     })
 
+    test('creates intermediate items if ID implies contexts', function () {
+      let fileId = 'not-found'
+      let contextId = `${fileId}[1:1]`
+      let testId = `${fileId}[1:1:1]`
+
+
+      let testItem = manager.getOrCreateTestItem(testId)
+      expect(testItem).to.not.be.undefined
+      expect(testItem?.id).to.eq(testId)
+      expect(testItem.canResolveChildren).to.eq(false)
+      testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), testId))
+
+      let contextItem = manager.getTestItem(contextId)
+      expect(contextItem).to.not.be.undefined
+      expect(contextItem?.id).to.eq(contextId)
+      expect(contextItem?.canResolveChildren).to.eq(true)
+      testUriMatches(testItem, contextItem?.uri?.fsPath)
+
+      let fileItem = manager.getTestItem(fileId)
+      expect(fileItem).to.not.be.undefined
+      expect(fileItem?.id).to.eq(fileId)
+      expect(fileItem?.canResolveChildren).to.eq(true)
+      testUriMatches(testItem, fileItem?.uri?.fsPath)
+    })
+
     test('creates item and parent if parent of nested file is not found', function () {
       let id = `folder${path.sep}not-found`
       let testItem = manager.getOrCreateTestItem(id)
