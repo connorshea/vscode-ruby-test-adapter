@@ -66,13 +66,14 @@ suite('Extension Test for RSpec', function() {
   let contexts_many_expectation = {
     file: expectedPath('contexts_spec.rb'),
     id: 'contexts_spec.rb[1:1:1:1:1:1:1:1:1:1]',
-    label: "doesn't break the extension",
+    //label: "doesn't break the extension",
+    label: "when there are many levels of nested contexts doesn't break the extension",
     line: 13,
   }
   let contexts_fewer_expectation = {
     file: expectedPath('contexts_spec.rb'),
     id: 'contexts_spec.rb[1:1:1:1:2:1]',
-    label: "still doesn't break the extension",
+    label: "when there are fewer levels of nested contexts test #1",
     line: 23,
   }
 
@@ -90,21 +91,24 @@ suite('Extension Test for RSpec', function() {
     beforeEach(function () {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new TestRunner(log, manager, false, workspaceFolder)
+      testRunner = new TestRunner(log, manager, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
     })
 
     test('Load tests on file resolve request', async function () {
       // Populate controller with test files. This would be done by the filesystem globs in the watchers
-      let createTest = (id: string, label?: string) =>
-      testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
-      let absSpecItem = createTest("abs_spec.rb")
+      let createTest = (id: string, canResolveChildren: boolean, label?: string) => {
+        let item = testController.createTestItem(id, label || id, vscode.Uri.file(expectedPath(id)))
+        item.canResolveChildren = canResolveChildren
+        return item
+      }
+      let absSpecItem = createTest("abs_spec.rb", true)
       testController.items.add(absSpecItem)
-      let contextsSpecItem = createTest("contexts_spec.rb")
+      let contextsSpecItem = createTest("contexts_spec.rb", true)
       testController.items.add(contextsSpecItem)
-      let subfolderItem = createTest("square")
+      let subfolderItem = createTest("square", true)
       testController.items.add(subfolderItem)
-      subfolderItem.children.add(createTest("square/square_spec.rb", "square_spec.rb"))
+      subfolderItem.children.add(createTest("square/square_spec.rb", true, "square_spec.rb"))
 
       // No tests in suite initially, just test files and folders
       testItemCollectionMatches(testController.items,
@@ -113,23 +117,27 @@ suite('Extension Test for RSpec', function() {
             file: expectedPath("abs_spec.rb"),
             id: "abs_spec.rb",
             label: "abs_spec.rb",
+            canResolveChildren: true,
             children: []
           },
           {
             file: expectedPath("contexts_spec.rb"),
             id: "contexts_spec.rb",
             label: "contexts_spec.rb",
+            canResolveChildren: true,
             children: []
           },
           {
             file: expectedPath("square"),
             id: "square",
             label: "square",
+            canResolveChildren: true,
             children: [
               {
                 file: expectedPath("square/square_spec.rb"),
                 id: "square/square_spec.rb",
                 label: "square_spec.rb",
+                canResolveChildren: true,
                 children: []
               },
             ]
@@ -171,6 +179,7 @@ suite('Extension Test for RSpec', function() {
                 file: expectedPath("square/square_spec.rb"),
                 id: "square/square_spec.rb",
                 label: "square_spec.rb",
+                canResolveChildren: true,
                 children: []
               },
             ]
@@ -190,7 +199,8 @@ suite('Extension Test for RSpec', function() {
           {
             file: expectedPath("abs_spec.rb"),
             id: "abs_spec.rb",
-            label: "Abs",
+            //label: "Abs",
+            label: "abs_spec.rb",
             canResolveChildren: true,
             children: [
               abs_positive_expectation,
@@ -201,52 +211,69 @@ suite('Extension Test for RSpec', function() {
           {
             file: expectedPath("contexts_spec.rb"),
             id: "contexts_spec.rb",
-            label: "Contexts",
+            //label: "Contexts",
+            label: "contexts_spec.rb",
             canResolveChildren: true,
             children: [
               {
                 file: expectedPath("contexts_spec.rb"),
                 id: "contexts_spec.rb[1:1]",
-                label: "when",
+                //label: "when",
+                label: "contexts_spec.rb[1:1]",
                 canResolveChildren: true,
                 children: [
                   {
                     file: expectedPath("contexts_spec.rb"),
                     id: "contexts_spec.rb[1:1:1]",
-                    label: "there",
+                    //label: "there",
+                    label: "contexts_spec.rb[1:1:1]",
                     canResolveChildren: true,
                     children: [
                       {
                         file: expectedPath("contexts_spec.rb"),
                         id: "contexts_spec.rb[1:1:1:1]",
-                        label: "many",
+                        //label: "are",
+                        label: "contexts_spec.rb[1:1:1:1]",
                         canResolveChildren: true,
                         children: [
                           {
                             file: expectedPath("contexts_spec.rb"),
                             id: "contexts_spec.rb[1:1:1:1:1]",
-                            label: "levels",
+                            //label: "many",
+                            label: "contexts_spec.rb[1:1:1:1:1]",
                             canResolveChildren: true,
                             children: [
                               {
                                 file: expectedPath("contexts_spec.rb"),
                                 id: "contexts_spec.rb[1:1:1:1:1:1]",
-                                label: "of",
+                                //label: "levels",
+                                label: "contexts_spec.rb[1:1:1:1:1:1]",
                                 canResolveChildren: true,
                                 children: [
                                   {
                                     file: expectedPath("contexts_spec.rb"),
                                     id: "contexts_spec.rb[1:1:1:1:1:1:1]",
-                                    label: "nested",
+                                    //label: "of",
+                                    label: "contexts_spec.rb[1:1:1:1:1:1:1]",
                                     canResolveChildren: true,
                                     children: [
                                       {
                                         file: expectedPath("contexts_spec.rb"),
                                         id: "contexts_spec.rb[1:1:1:1:1:1:1:1]",
-                                        label: "contexts",
+                                        //label: "nested",
+                                        label: "contexts_spec.rb[1:1:1:1:1:1:1:1]",
                                         canResolveChildren: true,
                                         children: [
-                                          contexts_many_expectation,
+                                          {
+                                            file: expectedPath("contexts_spec.rb"),
+                                            id: "contexts_spec.rb[1:1:1:1:1:1:1:1:1]",
+                                            //label: "contexts",
+                                            label: "contexts_spec.rb[1:1:1:1:1:1:1:1:1]",
+                                            canResolveChildren: true,
+                                            children: [
+                                              contexts_many_expectation,
+                                            ]
+                                          }
                                         ]
                                       },
                                     ]
@@ -258,7 +285,8 @@ suite('Extension Test for RSpec', function() {
                           {
                             file: expectedPath("contexts_spec.rb"),
                             id: "contexts_spec.rb[1:1:1:1:2]",
-                            label: "fewer levels of nested contexts",
+                            //label: "fewer levels of nested contexts",
+                            label: "contexts_spec.rb[1:1:1:1:2]",
                             canResolveChildren: true,
                             children: [
                               contexts_fewer_expectation,
@@ -281,7 +309,8 @@ suite('Extension Test for RSpec', function() {
               {
                 file: expectedPath("square/square_spec.rb"),
                 id: "square/square_spec.rb",
-                label: "Square",
+                //label: "Square",
+                label: "square_spec.rb",
                 canResolveChildren: true,
                 children: [
                   square_2_expectation,
@@ -301,7 +330,7 @@ suite('Extension Test for RSpec', function() {
     before(async function() {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new TestRunner(log, manager, false, workspaceFolder)
+      testRunner = new TestRunner(log, manager, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader.discoverAllFilesInWorkspace()
     })
@@ -315,9 +344,9 @@ suite('Extension Test for RSpec', function() {
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
-        verify(mockTestRun.enqueued(anything())).times(0)
-        verify(mockTestRun.started(anything())).times(8)
-        verify(mockTestRun.passed(anything(), anything())).times(4)
+        verify(mockTestRun.enqueued(anything())).times(20)
+        verify(mockTestRun.started(anything())).times(7)
+        verify(mockTestRun.passed(anything(), anything())).times(8)
         verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
         verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
         verify(mockTestRun.skipped(anything())).times(2)
@@ -329,8 +358,8 @@ suite('Extension Test for RSpec', function() {
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
-        verify(mockTestRun.enqueued(anything())).times(0)
-        verify(mockTestRun.started(anything())).times(8)
+        verify(mockTestRun.enqueued(anything())).times(8)
+        verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
         verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
         verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
@@ -343,9 +372,9 @@ suite('Extension Test for RSpec', function() {
         await testRunner.runHandler(request, cancellationTokenSource.token)
         mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
-        verify(mockTestRun.enqueued(anything())).times(0)
+        verify(mockTestRun.enqueued(anything())).times(7)
         // One less 'started' than the other tests as it doesn't include the 'square' folder
-        verify(mockTestRun.started(anything())).times(7)
+        verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
         verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
         verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
@@ -425,9 +454,7 @@ suite('Extension Test for RSpec', function() {
           }
           expect(testStateCaptors(mockTestRun).startedArg(0).id).to.eq(expectedTest.id)
           verify(mockTestRun.started(anything())).times(1)
-
-          // Verify that no other status events occurred
-          verify(mockTestRun.enqueued(anything())).times(0)
+          verify(mockTestRun.enqueued(anything())).times(1)
         })
       }
     })

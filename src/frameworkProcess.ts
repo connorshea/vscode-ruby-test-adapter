@@ -220,7 +220,7 @@ export class FrameworkProcess implements vscode.Disposable {
     // If the current file label doesn't have a slash in it and it starts with the PascalCase'd
     // file name, remove the from the start of the description. This turns, e.g.
     // `ExternalAccount Validations blah blah blah' into 'Validations blah blah blah'.
-    if (!pascalCurrentFileLabel.includes('/') && description.startsWith(pascalCurrentFileLabel)) {
+    if (!pascalCurrentFileLabel.includes(path.sep) && description.startsWith(pascalCurrentFileLabel)) {
       // Optional check for a space following the PascalCase file name. In some
       // cases, e.g. 'FileName#method_name` there's no space after the file name.
       let regexString = `${pascalCurrentFileLabel}[ ]?`;

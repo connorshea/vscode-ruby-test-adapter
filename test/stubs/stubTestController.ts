@@ -9,7 +9,7 @@ export class StubTestController implements vscode.TestController {
   id: string = "stub_test_controller_id";
   label: string = "stub_test_controller_label";
   items: vscode.TestItemCollection
-  testRuns: Map<vscode.TestRunRequest, vscode.TestRun> = new Map<vscode.TestRunRequest, vscode.TestRun>()
+  testRuns: Map<string, vscode.TestRun> = new Map<string, vscode.TestRun>()
   readonly rootLog: IChildLogger
 
   constructor(readonly log: IChildLogger) {
@@ -37,7 +37,7 @@ export class StubTestController implements vscode.TestController {
     persist?: boolean
   ): vscode.TestRun {
     let mockTestRun = mock<vscode.TestRun>()
-    this.testRuns.set(request, mockTestRun)
+    this.testRuns.set(request.profile!.label, mockTestRun)
     return instance(mockTestRun)
   }
 
@@ -46,7 +46,7 @@ export class StubTestController implements vscode.TestController {
   }
 
   getMockTestRun(request: vscode.TestRunRequest): vscode.TestRun | undefined {
-    return this.testRuns.get(request)
+    return this.testRuns.get(request.profile!.label)
   }
 
   dispose = () => {}

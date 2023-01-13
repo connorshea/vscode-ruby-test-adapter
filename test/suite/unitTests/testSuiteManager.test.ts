@@ -1,18 +1,17 @@
 import { expect } from 'chai';
-import { before, beforeEach } from 'mocha';
+import { before, beforeEach, afterEach } from 'mocha';
 import { instance, mock, when } from 'ts-mockito'
 import * as vscode from 'vscode'
 import path from 'path'
 
 import { Config } from '../../../src/config';
 import { TestSuiteManager } from '../../../src/testSuiteManager';
-import { StubTestController } from '../../stubs/stubTestController';
 import { logger } from '../../stubs/logger';
 import { testUriMatches } from '../helpers';
 
-const log = logger("trace")
+const log = logger("off")
 
-suite('TestSuite', function () {
+suite('TestSuiteManager', function () {
   let mockConfig: Config = mock<Config>();
   const config: Config = instance(mockConfig)
   let controller: vscode.TestController;
@@ -25,9 +24,13 @@ suite('TestSuite', function () {
   });
 
   beforeEach(function () {
-    controller = new StubTestController(log)
+    controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
     manager = new TestSuiteManager(log, controller, instance(mockConfig))
   });
+
+  afterEach(function() {
+    controller.dispose()
+  })
 
   suite('#normaliseTestId()', function () {
     const parameters = [
@@ -120,9 +123,9 @@ suite('TestSuite', function () {
   })
 
   suite('#getOrCreateTestItem()', function () {
-    const id = 'test-id'
+    const id = 'test-id.rb'
     const label = 'test-label'
-    const childId = `folder${path.sep}child-test`
+    const childId = path.join('folder', 'child-test.rb')
     let testItem: vscode.TestItem
     let childItem: vscode.TestItem
 
@@ -222,6 +225,54 @@ suite('TestSuite', function () {
           testUriMatches(testItem, path.resolve(config.getAbsoluteTestDirectory(), fileId))
         })
       }
+    })
+
+    suite('sets canResolveChildren correctly when creating items', function() {
+      test('folder', function() {
+        expect(manager.getOrCreateTestItem('folder').canResolveChildren).to.eq(true)
+      });
+
+      test('ruby file', function() {
+        expect(manager.getOrCreateTestItem('file.rb').canResolveChildren).to.eq(true)
+      });
+
+      test('folder and file', function() {
+        expect(manager.getOrCreateTestItem('folder/file.rb').canResolveChildren).to.eq(true)
+        expect(manager.getOrCreateTestItem('folder').canResolveChildren).to.eq(true)
+      });
+
+      test('test case in file with context (rspec)', function() {
+        expect(manager.getOrCreateTestItem('file.rb[1:1:1]').canResolveChildren).to.eq(false)
+        expect(manager.getOrCreateTestItem('file.rb[1:1]').canResolveChildren).to.eq(true)
+        expect(manager.getOrCreateTestItem('file.rb').canResolveChildren).to.eq(true)
+      });
+
+      test('test case in file (minitest)', function() {
+        expect(manager.getOrCreateTestItem('file.rb[1]').canResolveChildren).to.eq(false)
+      });
+
+      test('test case in file (rspec)', function() {
+        expect(manager.getOrCreateTestItem('file.rb[1:1]').canResolveChildren).to.eq(false)
+      });
+
+      test('folder and test case in file with context (rspec)', function() {
+        expect(manager.getOrCreateTestItem('folder/file.rb[1:1:1]').canResolveChildren).to.eq(false)
+        expect(manager.getOrCreateTestItem('folder/file.rb[1:1]').canResolveChildren).to.eq(true)
+        expect(manager.getOrCreateTestItem('folder/file.rb').canResolveChildren).to.eq(true)
+        expect(manager.getOrCreateTestItem('folder').canResolveChildren).to.eq(true)
+      });
+
+      test('folder and test case in file (minitest)', function() {
+        expect(manager.getOrCreateTestItem('folder/file.rb[1]').canResolveChildren).to.eq(false)
+        expect(manager.getOrCreateTestItem('folder/file.rb').canResolveChildren).to.eq(true)
+        expect(manager.getOrCreateTestItem('folder').canResolveChildren).to.eq(true)
+      });
+
+      test('folder and test case in file (rspec)', function() {
+        expect(manager.getOrCreateTestItem('folder/file.rb[1:1]').canResolveChildren).to.eq(false)
+        expect(manager.getOrCreateTestItem('folder/file.rb').canResolveChildren).to.eq(true)
+        expect(manager.getOrCreateTestItem('folder').canResolveChildren).to.eq(true)
+      });
     })
   })
 

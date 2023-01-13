@@ -168,6 +168,7 @@ export function setupMockRequest(manager: TestSuiteManager, testId?: string | st
   when(mockRequest.exclude).thenReturn([])
   let mockRunProfile = mock<vscode.TestRunProfile>()
   when(mockRunProfile.label).thenReturn('Run')
+  when(mockRunProfile.kind).thenReturn(vscode.TestRunProfileKind.Run)
   when(mockRequest.profile).thenReturn(instance(mockRunProfile))
   return mockRequest
 }

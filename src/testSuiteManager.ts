@@ -21,9 +21,9 @@ export class TestSuiteManager {
     this.log = rootLog.getChildLogger({label: 'TestSuite'});
   }
 
-  public deleteTestItem(testId: string | vscode.Uri) {
+  public deleteTestItem(testId: string) {
     let log = this.log.getChildLogger({label: 'deleteTestItem'})
-    testId = this.uriToTestId(testId)
+    testId = this.normaliseTestId(testId)
     log.debug('Deleting test', testId)
     let testItem = this.getTestItem(testId)
     if (!testItem) {
@@ -46,7 +46,7 @@ export class TestSuiteManager {
    * @returns The test item for the ID
    * @throws if test item could not be found
    */
-  public getOrCreateTestItem(testId: string | vscode.Uri, onItemCreated?: TestItemCallback): vscode.TestItem {
+  public getOrCreateTestItem(testId: string, onItemCreated?: TestItemCallback): vscode.TestItem {
     let log = this.log.getChildLogger({label: 'getOrCreateTestItem'})
     return this.getTestItemInternal(log, testId, true, onItemCreated)!
   }
@@ -56,7 +56,7 @@ export class TestSuiteManager {
    * @param testId ID of the TestItem to get
    * @returns TestItem if found, else undefined
    */
-  public getTestItem(testId: string | vscode.Uri): vscode.TestItem | undefined {
+  public getTestItem(testId: string): vscode.TestItem | undefined {
     let log = this.log.getChildLogger({label: 'getTestItem'})
     return this.getTestItemInternal(log, testId, false)
   }
@@ -80,24 +80,6 @@ export class TestSuiteManager {
     }
     log.debug('Normalised ID', testId)
     return testId
-  }
-
-  /**
-   * Converts a test URI into a test ID
-   * @param uri URI of test
-   * @returns test ID
-   */
-  private uriToTestId(uri: string | vscode.Uri): string {
-    let log = this.log.getChildLogger({label: `uriToTestId(${uri})`})
-    if (typeof uri === "string") {
-      log.debug("uri is string. Returning unchanged")
-      return uri
-    }
-    let fullTestDirPath = this.config.getAbsoluteTestDirectory()
-    log.debug('Full path to test dir', fullTestDirPath)
-    let strippedUri = uri.fsPath.replace(fullTestDirPath + path.sep, '')
-    log.debug('Stripped URI', strippedUri)
-    return strippedUri
   }
 
   private testIdToUri(testId: string): vscode.Uri {
@@ -191,11 +173,11 @@ export class TestSuiteManager {
 
   private getTestItemInternal(
     log: IChildLogger,
-    testId: string | vscode.Uri,
+    testId: string,
     createIfMissing: boolean,
     onItemCreated?: TestItemCallback
   ): vscode.TestItem | undefined {
-    testId = this.normaliseTestId(this.uriToTestId(testId))
+    testId = this.normaliseTestId(testId)
 
     log.debug('Looking for test', testId)
     let parentIds = this.getParentIdsFromId(testId)
@@ -211,10 +193,10 @@ export class TestSuiteManager {
         if (createIfMissing) {
           child = this.createTestItem(
             id,
-            id, // Temporary label
+            id.substring(id.lastIndexOf(path.sep) + 1), // Temporary label
             item,
             onItemCreated,
-            !(id == testId) // Only the test ID will be a test case. All parents need this set to true
+            this.canResolveChildren(id, testId) // Only the test ID will be a test case. All parents need this set to true
           )
         } else {
           return undefined
@@ -225,5 +207,13 @@ export class TestSuiteManager {
     }
 
     return item
+  }
+
+  private canResolveChildren(itemId: string, testId: string): boolean {
+    if (itemId.endsWith(']')) {
+      return itemId !== testId
+    } else {
+      return true
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { before, beforeEach } from 'mocha';
+import { before, beforeEach, afterEach } from 'mocha';
 import { instance, mock, when } from 'ts-mockito'
 import * as childProcess from 'child_process';
 import * as vscode from 'vscode'
@@ -11,7 +11,6 @@ import { FrameworkProcess } from '../../../src/frameworkProcess';
 
 import { testItemCollectionMatches, TestItemExpectation } from "../helpers";
 import { logger } from '../../stubs/logger';
-import { StubTestController } from '../../stubs/stubTestController';
 
 // JSON Fixtures
 import rspecDryRunOutput from '../../fixtures/unitTests/rspec/dryRunOutput.json'
@@ -19,7 +18,7 @@ import rspecTestRunOutput from '../../fixtures/unitTests/rspec/testRunOutput.jso
 import minitestDryRunOutput from '../../fixtures/unitTests/minitest/dryRunOutput.json'
 import minitestTestRunOutput from '../../fixtures/unitTests/minitest/testRunOutput.json'
 
-const log = logger("trace")
+const log = logger("off")
 const cancellationTokenSoure = new vscode.CancellationTokenSource()
 
 suite('FrameworkProcess', function () {
@@ -36,6 +35,12 @@ suite('FrameworkProcess', function () {
     when(mockContext.cancellationToken).thenReturn(cancellationTokenSoure.token)
   })
 
+  afterEach(function() {
+    if (testController) {
+      testController.dispose()
+    }
+  })
+
   suite('#parseAndHandleTestOutput()', function () {
     suite('RSpec output', function () {
       before(function () {
@@ -45,43 +50,16 @@ suite('FrameworkProcess', function () {
       })
 
       beforeEach(function () {
-        testController = new StubTestController(log)
+        testController = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
         manager = new TestSuiteManager(log, testController, instance(config))
         frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, instance(mockContext), manager)
       })
 
       const expectedTests: TestItemExpectation[] = [
         {
-          id: "square",
-          label: "square",
-          file: path.resolve("spec", "square"),
-          canResolveChildren: true,
-          children: [
-            {
-              id: "square/square_spec.rb",
-              label: "Square",
-              file: path.resolve("spec", "square", "square_spec.rb"),
-              canResolveChildren: true,
-              children: [
-                {
-                  id: "square/square_spec.rb[1:1]",
-                  label: "finds the square of 2",
-                  file: path.resolve("spec", "square", "square_spec.rb"),
-                  line: 3,
-                },
-                {
-                  id: "square/square_spec.rb[1:2]",
-                  label: "finds the square of 3",
-                  file: path.resolve("spec", "square", "square_spec.rb"),
-                  line: 7,
-                },
-              ]
-            }
-          ]
-        },
-        {
           id: "abs_spec.rb",
-          label: "Abs",
+          //label: "Abs",
+          label: "abs_spec.rb",
           file: path.resolve("spec", "abs_spec.rb"),
           canResolveChildren: true,
           children: [
@@ -104,7 +82,141 @@ suite('FrameworkProcess', function () {
               line: 11,
             }
           ]
-        }
+        },
+        {
+          id: "contexts_spec.rb",
+          //label: "Contexts",
+          label: "contexts_spec.rb",
+          file: path.resolve("spec", "contexts_spec.rb"),
+          canResolveChildren: true,
+          children: [
+            {
+              id: "contexts_spec.rb[1:1]",
+              //label: "when",
+              label: "contexts_spec.rb[1:1]",
+              file: path.resolve("spec", "contexts_spec.rb"),
+              canResolveChildren: true,
+              children: [
+                {
+                  id: "contexts_spec.rb[1:1:1]",
+                  //label: "there",
+                  label: "contexts_spec.rb[1:1:1]",
+                  file: path.resolve("spec", "contexts_spec.rb"),
+                  canResolveChildren: true,
+                  children: [
+                    {
+                      id: "contexts_spec.rb[1:1:1:1]",
+                      //label: "are",
+                      label: "contexts_spec.rb[1:1:1:1]",
+                      file: path.resolve("spec", "contexts_spec.rb"),
+                      canResolveChildren: true,
+                      children: [
+                        {
+                          id: "contexts_spec.rb[1:1:1:1:1]",
+                          //label: "many",
+                          label: "contexts_spec.rb[1:1:1:1:1]",
+                          file: path.resolve("spec", "contexts_spec.rb"),
+                          canResolveChildren: true,
+                          children: [
+                            {
+                              id: "contexts_spec.rb[1:1:1:1:1:1]",
+                              //label: "levels",
+                              label: "contexts_spec.rb[1:1:1:1:1:1]",
+                              file: path.resolve("spec", "contexts_spec.rb"),
+                              canResolveChildren: true,
+                              children: [
+                                {
+                                  id: "contexts_spec.rb[1:1:1:1:1:1:1]",
+                                  //label: "of",
+                                  label: "contexts_spec.rb[1:1:1:1:1:1:1]",
+                                  file: path.resolve("spec", "contexts_spec.rb"),
+                                  canResolveChildren: true,
+                                  children: [
+                                    {
+                                      id: "contexts_spec.rb[1:1:1:1:1:1:1:1]",
+                                      //label: "nested",
+                                      label: "contexts_spec.rb[1:1:1:1:1:1:1:1]",
+                                      file: path.resolve("spec", "contexts_spec.rb"),
+                                      canResolveChildren: true,
+                                      children: [
+                                        {
+                                          id: "contexts_spec.rb[1:1:1:1:1:1:1:1:1]",
+                                          //label: "contexts",
+                                          label: "contexts_spec.rb[1:1:1:1:1:1:1:1:1]",
+                                          file: path.resolve("spec", "contexts_spec.rb"),
+                                          canResolveChildren: true,
+                                          children: [
+                                            {
+                                              id: "contexts_spec.rb[1:1:1:1:1:1:1:1:1:1]",
+                                              //label: "doesn't break the extension",
+                                              label: "when there are many levels of nested contexts doesn't break the extension",
+                                              file: path.resolve("spec", "contexts_spec.rb"),
+                                              canResolveChildren: false,
+                                              line: 13,
+                                            },
+                                          ]
+                                        },
+                                      ]
+                                    },
+                                  ]
+                                },
+                              ]
+                            },
+                          ]
+                        },
+                        {
+                          id: "contexts_spec.rb[1:1:1:1:2]",
+                          //label: "fewer levels of nested contexts",
+                          label: "contexts_spec.rb[1:1:1:1:2]",
+                          file: path.resolve("spec", "contexts_spec.rb"),
+                          canResolveChildren: true,
+                          children: [
+                            {
+                              id: "contexts_spec.rb[1:1:1:1:2:1]",
+                              label: "when there are fewer levels of nested contexts test #1",
+                              file: path.resolve("spec", "contexts_spec.rb"),
+                              canResolveChildren: false,
+                              line: 23
+                            },
+                          ]
+                        },
+                      ]
+                    },
+                  ]
+                },
+              ]
+            }
+          ]
+        },
+        {
+          id: "square",
+          label: "square",
+          file: path.resolve("spec", "square"),
+          canResolveChildren: true,
+          children: [
+            {
+              id: "square/square_spec.rb",
+              //label: "Square",
+              label: "square_spec.rb",
+              file: path.resolve("spec", "square", "square_spec.rb"),
+              canResolveChildren: true,
+              children: [
+                {
+                  id: "square/square_spec.rb[1:1]",
+                  label: "finds the square of 2",
+                  file: path.resolve("spec", "square", "square_spec.rb"),
+                  line: 3,
+                },
+                {
+                  id: "square/square_spec.rb[1:2]",
+                  label: "finds the square of 3",
+                  file: path.resolve("spec", "square", "square_spec.rb"),
+                  line: 7,
+                },
+              ]
+            }
+          ]
+        },
       ]
 
       test('parses dry run output correctly', function () {
@@ -128,10 +240,12 @@ suite('FrameworkProcess', function () {
       })
 
       beforeEach(function () {
-        testController = new StubTestController(log)
+        testController = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
         manager = new TestSuiteManager(log, testController, instance(config))
         frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, instance(mockContext), manager)
       })
+
+
 
       const expectedTests: TestItemExpectation[] = [
         {
@@ -142,7 +256,8 @@ suite('FrameworkProcess', function () {
           children: [
             {
               id: "square/square_test.rb",
-              label: "Square",
+              //label: "Square",
+              label: "square_test.rb",
               file: path.resolve("test", "square", "square_test.rb"),
               canResolveChildren: true,
               children: [
@@ -164,7 +279,8 @@ suite('FrameworkProcess', function () {
         },
         {
           id: "abs_test.rb",
-          label: "Abs",
+          //label: "Abs",
+          label: "abs_test.rb",
           file: path.resolve("test", "abs_test.rb"),
           canResolveChildren: true,
           children: [

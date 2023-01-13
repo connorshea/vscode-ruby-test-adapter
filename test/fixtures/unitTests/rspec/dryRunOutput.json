@@ -10,7 +10,7 @@
       "line_number": 4,
       "type": null,
       "pending_message": null,
-      "duration": 2.9555e-05
+      "duration": 3.0758e-05
     },
     {
       "id": "./spec/abs_spec.rb[1:2]",
@@ -21,7 +21,7 @@
       "line_number": 8,
       "type": null,
       "pending_message": null,
-      "duration": 1.1982e-05
+      "duration": 1.2055e-05
     },
     {
       "id": "./spec/abs_spec.rb[1:3]",
@@ -32,7 +32,29 @@
       "line_number": 12,
       "type": null,
       "pending_message": null,
-      "duration": 1.0685e-05
+      "duration": 1.0444e-05
+    },
+    {
+      "id": "./spec/contexts_spec.rb[1:1:1:1:1:1:1:1:1:1]",
+      "description": "doesn't break the extension",
+      "full_description": "Contexts when there are many levels of nested contexts doesn't break the extension",
+      "status": "passed",
+      "file_path": "./spec/contexts_spec.rb",
+      "line_number": 14,
+      "type": null,
+      "pending_message": null,
+      "duration": 3.7666e-05
+    },
+    {
+      "id": "./spec/contexts_spec.rb[1:1:1:1:2:1]",
+      "description": "example at ./spec/contexts_spec.rb:24",
+      "full_description": "Contexts when there are fewer levels of nested contexts ",
+      "status": "passed",
+      "file_path": "./spec/contexts_spec.rb",
+      "line_number": 24,
+      "type": null,
+      "pending_message": null,
+      "duration": 4.024e-05
     },
     {
       "id": "./spec/square/square_spec.rb[1:1]",
@@ -43,7 +65,7 @@
       "line_number": 4,
       "type": null,
       "pending_message": null,
-      "duration": 1.7352e-05
+      "duration": 4.3333e-05
     },
     {
       "id": "./spec/square/square_spec.rb[1:2]",
@@ -54,15 +76,15 @@
       "line_number": 8,
       "type": null,
       "pending_message": null,
-      "duration": 1.2148e-05
+      "duration": 0.000158812
     }
   ],
   "summary": {
-    "duration": 0.002985345,
-    "example_count": 5,
+    "duration": 0.007978328,
+    "example_count": 7,
     "failure_count": 0,
     "pending_count": 0,
     "errors_outside_of_examples_count": 0
   },
-  "summary_line": "5 examples, 0 failures"
+  "summary_line": "7 examples, 0 failures"
 }

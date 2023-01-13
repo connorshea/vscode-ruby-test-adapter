@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import path from 'path'
 import { IChildLogger } from '@vscode-logging/logger';
 import { TestSuiteManager } from './testSuiteManager';
 import { LoaderQueue } from './loaderQueue';
@@ -53,13 +54,13 @@ export class TestLoader implements vscode.Disposable {
     watcher.onDidCreate(uri => {
       let watcherLog = this.log.getChildLogger({label: 'onDidCreate watcher'})
       watcherLog.debug('File created', uri.fsPath)
-      this.manager.getOrCreateTestItem(uri)
+      this.manager.getOrCreateTestItem(this.uriToTestId(uri))
     })
     // When files change, reload them
     watcher.onDidChange(uri => {
       let watcherLog = this.log.getChildLogger({label: 'onDidChange watcher'})
       watcherLog.debug('File changed, reloading tests', uri.fsPath)
-      let testItem = this.manager.getTestItem(uri)
+      let testItem = this.manager.getTestItem(this.uriToTestId(uri))
       if (!testItem) {
         watcherLog.error('Unable to find test item for file', uri)
       } else {
@@ -70,7 +71,7 @@ export class TestLoader implements vscode.Disposable {
     watcher.onDidDelete(uri => {
       let watcherLog = this.log.getChildLogger({label: 'onDidDelete watcher'})
       watcherLog.debug('File deleted', uri.fsPath)
-      this.manager.deleteTestItem(uri)
+      this.manager.deleteTestItem(this.uriToTestId(uri))
     });
 
     return watcher;
@@ -99,7 +100,7 @@ export class TestLoader implements vscode.Disposable {
       for (const file of await vscode.workspace.findFiles(pattern)) {
         log.debug('Found file, creating TestItem', file)
         // Enqueue the file to load tests from it
-        resolveFilesPromises.push(this.resolveQueue.enqueue(this.manager.getOrCreateTestItem(file)))
+        resolveFilesPromises.push(this.resolveQueue.enqueue(this.manager.getOrCreateTestItem(this.uriToTestId(file))))
       }
 
       // TODO - skip if filewatcher for this pattern exists and dispose filewatchers for patterns no longer in config
@@ -148,5 +149,23 @@ export class TestLoader implements vscode.Disposable {
         this.discoverAllFilesInWorkspace();
       }
     })
+  }
+
+  /**
+   * Converts a test URI into a test ID
+   * @param uri URI of test
+   * @returns test ID
+   */
+  private uriToTestId(uri: string | vscode.Uri): string {
+    let log = this.log.getChildLogger({label: `uriToTestId(${uri})`})
+    if (typeof uri === "string") {
+      log.debug("uri is string. Returning unchanged")
+      return uri
+    }
+    let fullTestDirPath = this.manager.config.getAbsoluteTestDirectory()
+    log.debug('Full path to test dir', fullTestDirPath)
+    let strippedUri = uri.fsPath.replace(fullTestDirPath + path.sep, '')
+    log.debug('Stripped URI', strippedUri)
+    return strippedUri
   }
 }

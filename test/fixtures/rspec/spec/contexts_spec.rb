@@ -12,7 +12,7 @@ describe 'Contexts' do
               context 'nested' do
                 context 'contexts' do
                   it "doesn't break the extension" do
-                    expect('Hello text explorer!').to be_a(string)
+                    expect('Hello text explorer!').to be_a(String)
                   end
                 end
               end
@@ -21,8 +21,8 @@ describe 'Contexts' do
         end
 
         context 'fewer levels of nested contexts' do
-          it "still doesn't break the extension" do
-            expect('Hello again text explorer!').to be_a(string)
+          it do
+            expect('Hello again text explorer!').to be_a(String)
           end
         end
       end

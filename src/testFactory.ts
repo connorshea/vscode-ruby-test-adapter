@@ -60,7 +60,6 @@ export class TestFactory implements vscode.Disposable {
       this.runner = new TestRunner(
         this.log,
         this.manager,
-        this.framework == "minitest",
         this.workspace,
       )
       this.disposables.push(this.runner);

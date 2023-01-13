@@ -21,7 +21,6 @@ export class TestRunner implements vscode.Disposable {
   constructor(
     readonly rootLog: IChildLogger,
     protected manager: TestSuiteManager,
-    private readonly canNotifyOnStartingTests: boolean,
     protected workspace?: vscode.WorkspaceFolder,
   ) {
     this.log = rootLog.getChildLogger({label: "TestRunner"})
@@ -225,12 +224,8 @@ export class TestRunner implements vscode.Disposable {
    * Mark a test node and all its children as being queued for execution
    */
   private enqueTestAndChildren(test: vscode.TestItem, context: TestRunContext) {
-    if (this.canNotifyOnStartingTests) {
-      // Tests will be marked as started as the runner gets to them
-      context.enqueued(test);
-    } else {
-      context.started(test);
-    }
+    // Tests will be marked as started as the runner gets to them
+    context.enqueued(test);
     if (test.children && test.children.size > 0) {
       test.children.forEach(child => { this.enqueTestAndChildren(child, context) })
     }

@@ -86,6 +86,28 @@
       "duration": 0.000438123
     },
     {
+      "id": "./spec/contexts_spec.rb[1:1:1:1:1:1:1:1:1:1]",
+      "description": "doesn't break the extension",
+      "full_description": "Contexts when there are many levels of nested contexts doesn't break the extension",
+      "status": "passed",
+      "file_path": "./spec/contexts_spec.rb",
+      "line_number": 14,
+      "type": null,
+      "pending_message": null,
+      "duration": 3.7666e-05
+    },
+    {
+      "id": "./spec/contexts_spec.rb[1:1:1:1:2:1]",
+      "description": "example at ./spec/contexts_spec.rb:24",
+      "full_description": "Contexts when there are fewer levels of nested contexts ",
+      "status": "passed",
+      "file_path": "./spec/contexts_spec.rb",
+      "line_number": 24,
+      "type": null,
+      "pending_message": null,
+      "duration": 4.024e-05
+    },
+    {
       "id": "./spec/square/square_spec.rb[1:1]",
       "description": "finds the square of 2",
       "full_description": "Square finds the square of 2",
@@ -168,10 +190,10 @@
   ],
   "summary": {
     "duration": 0.094338312,
-    "example_count": 5,
+    "example_count": 7,
     "failure_count": 2,
     "pending_count": 1,
     "errors_outside_of_examples_count": 0
   },
-  "summary_line": "5 examples, 2 failures, 1 pending"
+  "summary_line": "7 examples, 2 failures, 1 pending"
 }

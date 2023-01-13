@@ -22,7 +22,7 @@ suite('Extension Test for Minitest', function() {
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
 
-  const log = logger("debug");
+  const log = logger("info");
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -78,7 +78,7 @@ suite('Extension Test for Minitest', function() {
     beforeEach(function () {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new TestRunner(log, manager, true, workspaceFolder)
+      testRunner = new TestRunner(log, manager, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
     })
 
@@ -101,7 +101,8 @@ suite('Extension Test for Minitest', function() {
           {
             file: expectedPath("abs_test.rb"),
             id: "abs_test.rb",
-            label: "Abs",
+            //label: "Abs",
+            label: "abs_test.rb",
             canResolveChildren: true,
             children: []
           },
@@ -114,7 +115,8 @@ suite('Extension Test for Minitest', function() {
               {
                 file: expectedPath("square/square_test.rb"),
                 id: "square/square_test.rb",
-                label: "Square",
+                //label: "Square",
+                label: "square_test.rb",
                 canResolveChildren: true,
                 children: []
               },
@@ -206,7 +208,7 @@ suite('Extension Test for Minitest', function() {
     before(async function() {
       testController = new StubTestController(log)
       manager = new TestSuiteManager(log, testController, config)
-      testRunner = new TestRunner(log, manager, true, workspaceFolder)
+      testRunner = new TestRunner(log, manager, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader.discoverAllFilesInWorkspace()
     })

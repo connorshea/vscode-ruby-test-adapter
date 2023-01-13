@@ -12,9 +12,11 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
                                    :stop,
                                    :seed,
                                    :close,
+                                   # :example_group_started,
                                    :example_passed,
                                    :example_failed,
-                                   :example_pending
+                                   :example_pending,
+                                   :example_started
 
   attr_reader :output_hash
 
@@ -83,6 +85,14 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
   def example_pending(notification)
     output.write "SKIPPED: #{notification.example.id}\n"
   end
+
+  def example_started(notification)
+    output.write "RUNNING: #{notification.example.id}\n"
+  end
+
+  # def example_group_started(notification)
+  #   output.write "RUNNING: #{notification.group.id}\n"
+  # end
 
   private
 
