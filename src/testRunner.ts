@@ -120,40 +120,44 @@ export class TestRunner implements vscode.Disposable {
 
       let command: string
       if (context.request.profile?.label === 'ResolveTests') {
+        // Load tests
         command = this.manager.config.getResolveTestsCommand(testsToRun)
         await this.runTestFramework(command, context)
-      } else if (!testsToRun) {
-        log.debug("Running all tests")
-        this.manager.controller.items.forEach((item) => {
-          // Mark selected tests as started
-          this.enqueTestAndChildren(item, context)
-        })
-        command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
       } else {
-        log.debug("Running selected tests")
-        command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
-        for (const node of testsToRun) {
-          log.trace('Adding test to command: %s', node.id)
-          // Mark selected tests as started
-          this.enqueTestAndChildren(node, context)
-          command = `${command} ${node.uri?.fsPath}`
-          if (!node.canResolveChildren) {
-            // single test
-            if (!node.range) {
-              throw new Error(`Test item is missing line number: ${node.id}`)
+        // Run tests
+        if (!testsToRun) {
+          log.debug("Running all tests")
+          this.manager.controller.items.forEach((item) => {
+            // Mark selected tests as started
+            this.enqueTestAndChildren(item, context)
+          })
+          command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
+        } else {
+          log.debug("Running selected tests")
+          command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
+          for (const node of testsToRun) {
+            log.trace('Adding test to command: %s', node.id)
+            // Mark selected tests as started
+            this.enqueTestAndChildren(node, context)
+            command = `${command} ${node.uri?.fsPath}`
+            if (!node.canResolveChildren) {
+              // single test
+              if (!node.range) {
+                throw new Error(`Test item is missing line number: ${node.id}`)
+              }
+              command = `${command}:${node.range!.start.line + 1}`
             }
-            command = `${command}:${node.range!.start.line + 1}`
+            log.trace("Current command: %s", command)
           }
-          log.trace("Current command: %s", command)
         }
-      }
-      if (debuggerConfig) {
-        log.debug('Debugging tests', request.include?.map(x => x.id));
-        await Promise.all([this.startDebugSession(debuggerConfig, context), this.runTestFramework(command, context)])
-      }
-      else {
-        log.debug('Running test', request.include?.map(x => x.id));
-        await this.runTestFramework(command, context)
+        if (debuggerConfig) {
+          log.debug('Debugging tests', request.include?.map(x => x.id));
+          await Promise.all([this.startDebugSession(debuggerConfig, context), this.runTestFramework(command, context)])
+        }
+        else {
+          log.debug('Running test', request.include?.map(x => x.id));
+          await this.runTestFramework(command, context)
+        }
       }
     }
     catch (err) {
