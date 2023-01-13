@@ -269,8 +269,12 @@ export class TestRunner implements vscode.Disposable {
           context.skipped(event.testItem)
           break;
         case Status.passed:
-          log.debug('Received test passed event: %s (duration: %d)', event.testItem.id, event.duration)
-          context.passed(event.testItem, event.duration)
+          if (this.isTestLoad(context)) {
+            log.debug('Ignored test passed event from test load: %s (duration: %d)', event.testItem.id, event.duration)
+          } else {
+            log.debug('Received test passed event: %s (duration: %d)', event.testItem.id, event.duration)
+            context.passed(event.testItem, event.duration)
+          }
           break;
         case Status.errored:
           log.debug('Received test errored event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
@@ -281,8 +285,12 @@ export class TestRunner implements vscode.Disposable {
           context.failed(event.testItem, event.message!, event.duration)
           break;
         case Status.running:
-          log.debug('Received test started event: %s', event.testItem.id)
-          context.started(event.testItem)
+          if (this.isTestLoad(context)) {
+            log.debug('Ignored test started event from test load: %s (duration: %d)', event.testItem.id, event.duration)
+          } else {
+            log.debug('Received test started event: %s', event.testItem.id)
+            context.started(event.testItem)
+          }
           break;
         default:
           log.warn('Unexpected status: %s', event.status)
@@ -293,6 +301,13 @@ export class TestRunner implements vscode.Disposable {
     } finally {
       this.testProcessMap.delete(testProfileKind)
     }
+  }
+
+  /**
+   * Checks if the current test run is for loading tests rather than running them
+   */
+  private isTestLoad(context: TestRunContext): boolean {
+    return context.request.profile!.label == 'ResolveTests'
   }
 
   private killProfileTestRun(context: TestRunContext) {
