@@ -68,26 +68,6 @@ export class TestRunner implements vscode.Disposable {
     return parseInt(test.id.substring(test.id.indexOf("[") + 1, test.id.lastIndexOf("]")).split(':').join(''));
   }
 
-  // /**
-  //  * Sorts an array of TestSuiteInfo objects by label.
-  //  *
-  //  * @param testSuiteChildren An array of TestSuiteInfo objects, generally the children of another TestSuiteInfo object.
-  //  * @return The input array, sorted by label.
-  //  */
-  // protected sortTestSuiteChildren(testSuiteChildren: Array<TestSuiteInfo>): Array<TestSuiteInfo> {
-  //   testSuiteChildren = testSuiteChildren.sort((a: TestSuiteInfo, b: TestSuiteInfo) => {
-  //     let comparison = 0;
-  //     if (a.label > b.label) {
-  //       comparison = 1;
-  //     } else if (a.label < b.label) {
-  //       comparison = -1;
-  //     }
-  //     return comparison;
-  //   });
-
-  //   return testSuiteChildren;
-  // }
-
   /**
    * Test run handler
    *
