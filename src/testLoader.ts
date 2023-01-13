@@ -121,11 +121,14 @@ export class TestLoader implements vscode.Disposable {
     let log = this.log.getChildLogger({label:'loadTests'})
     log.info('Loading tests...', testItems?.map(x => x.id) || 'all tests');
     try {
+      if (testItems) { for (const item of testItems) { item.busy = true }}
       let request = new vscode.TestRunRequest(testItems, undefined, this.resolveTestProfile)
       await this.resolveTestProfile.runHandler(request, this.cancellationTokenSource.token)
     } catch (e: any) {
       log.error('Failed to load tests', e)
       return Promise.reject(e)
+    } finally {
+      if (testItems) { for (const item of testItems) { item.busy = false }}
     }
   }
 
