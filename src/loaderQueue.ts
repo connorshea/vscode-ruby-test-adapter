@@ -28,7 +28,7 @@ export type QueueItem = {
  */
 export class LoaderQueue implements vscode.Disposable {
   private readonly log: IChildLogger
-  private readonly queue: QueueItem[] = []
+  private readonly queue: Set<QueueItem> = new Set<QueueItem>()
   private isDisposed = false
   private notifyQueueWorker?: () => void
   private terminateQueueWorker?: () => void
@@ -79,7 +79,7 @@ export class LoaderQueue implements vscode.Disposable {
       queueItem["resolve"] = () => resolve(item)
       queueItem["reject"] = reject
     })
-    this.queue.push(queueItem)
+    this.queue.add(queueItem)
     if (this.notifyQueueWorker) {
       this.log.debug('notifying worker of items in queue')
       // Notify the worker function that there are items to resolve if it's waiting
@@ -93,7 +93,7 @@ export class LoaderQueue implements vscode.Disposable {
     log.info('worker started')
     // Check to see if the queue is being disposed
     while(!this.isDisposed) {
-      if (this.queue.length == 0) {
+      if (this.queue.size == 0) {
         log.debug('awaiting items to resolve')
         // While the queue is empty, wait for more items
         await new Promise<void>((resolve, reject) => {
@@ -112,8 +112,8 @@ export class LoaderQueue implements vscode.Disposable {
         this.terminateQueueWorker = undefined
       } else {
         // Drain queue to get batch of test items to load
-        let queueItems: QueueItem[] = []
-        while(this.queue.length > 0) { queueItems.push(this.queue.pop()!) }
+        let queueItems = Array.from(this.queue)
+        this.queue.clear()
 
         let items = queueItems.map(x => x["item"])
         this.log.debug('worker resolving items', items.map(x => x.id))
