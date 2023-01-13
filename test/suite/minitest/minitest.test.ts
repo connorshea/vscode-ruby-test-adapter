@@ -162,7 +162,7 @@ suite('Extension Test for Minitest', function() {
     })
 
     test('Load all tests', async function () {
-      await testLoader.discoverAllFilesInWorkspace()
+      await testLoader['loadTests']()
 
       const manager = testController.items
 
@@ -210,7 +210,7 @@ suite('Extension Test for Minitest', function() {
       manager = new TestSuiteManager(log, testController, config)
       testRunner = new TestRunner(log, manager, workspaceFolder)
       testLoader = new TestLoader(log, resolveTestsProfile, manager);
-      await testLoader.discoverAllFilesInWorkspace()
+      await testLoader['loadTests']()
     })
 
     suite(`running collections emits correct statuses`, async function() {

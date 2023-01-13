@@ -101,17 +101,20 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(profiles.resolveTestsProfile);
     context.subscriptions.push(factory);
 
-    factory.getLoader().discoverAllFilesInWorkspace();
-
     controller.resolveHandler = async test => {
       log.debug('resolveHandler called', test)
       if (!test) {
         await factory.getLoader().discoverAllFilesInWorkspace();
-      } else if (test.id.endsWith(".rb")) {
+      } else if (test.id.endsWith(".rb") || test.id.endsWith(']')) {
         // Only parse files
+        if (!test.canResolveChildren) {
+          log.warn("resolveHandler called for test that can't resolve children", test.id)
+        }
         await factory.getLoader().loadTestItem(test);
       }
     };
+
+    factory.getLoader().discoverAllFilesInWorkspace();
   }
   else {
     log.fatal('No test framework detected. Configure the rubyTestExplorer.testFramework setting if you want to use the Ruby Test Explorer.');

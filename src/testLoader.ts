@@ -99,8 +99,7 @@ export class TestLoader implements vscode.Disposable {
     let fileWatchers = await Promise.all(patterns.map(async (pattern) => {
       for (const file of await vscode.workspace.findFiles(pattern)) {
         log.debug('Found file, creating TestItem', file)
-        // Enqueue the file to load tests from it
-        resolveFilesPromises.push(this.resolveQueue.enqueue(this.manager.getOrCreateTestItem(this.uriToTestId(file))))
+        this.manager.getOrCreateTestItem(this.uriToTestId(file))
       }
 
       // TODO - skip if filewatcher for this pattern exists and dispose filewatchers for patterns no longer in config
