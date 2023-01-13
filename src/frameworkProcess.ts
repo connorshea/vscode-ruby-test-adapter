@@ -198,6 +198,9 @@ export class FrameworkProcess implements vscode.Disposable {
         testFile.children.replace(parsedTests.filter(x => !x.canResolveChildren && x.parent == testFile))
       }
     }
+    if (testMetadata.summary) {
+      log.info('Test run completed in %d ms', testMetadata.summary.duration)
+    }
   }
 
   private parseDescription(test: ParsedTest): string {
@@ -258,7 +261,7 @@ export class FrameworkProcess implements vscode.Disposable {
         this.testStatusEmitter.fire(new TestStatus(testItem, status, parsedtest.duration, this.failureMessage(testItem, parsedtest)))
         break;
       default:
-        log.error('Unexpected test status', status, testItem.id)
+        log.error('Unexpected test status %s for test ID %s', status, testItem.id)
     }
   }
 

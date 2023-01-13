@@ -35,7 +35,7 @@ export class LoaderQueue implements vscode.Disposable {
   public readonly worker: Promise<void>
 
   constructor(rootLog: IChildLogger, private readonly processItems: (testItems?: vscode.TestItem[]) => Promise<void>) {
-    this.log = rootLog.getChildLogger({label: 'ResolveQueue'})
+    this.log = rootLog.getChildLogger({label: `${LoaderQueue.name}`})
     this.worker = this.resolveItemsInQueueWorker()
   }
 
@@ -67,7 +67,7 @@ export class LoaderQueue implements vscode.Disposable {
    *   an error while loading the item (or the batch containing the item)
    */
   public enqueue(item: vscode.TestItem): Promise<vscode.TestItem> {
-    this.log.debug('enqueing item to resolve', item.id)
+    this.log.debug('enqueing item to resolve: %s', item.id)
     // Create queue item with empty functions
     let queueItem: QueueItem = {
       item: item,

@@ -133,7 +133,7 @@ export class TestRunner implements vscode.Disposable {
         log.debug("Running selected tests")
         command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
         for (const node of testsToRun) {
-          log.trace("Adding test to command", node.id)
+          log.trace('Adding test to command: %s', node.id)
           // Mark selected tests as started
           this.enqueTestAndChildren(node, context)
           command = `${command} ${node.uri?.fsPath}`
@@ -144,7 +144,7 @@ export class TestRunner implements vscode.Disposable {
             }
             command = `${command}:${node.range!.start.line + 1}`
           }
-          log.trace("Current command", command)
+          log.trace("Current command: %s", command)
         }
       }
       if (debuggerConfig) {
@@ -161,7 +161,7 @@ export class TestRunner implements vscode.Disposable {
     }
     finally {
       // Make sure to end the run after all tests have been executed:
-      log.info('Ending test run');
+      log.debug('Ending test run');
       context.endTestRun();
     }
     if (token.isCancellationRequested) {
@@ -246,11 +246,11 @@ export class TestRunner implements vscode.Disposable {
       env: this.manager.config.getProcessEnv()
     };
 
-    this.log.debug('Running command', testCommand);
+    this.log.info('Running command: %s', testCommand);
     let testProfileKind = context.request.profile!.kind
 
     if (this.testProcessMap.get(testProfileKind)) {
-      this.log.warn('Test run already in progress for profile kind', testProfileKind)
+      this.log.warn('Test run already in progress for profile kind: %s', testProfileKind)
       return
     }
     let testProcess = new FrameworkProcess(this.log, testCommand, spawnArgs, context, this.manager)
@@ -261,27 +261,27 @@ export class TestRunner implements vscode.Disposable {
       let log = this.log.getChildLogger({label: 'testStatusListener'})
       switch(event.status) {
         case Status.skipped:
-          log.debug('Received test skipped event', event.testItem.id)
+          log.debug('Received test skipped event: %s', event.testItem.id)
           context.skipped(event.testItem)
           break;
         case Status.passed:
-          log.debug('Received test passed event', event.testItem.id, event.duration)
+          log.debug('Received test passed event: %s (duration: %d)', event.testItem.id, event.duration)
           context.passed(event.testItem, event.duration)
           break;
         case Status.errored:
-          log.debug('Received test errored event', event.testItem.id, event.duration, event.message)
+          log.debug('Received test errored event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
           context.errored(event.testItem, event.message!, event.duration)
           break;
         case Status.failed:
-          log.debug('Received test failed event', event.testItem.id, event.duration, event.message)
+          log.debug('Received test failed event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
           context.failed(event.testItem, event.message!, event.duration)
           break;
         case Status.running:
-          log.debug('Received test started event', event.testItem.id)
+          log.debug('Received test started event: %s', event.testItem.id)
           context.started(event.testItem)
           break;
         default:
-          log.warn('Unexpected status', event.status)
+          log.warn('Unexpected status: %s', event.status)
       }
     })
     try {

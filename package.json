@@ -91,6 +91,21 @@
           "type": "string",
           "scope": "resource"
         },
+        "rubyTestExplorer.logLevel": {
+          "description": "Level of information to include in logs",
+          "type": "string",
+          "scope": "resource",
+          "default": "info",
+          "enum": [
+            "off",
+            "fatal",
+            "error",
+            "warn",
+            "info",
+            "debug",
+            "trace"
+          ]
+        },
         "rubyTestExplorer.testFramework": {
           "description": "Test framework to use by default, for example rspec or minitest.",
           "type": "string",

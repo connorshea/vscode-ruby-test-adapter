@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import { getExtensionLogger, IChildLogger } from "@vscode-logging/logger";
+import { getExtensionLogger, IChildLogger, LogLevel } from "@vscode-logging/logger";
 import { TestFactory } from './testFactory';
 import { RspecConfig } from './rspec/rspecConfig';
 import { MinitestConfig } from './minitest/minitestConfig';
 import { Config } from './config';
 
 export const guessWorkspaceFolder = async (rootLog: IChildLogger) => {
-  let log = rootLog.getChildLogger({ label: "guessWorkspaceFolder: " })
+  let log = rootLog.getChildLogger({ label: "guessWorkspaceFolder" })
   if (!vscode.workspace.workspaceFolders) {
     return undefined;
   }
@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(logOutputChannel)
   const log = getExtensionLogger({
     extName: "RubyTestExplorer",
-    level: "debug", // See LogLevel type in @vscode-logging/types for possible logLevels
+    level: (extensionConfig.get('logLevel') as LogLevel), // See LogLevel type in @vscode-logging/types for possible logLevels
     logPath: context.logUri.fsPath, // The logPath is only available from the `vscode.ExtensionContext`
     logOutputChannel: logOutputChannel, // OutputChannel for the logger
     sourceLocationTracking: false,
@@ -108,7 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
       } else if (test.id.endsWith(".rb") || test.id.endsWith(']')) {
         // Only parse files
         if (!test.canResolveChildren) {
-          log.warn("resolveHandler called for test that can't resolve children", test.id)
+          log.warn("resolveHandler called for test that can't resolve children: %s", test.id)
         }
         await factory.getLoader().loadTestItem(test);
       }

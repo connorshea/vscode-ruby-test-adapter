@@ -26,8 +26,8 @@ export class TestRunContext {
     readonly controller: vscode.TestController,
     public readonly debuggerConfig?: vscode.DebugConfiguration
   ) {
-    this.log = rootLog.getChildLogger({ label: `TestRunContext(${request.profile?.label})` })
-    this.log.info('Creating test run');
+    this.log = rootLog.getChildLogger({ label: `${TestRunContext.name}(${request.profile?.label})` })
+    this.log.info('Creating test run', {request: request});
     this.testRun = controller.createTestRun(request)
   }
 
@@ -37,7 +37,7 @@ export class TestRunContext {
    * @param test Test item to update.
    */
   public enqueued(test: vscode.TestItem): void {
-    this.log.debug('Enqueued test', test.id)
+    this.log.debug('Enqueued test: %s', test.id)
     this.testRun.enqueued(test)
   }
 
@@ -55,7 +55,7 @@ export class TestRunContext {
     message: vscode.TestMessage,
     duration?: number
   ): void {
-    this.log.debug('Errored test', test.id, duration, message.message)
+    this.log.debug('Errored test: %s (duration: %d)', test.id, duration, message)
     this.testRun.errored(test, message, duration)
   }
 
@@ -73,7 +73,7 @@ export class TestRunContext {
     message: vscode.TestMessage,
     duration?: number
   ): void {
-    this.log.debug('Failed test', test.id, duration, message.message)
+    this.log.debug('Failed test: %s (duration: %d)', test.id, duration, message)
     this.testRun.failed(test, message, duration)
   }
 
@@ -86,7 +86,7 @@ export class TestRunContext {
   public passed(test: vscode.TestItem,
     duration?: number | undefined
   ): void {
-    this.log.debug('Passed test', test.id, duration)
+    this.log.debug('Passed test: %s (duration: %d)', test.id, duration)
     this.testRun.passed(test, duration)
   }
 
@@ -96,7 +96,7 @@ export class TestRunContext {
    * @param test ID of the test item to update, or the test item.
    */
   public skipped(test: vscode.TestItem): void {
-    this.log.debug('Skipped test', test.id)
+    this.log.debug('Skipped test: %s', test.id)
     this.testRun.skipped(test)
   }
 
@@ -106,12 +106,12 @@ export class TestRunContext {
    * @param test Test item to update, or the test item.
    */
   public started(test: vscode.TestItem): void {
-    this.log.debug('Started test', test.id)
+    this.log.debug('Started test: %s', test.id)
     this.testRun.started(test)
   }
 
   public endTestRun(): void {
-    this.log.debug('Ending test run');
+    this.log.info('Ending test run');
     this.testRun.end()
   }
 }

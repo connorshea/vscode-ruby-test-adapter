@@ -53,13 +53,13 @@ export class TestLoader implements vscode.Disposable {
     // When files are created, make sure there's a corresponding "file" node in the test item tree
     watcher.onDidCreate(uri => {
       let watcherLog = this.log.getChildLogger({label: 'onDidCreate watcher'})
-      watcherLog.debug('File created', uri.fsPath)
+      watcherLog.debug('File created: %s', uri.fsPath)
       this.manager.getOrCreateTestItem(this.uriToTestId(uri))
     })
     // When files change, reload them
     watcher.onDidChange(uri => {
       let watcherLog = this.log.getChildLogger({label: 'onDidChange watcher'})
-      watcherLog.debug('File changed, reloading tests', uri.fsPath)
+      watcherLog.debug('File changed, reloading tests: %s', uri.fsPath)
       let testItem = this.manager.getTestItem(this.uriToTestId(uri))
       if (!testItem) {
         watcherLog.error('Unable to find test item for file', uri)
@@ -70,7 +70,7 @@ export class TestLoader implements vscode.Disposable {
     // And, finally, delete TestItems for removed files
     watcher.onDidDelete(uri => {
       let watcherLog = this.log.getChildLogger({label: 'onDidDelete watcher'})
-      watcherLog.debug('File deleted', uri.fsPath)
+      watcherLog.debug('File deleted: %s', uri.fsPath)
       this.manager.deleteTestItem(this.uriToTestId(uri))
     });
 
@@ -143,11 +143,18 @@ export class TestLoader implements vscode.Disposable {
     log.debug('configWatcher')
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
-      if (configChange.affectsConfiguration('rubyTestExplorer')) {
+      if (this.configChangeAffectsFileWatchers(configChange)) {
         this.manager.controller.items.replace([])
         this.discoverAllFilesInWorkspace();
       }
     })
+  }
+
+  private configChangeAffectsFileWatchers(configChange: vscode.ConfigurationChangeEvent): boolean {
+    return configChange.affectsConfiguration('rubyTestExplorer.filePattern')
+      || configChange.affectsConfiguration('rubyTestExplorer.testFramework')
+      || configChange.affectsConfiguration('rubyTestExplorer.rspecDirectory')
+      || configChange.affectsConfiguration('rubyTestExplorer.minitestDirectory')
   }
 
   /**
@@ -156,15 +163,15 @@ export class TestLoader implements vscode.Disposable {
    * @returns test ID
    */
   private uriToTestId(uri: string | vscode.Uri): string {
-    let log = this.log.getChildLogger({label: `uriToTestId(${uri})`})
+    let log = this.log.getChildLogger({label: 'uriToTestId'})
     if (typeof uri === "string") {
       log.debug("uri is string. Returning unchanged")
       return uri
     }
     let fullTestDirPath = this.manager.config.getAbsoluteTestDirectory()
-    log.debug('Full path to test dir', fullTestDirPath)
+    log.debug('Full path to test dir: %s', fullTestDirPath)
     let strippedUri = uri.fsPath.replace(fullTestDirPath + path.sep, '')
-    log.debug('Stripped URI', strippedUri)
+    log.debug('Stripped URI: %s', strippedUri)
     return strippedUri
   }
 }
