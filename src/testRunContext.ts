@@ -1,117 +1,59 @@
 import * as vscode from 'vscode'
 import { IChildLogger } from '@vscode-logging/logger'
+import { Status, TestStatus } from './testStatus'
 
 /**
- * Test run context
- *
- * Contains all objects used for interacting with VS Test API while tests are running
+ * Updates the TestRun when test status events are received
  */
-export class TestRunContext {
-  public readonly testRun: vscode.TestRun
-  public readonly log: IChildLogger
+export class TestStatusListener {
+  public static listen(
+    rootLog: IChildLogger,
+    profile: vscode.TestRunProfile,
+    testRun: vscode.TestRun,
+    testStatusEmitter: vscode.EventEmitter<TestStatus>
+  ): vscode.Disposable {
+    let log = rootLog.getChildLogger({ label: `${TestStatusListener.name}(${profile.label})`})
+    return testStatusEmitter.event((event: TestStatus) => {
 
-  /**
-   * Create a new context
-   *
-   * @param log Logger
-   * @param cancellationToken Cancellation token triggered when the user cancels a test operation
-   * @param request Test run request for creating test run object
-   * @param controller Test controller to look up tests for status reporting
-   * @param debuggerConfig A VS Code debugger configuration.
-   */
-  constructor(
-    readonly rootLog: IChildLogger,
-    public readonly cancellationToken: vscode.CancellationToken,
-    readonly request: vscode.TestRunRequest,
-    readonly controller: vscode.TestController,
-    public readonly debuggerConfig?: vscode.DebugConfiguration
-  ) {
-    this.log = rootLog.getChildLogger({ label: `${TestRunContext.name}(${request.profile?.label})` })
-    this.log.info('Creating test run', {request: request});
-    this.testRun = controller.createTestRun(request)
+      switch(event.status) {
+        case Status.skipped:
+          log.debug('Received test skipped event: %s', event.testItem.id)
+          testRun.skipped(event.testItem)
+          break;
+        case Status.passed:
+          if (this.isTestLoad(profile)) {
+            log.debug('Ignored test passed event from test load: %s (duration: %d)', event.testItem.id, event.duration)
+          } else {
+            log.debug('Received test passed event: %s (duration: %d)', event.testItem.id, event.duration)
+            testRun.passed(event.testItem, event.duration)
+          }
+          break;
+        case Status.errored:
+          log.debug('Received test errored event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
+          testRun.errored(event.testItem, event.message!, event.duration)
+          break;
+        case Status.failed:
+          log.debug('Received test failed event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
+          testRun.failed(event.testItem, event.message!, event.duration)
+          break;
+        case Status.running:
+          if (this.isTestLoad(profile)) {
+            log.debug('Ignored test started event from test load: %s (duration: %d)', event.testItem.id, event.duration)
+          } else {
+            log.debug('Received test started event: %s', event.testItem.id)
+            testRun.started(event.testItem)
+          }
+          break;
+        default:
+          log.warn('Unexpected status: %s', event.status)
+      }
+    })
   }
 
   /**
-   * Indicates a test is queued for later execution.
-   *
-   * @param test Test item to update.
+   * Checks if the current test run is for loading tests rather than running them
    */
-  public enqueued(test: vscode.TestItem): void {
-    this.log.debug('Enqueued test: %s', test.id)
-    this.testRun.enqueued(test)
-  }
-
-  /**
-   * Indicates a test has errored.
-   *
-   * This differs from the "failed" state in that it indicates a test that couldn't be executed at all, from a compilation error for example
-   *
-   * @param test Test item to update.
-   * @param message Message(s) associated with the test failure.
-   * @param duration How long the test took to execute, in milliseconds.
-   */
-  public errored(
-    test: vscode.TestItem,
-    message: vscode.TestMessage,
-    duration?: number
-  ): void {
-    this.log.debug('Errored test: %s (duration: %d)', test.id, duration, message)
-    this.testRun.errored(test, message, duration)
-  }
-
-  /**
-   * Indicates a test has failed.
-   *
-   * @param test Test item to update.
-   * @param message Message(s) associated with the test failure.
-   * @param file Path to the file containing the failed test
-   * @param line Line number where the error occurred
-   * @param duration How long the test took to execute, in milliseconds.
-   */
-  public failed(
-    test: vscode.TestItem,
-    message: vscode.TestMessage,
-    duration?: number
-  ): void {
-    this.log.debug('Failed test: %s (duration: %d)', test.id, duration, message)
-    this.testRun.failed(test, message, duration)
-  }
-
-  /**
-   * Indicates a test has passed.
-   *
-   * @param test Test item to update.
-   * @param duration How long the test took to execute, in milliseconds.
-   */
-  public passed(test: vscode.TestItem,
-    duration?: number | undefined
-  ): void {
-    this.log.debug('Passed test: %s (duration: %d)', test.id, duration)
-    this.testRun.passed(test, duration)
-  }
-
-  /**
-   * Indicates a test has been skipped.
-   *
-   * @param test ID of the test item to update, or the test item.
-   */
-  public skipped(test: vscode.TestItem): void {
-    this.log.debug('Skipped test: %s', test.id)
-    this.testRun.skipped(test)
-  }
-
-  /**
-   * Indicates a test has started running.
-   *
-   * @param test Test item to update, or the test item.
-   */
-  public started(test: vscode.TestItem): void {
-    this.log.debug('Started test: %s', test.id)
-    this.testRun.started(test)
-  }
-
-  public endTestRun(): void {
-    this.log.info('Ending test run');
-    this.testRun.end()
+  private static isTestLoad(profile: vscode.TestRunProfile): boolean {
+    return profile.label == 'ResolveTests'
   }
 }

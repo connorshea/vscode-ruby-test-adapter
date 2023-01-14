@@ -6,7 +6,6 @@ import * as path from 'path'
 
 import { Config } from "../../../src/config";
 import { TestSuiteManager } from "../../../src/testSuiteManager";
-import { TestRunContext } from '../../../src/testRunContext';
 import { FrameworkProcess } from '../../../src/frameworkProcess';
 
 import { logger, testItemCollectionMatches, TestItemExpectation } from "../helpers";
@@ -18,21 +17,15 @@ import minitestDryRunOutput from '../../fixtures/unitTests/minitest/dryRunOutput
 import minitestTestRunOutput from '../../fixtures/unitTests/minitest/testRunOutput.json'
 
 const log = logger("off")
-const cancellationTokenSoure = new vscode.CancellationTokenSource()
+const cancellationTokenSource = new vscode.CancellationTokenSource()
 
 suite('FrameworkProcess', function () {
   let manager: TestSuiteManager
   let testController: vscode.TestController
-  let mockContext: TestRunContext
   let frameworkProcess: FrameworkProcess
   let spawnOptions: childProcess.SpawnOptions = {}
 
   const config = mock<Config>()
-
-  before(function () {
-    mockContext = mock<TestRunContext>()
-    when(mockContext.cancellationToken).thenReturn(cancellationTokenSoure.token)
-  })
 
   afterEach(function() {
     if (testController) {
@@ -51,7 +44,7 @@ suite('FrameworkProcess', function () {
       beforeEach(function () {
         testController = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
         manager = new TestSuiteManager(log, testController, instance(config))
-        frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, instance(mockContext), manager)
+        frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, cancellationTokenSource.token, manager)
       })
 
       const expectedTests: TestItemExpectation[] = [
@@ -241,7 +234,7 @@ suite('FrameworkProcess', function () {
       beforeEach(function () {
         testController = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
         manager = new TestSuiteManager(log, testController, instance(config))
-        frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, instance(mockContext), manager)
+        frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, cancellationTokenSource.token, manager)
       })
 
 

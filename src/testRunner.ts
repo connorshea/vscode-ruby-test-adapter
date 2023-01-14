@@ -2,10 +2,9 @@ import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
-import { TestRunContext } from './testRunContext';
+import { TestStatusListener } from './testRunContext';
 import { TestSuiteManager } from './testSuiteManager';
 import { FrameworkProcess } from './frameworkProcess';
-import { Status, TestStatus } from './testStatus';
 
 export class TestRunner implements vscode.Disposable {
   protected debugCommandStartedResolver?: () => void;
@@ -83,14 +82,16 @@ export class TestRunner implements vscode.Disposable {
   ) {
     let log = this.log.getChildLogger({ label: 'runHandler' })
 
+    if (!request.profile) {
+      log.error('Test run request is missing a profile', {request: request})
+      return
+    }
+
     // Loop through all included tests, or all known tests, and add them to our queue
     log.debug('Number of tests in request', request.include?.length || 0);
-    let context = new TestRunContext(
-      this.rootLog,
-      token,
-      request,
-      this.manager.controller
-    );
+
+    log.info('Creating test run', {request: request});
+    const testRun = this.manager.controller.createTestRun(request)
 
     try {
       log.trace("Included tests in request", request.include?.map(x => x.id));
@@ -99,26 +100,26 @@ export class TestRunner implements vscode.Disposable {
       log.trace("Running tests", testsToRun?.map(x => x.id));
 
       let command: string
-      if (context.request.profile?.label === 'ResolveTests') {
+      if (request.profile.label === 'ResolveTests') {
         // Load tests
         command = this.manager.config.getResolveTestsCommand(testsToRun)
-        await this.runTestFramework(command, context)
+        await this.runTestFramework(command, testRun, request.profile)
       } else {
         // Run tests
         if (!testsToRun) {
           log.debug("Running all tests")
           this.manager.controller.items.forEach((item) => {
             // Mark selected tests as started
-            this.enqueTestAndChildren(item, context)
+            this.enqueTestAndChildren(item, testRun)
           })
-          command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
+          command = this.manager.config.getFullTestSuiteCommand(debuggerConfig)
         } else {
           log.debug("Running selected tests")
-          command = this.manager.config.getFullTestSuiteCommand(context.debuggerConfig)
+          command = this.manager.config.getFullTestSuiteCommand(debuggerConfig)
           for (const node of testsToRun) {
             log.trace('Adding test to command: %s', node.id)
             // Mark selected tests as started
-            this.enqueTestAndChildren(node, context)
+            this.enqueTestAndChildren(node, testRun)
             command = `${command} ${node.uri?.fsPath}`
             if (!node.canResolveChildren) {
               // single test
@@ -132,11 +133,14 @@ export class TestRunner implements vscode.Disposable {
         }
         if (debuggerConfig) {
           log.debug('Debugging tests', request.include?.map(x => x.id));
-          await Promise.all([this.startDebugSession(debuggerConfig, context), this.runTestFramework(command, context)])
+          await Promise.all([
+            this.startDebugSession(debuggerConfig, request.profile),
+            this.runTestFramework(command, testRun, request.profile)
+          ])
         }
         else {
           log.debug('Running test', request.include?.map(x => x.id));
-          await this.runTestFramework(command, context)
+          await this.runTestFramework(command, testRun, request.profile)
         }
       }
     }
@@ -146,14 +150,14 @@ export class TestRunner implements vscode.Disposable {
     finally {
       // Make sure to end the run after all tests have been executed:
       log.debug('Ending test run');
-      context.endTestRun();
+      testRun.end();
     }
     if (token.isCancellationRequested) {
       log.info('Test run aborted due to cancellation')
     }
   }
 
-  private async startDebugSession(debuggerConfig: vscode.DebugConfiguration, context: TestRunContext): Promise<void> {
+  private async startDebugSession(debuggerConfig: vscode.DebugConfiguration, profile: vscode.TestRunProfile): Promise<void> {
     let log = this.log.getChildLogger({label: 'startDebugSession'})
 
     if (this.workspace) {
@@ -194,24 +198,24 @@ export class TestRunner implements vscode.Disposable {
       const debugStopSubscription = vscode.debug.onDidTerminateDebugSession(session => {
         if (session === activeDebugSession) {
           log.info('Debug session ended', session.name);
-          this.killProfileTestRun(context) // terminate the test run
+          this.killTestRun(profile) // terminate the test run
           debugStopSubscription.dispose();
         }
       })
     } catch (err) {
       log.error('Error starting debug session', err)
-      this.killProfileTestRun(context)
+      this.killTestRun(profile)
     }
   }
 
   /**
    * Mark a test node and all its children as being queued for execution
    */
-  private enqueTestAndChildren(test: vscode.TestItem, context: TestRunContext) {
+  private enqueTestAndChildren(test: vscode.TestItem, testRun: vscode.TestRun) {
     // Tests will be marked as started as the runner gets to them
-    context.enqueued(test);
+    testRun.enqueued(test);
     if (test.children && test.children.size > 0) {
-      test.children.forEach(child => { this.enqueTestAndChildren(child, context) })
+      test.children.forEach(child => { this.enqueTestAndChildren(child, testRun) })
     }
   }
 
@@ -223,7 +227,7 @@ export class TestRunner implements vscode.Disposable {
    * @param context Test run context for the cancellation token
    * @returns Raw output from process
    */
-  private async runTestFramework (testCommand: string, context: TestRunContext): Promise<void> {
+  private async runTestFramework (testCommand: string, testRun: vscode.TestRun, profile: vscode.TestRunProfile): Promise<void> {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
@@ -231,67 +235,38 @@ export class TestRunner implements vscode.Disposable {
     };
 
     this.log.info('Running command: %s', testCommand);
-    let testProfileKind = context.request.profile!.kind
+    let testProfileKind = profile.kind
 
     if (this.testProcessMap.get(testProfileKind)) {
       this.log.warn('Test run already in progress for profile kind: %s', testProfileKind)
       return
     }
-    let testProcess = new FrameworkProcess(this.log, testCommand, spawnArgs, context, this.manager)
+    let testProcess = new FrameworkProcess(this.log, testCommand, spawnArgs, testRun.token, this.manager)
     this.disposables.push(testProcess)
     this.testProcessMap.set(testProfileKind, testProcess);
 
-    testProcess.testStatusEmitter.event((event: TestStatus) => {
-      let log = this.log.getChildLogger({label: 'testStatusListener'})
-      switch(event.status) {
-        case Status.skipped:
-          log.debug('Received test skipped event: %s', event.testItem.id)
-          context.skipped(event.testItem)
-          break;
-        case Status.passed:
-          if (this.isTestLoad(context)) {
-            log.debug('Ignored test passed event from test load: %s (duration: %d)', event.testItem.id, event.duration)
-          } else {
-            log.debug('Received test passed event: %s (duration: %d)', event.testItem.id, event.duration)
-            context.passed(event.testItem, event.duration)
-          }
-          break;
-        case Status.errored:
-          log.debug('Received test errored event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
-          context.errored(event.testItem, event.message!, event.duration)
-          break;
-        case Status.failed:
-          log.debug('Received test failed event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
-          context.failed(event.testItem, event.message!, event.duration)
-          break;
-        case Status.running:
-          if (this.isTestLoad(context)) {
-            log.debug('Ignored test started event from test load: %s (duration: %d)', event.testItem.id, event.duration)
-          } else {
-            log.debug('Received test started event: %s', event.testItem.id)
-            context.started(event.testItem)
-          }
-          break;
-        default:
-          log.warn('Unexpected status: %s', event.status)
-      }
-    })
+    const statusListener = TestStatusListener.listen(
+      this.rootLog,
+      profile,
+      testRun,
+      testProcess.testStatusEmitter
+    )
+    this.disposables.push(statusListener)
     try {
       await testProcess.startProcess(this.debugCommandStartedResolver)
     } finally {
+      this.disposeInstance(statusListener)
+      this.disposeInstance(testProcess)
       this.testProcessMap.delete(testProfileKind)
     }
   }
 
   /**
-   * Checks if the current test run is for loading tests rather than running them
+   * Terminates the current test run process for the given profile kind if there is one
+   * @param profile The profile to kill the test run for
    */
-  private isTestLoad(context: TestRunContext): boolean {
-    return context.request.profile!.label == 'ResolveTests'
-  }
-
-  private killProfileTestRun(context: TestRunContext) {
-    let profileKind = context.request.profile!.kind
+  private killTestRun(profile: vscode.TestRunProfile) {
+    let profileKind = profile.kind
     let process = this.testProcessMap.get(profileKind)
     if (process) {
       this.disposeInstance(process)

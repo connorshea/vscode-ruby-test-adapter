@@ -30,7 +30,7 @@ suite('Extension Test for RSpec', function() {
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
 
-  const log = logger("info");
+  const log = logger("debug");
 
   let expectedPath = (file: string): string => {
     return path.resolve(

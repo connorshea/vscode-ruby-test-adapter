@@ -1,5 +1,5 @@
 import * as vscode from 'vscode'
-import { instance, mock } from 'ts-mockito';
+import { instance, mock, when } from 'ts-mockito';
 
 import { StubTestItemCollection } from './stubTestItemCollection';
 import { StubTestItem } from './stubTestItem';
@@ -11,6 +11,7 @@ export class StubTestController implements vscode.TestController {
   items: vscode.TestItemCollection
   testRuns: Map<string, vscode.TestRun> = new Map<string, vscode.TestRun>()
   readonly rootLog: IChildLogger
+  readonly cancellationTokenSource = new vscode.CancellationTokenSource()
 
   constructor(readonly log: IChildLogger) {
     this.rootLog = log
@@ -38,6 +39,7 @@ export class StubTestController implements vscode.TestController {
   ): vscode.TestRun {
     let mockTestRun = mock<vscode.TestRun>()
     this.testRuns.set(request.profile!.label, mockTestRun)
+    when(mockTestRun.token).thenReturn(this.cancellationTokenSource.token)
     return instance(mockTestRun)
   }
 

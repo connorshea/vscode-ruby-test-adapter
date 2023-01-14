@@ -4,7 +4,6 @@ import * as vscode from 'vscode';
 import split2 from 'split2';
 import { IChildLogger } from '@vscode-logging/logger';
 import { Status, TestStatus } from './testStatus';
-import { TestRunContext } from './testRunContext';
 import { TestSuiteManager } from './testSuiteManager';
 
 type ParsedTest = {
@@ -38,11 +37,11 @@ export class FrameworkProcess implements vscode.Disposable {
     readonly rootLog: IChildLogger,
     private readonly testCommand: string,
     private readonly spawnArgs: childProcess.SpawnOptions,
-    private readonly testContext: TestRunContext,
+    private readonly cancellationToken: vscode.CancellationToken,
     private readonly testManager: TestSuiteManager,
   ) {
     this.log = rootLog.getChildLogger({label: 'FrameworkProcess'})
-    this.disposables.push(this.testContext.cancellationToken.onCancellationRequested(() => {
+    this.disposables.push(this.cancellationToken.onCancellationRequested(() => {
       this.log.debug('Cancellation requested')
       this.dispose()
     }))
