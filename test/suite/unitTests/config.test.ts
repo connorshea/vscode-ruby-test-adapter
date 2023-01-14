@@ -5,7 +5,7 @@ import * as path from 'path'
 
 import { Config } from "../../../src/config";
 import { RspecConfig } from "../../../src/rspec/rspecConfig";
-import { logger } from "../../stubs/logger";
+import { logger } from "../helpers";
 
 const log = logger("off")
 

@@ -136,7 +136,7 @@ export class FrameworkProcess implements vscode.Disposable {
               // it should always have a uri, but just to be safe...
               testMessage.location = new vscode.Location(testItem.uri, testItem.range)
             } else {
-              log.error('Test missing location details', testItem.id, testItem.uri)
+              log.error('Test missing location details', { testId: testItem.id, uri: testItem.uri })
             }
           }
           this.testStatusEmitter.fire(new TestStatus(

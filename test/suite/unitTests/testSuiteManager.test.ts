@@ -6,8 +6,7 @@ import path from 'path'
 
 import { Config } from '../../../src/config';
 import { TestSuiteManager } from '../../../src/testSuiteManager';
-import { logger } from '../../stubs/logger';
-import { testUriMatches } from '../helpers';
+import { logger, testUriMatches } from '../helpers';
 
 const log = logger("off")
 

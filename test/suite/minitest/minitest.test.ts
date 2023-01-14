@@ -9,8 +9,16 @@ import { TestSuiteManager } from '../../../src/testSuiteManager';
 import { TestRunner } from '../../../src/testRunner';
 import { MinitestConfig } from '../../../src/minitest/minitestConfig';
 
-import { setupMockRequest, TestFailureExpectation, testItemCollectionMatches, TestItemExpectation, testItemMatches, testStateCaptors, verifyFailure } from '../helpers';
-import { logger } from '../..//stubs/logger';
+import {
+  logger,
+  setupMockRequest,
+  TestFailureExpectation,
+  testItemCollectionMatches,
+  TestItemExpectation,
+  testItemMatches,
+  testStateCaptors,
+  verifyFailure
+} from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {

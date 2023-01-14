@@ -9,8 +9,7 @@ import { TestSuiteManager } from "../../../src/testSuiteManager";
 import { TestRunContext } from '../../../src/testRunContext';
 import { FrameworkProcess } from '../../../src/frameworkProcess';
 
-import { testItemCollectionMatches, TestItemExpectation } from "../helpers";
-import { logger } from '../../stubs/logger';
+import { logger, testItemCollectionMatches, TestItemExpectation } from "../helpers";
 
 // JSON Fixtures
 import rspecDryRunOutput from '../../fixtures/unitTests/rspec/dryRunOutput.json'

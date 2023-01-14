@@ -9,8 +9,16 @@ import { TestSuiteManager } from '../../../src/testSuiteManager';
 import { TestRunner } from '../../../src/testRunner';
 import { RspecConfig } from '../../../src/rspec/rspecConfig';
 
-import { setupMockRequest, testItemCollectionMatches, testItemMatches, testStateCaptors, verifyFailure, TestItemExpectation, TestFailureExpectation } from '../helpers';
-import { logger } from '../../stubs/logger';
+import {
+  logger,
+  setupMockRequest,
+  testItemCollectionMatches,
+  testItemMatches,
+  testStateCaptors,
+  verifyFailure,
+  TestItemExpectation,
+  TestFailureExpectation
+} from '../helpers';
 import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for RSpec', function() {

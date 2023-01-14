@@ -1,13 +1,24 @@
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { IChildLogger } from "@vscode-logging/types";
-import { anyString, anything, capture, instance, mock, when } from 'ts-mockito';
+import { capture, instance, mock, when } from 'ts-mockito';
 import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCaptor';
 
-import { NOOP_LOGGER } from '../stubs/logger';
-import { StubTestItemCollection } from '../stubs/stubTestItemCollection';
 import { TestSuiteManager } from '../testSuiteManager';
+import { getExtensionLogger, IVSCodeExtLogger, LogLevel } from '@vscode-logging/logger';
 
+/**
+ * Get a logger
+ *
+ * @param level One of "off", "fatal", "error", "warn", "info", "debug", "trace"
+ * @returns a logger that logs to stdout at the specified level
+ */
+export function logger(level: LogLevel = "info"): IVSCodeExtLogger {
+  return getExtensionLogger({
+    extName: "RubyTestExplorer - Tests",
+    level: (level as LogLevel),
+    logConsole: true
+  })
+}
 
 /**
  * Object to simplify describing a {@link vscode.TestItem TestItem} for testing its values
@@ -125,29 +136,6 @@ export function verifyFailure(
   expect(failureDetails.location?.uri.fsPath).to.eq(expectedTestItem.file, `${messagePrefix}: path`)
 }
 
-export function setupMockTestController(rootLog?: IChildLogger): vscode.TestController {
-  let mockTestController = mock<vscode.TestController>()
-  let createTestItem = (id: string, label: string, uri?: vscode.Uri | undefined) => {
-    return {
-      id: id,
-      label: label,
-      uri: uri,
-      canResolveChildren: false,
-      parent: undefined,
-      tags: [],
-      busy: false,
-      range: undefined,
-      error: undefined,
-      children: new StubTestItemCollection(rootLog || NOOP_LOGGER, instance(mockTestController)),
-    }
-  }
-  when(mockTestController.createTestItem(anyString(), anyString())).thenCall(createTestItem)
-  when(mockTestController.createTestItem(anyString(), anyString(), anything())).thenCall(createTestItem)
-  let testItems = new StubTestItemCollection(rootLog || NOOP_LOGGER, instance(mockTestController))
-  when(mockTestController.items).thenReturn(testItems)
-  return mockTestController
-}
-
 export function setupMockRequest(manager: TestSuiteManager, testId?: string | string[]): vscode.TestRunRequest {
   let mockRequest = mock<vscode.TestRunRequest>()
   if (testId) {
@@ -171,14 +159,6 @@ export function setupMockRequest(manager: TestSuiteManager, testId?: string | st
   when(mockRunProfile.kind).thenReturn(vscode.TestRunProfileKind.Run)
   when(mockRequest.profile).thenReturn(instance(mockRunProfile))
   return mockRequest
-}
-
-export function getMockCancellationToken(): vscode.CancellationToken {
-  let mockToken = mock<vscode.CancellationToken>()
-  when(mockToken.isCancellationRequested).thenReturn(false)
-  when(mockToken.onCancellationRequested(anything(), anything(), undefined)).thenReturn({ dispose: () => {} })
-  when(mockToken.onCancellationRequested(anything(), anything(), anything())).thenReturn({ dispose: () => {} })
-  return instance(mockToken)
 }
 
 /**

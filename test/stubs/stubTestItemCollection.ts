@@ -14,7 +14,7 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   }
 
   replace(items: readonly vscode.TestItem[]): void {
-    this.log.debug(`Replacing all tests`, JSON.stringify(Object.keys(this.testIds)), JSON.stringify(items.map(x => x.id)))
+    this.log.debug(`Replacing all tests`, { currentItems: JSON.stringify(Object.keys(this.testIds)), newItems: JSON.stringify(items.map(x => x.id)) })
     this.testIds = {}
     items.forEach(item => {
       this.testIds[item.id] = item
@@ -47,7 +47,7 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   }
 
   add(item: vscode.TestItem): void {
-    this.log.debug('Adding test to collection', item.id, Object.keys(this.testIds))
+    this.log.debug('Adding test to collection', { testId: item.id, collectionItems: Object.keys(this.testIds) })
     this.testIds[item.id] = item
     let sortedIds = Object.values(this.testIds).sort((a, b) => {
       if(a.id > b.id) return 1
@@ -62,7 +62,7 @@ export class StubTestItemCollection implements vscode.TestItemCollection {
   }
 
   delete(itemId: string): void {
-    this.log.debug('Deleting test from collection', itemId, Object.keys(this.testIds))
+    this.log.debug('Deleting test from collection', { testId: itemId, collectionItems: Object.keys(this.testIds) })
     delete this.testIds[itemId]
   }
 
