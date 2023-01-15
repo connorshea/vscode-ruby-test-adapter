@@ -1,7 +1,7 @@
 import * as vscode from 'vscode'
 import { expect } from 'chai'
-import { capture, instance, mock, when } from 'ts-mockito';
-import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from 'ts-mockito/lib/capture/ArgCaptor';
+import { capture, instance, mock, when } from '@typestrong/ts-mockito';
+import { ArgCaptor1, ArgCaptor2, ArgCaptor3 } from '@typestrong/ts-mockito/lib/capture/ArgCaptor';
 
 import { TestSuiteManager } from '../testSuiteManager';
 import { getExtensionLogger, IVSCodeExtLogger, LogLevel } from '@vscode-logging/logger';

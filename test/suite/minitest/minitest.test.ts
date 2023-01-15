@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path'
-import { anything, instance, verify, mock, when } from 'ts-mockito'
+import { anything, instance, mock, reset, verify, when } from '@typestrong/ts-mockito'
 import { expect } from 'chai';
-import { before, beforeEach } from 'mocha';
+import { after, before, beforeEach } from 'mocha';
 
 import { TestLoader } from '../../../src/testLoader';
 import { TestSuiteManager } from '../../../src/testSuiteManager';
@@ -19,7 +19,6 @@ import {
   testStateCaptors,
   verifyFailure
 } from '../helpers';
-import { StubTestController } from '../../stubs/stubTestController';
 
 suite('Extension Test for Minitest', function() {
   let testController: vscode.TestController
@@ -29,8 +28,10 @@ suite('Extension Test for Minitest', function() {
   let testLoader: TestLoader;
   let manager: TestSuiteManager;
   let resolveTestsProfile: vscode.TestRunProfile;
+  let mockTestRun: vscode.TestRun;
+  let cancellationTokenSource: vscode.CancellationTokenSource;
 
-  const log = logger("info");
+  const log = logger("off");
 
   let expectedPath = (file: string): string => {
     return path.resolve(
@@ -80,14 +81,33 @@ suite('Extension Test for Minitest', function() {
     when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
     when(mockProfile.label).thenReturn('ResolveTests')
     resolveTestsProfile = instance(mockProfile)
+
+    testController = vscode.tests.createTestController('ruby-test-explorer-tests', 'Ruby Test Explorer')
+    mockTestRun = mock<vscode.TestRun>()
+    cancellationTokenSource = new vscode.CancellationTokenSource()
+    testController.createTestRun = (_: vscode.TestRunRequest, name?: string): vscode.TestRun => {
+      when(mockTestRun.name).thenReturn(name)
+      when(mockTestRun.token).thenReturn(cancellationTokenSource.token)
+      return instance(mockTestRun)
+    }
+
+    manager = new TestSuiteManager(log, testController, config)
+    testRunner = new TestRunner(log, manager, workspaceFolder)
+    testLoader = new TestLoader(log, resolveTestsProfile, manager);
+  })
+
+  beforeEach(function() {
+    reset(mockTestRun);
+  });
+
+  after(function() {
+    testController.dispose()
+    cancellationTokenSource.dispose()
   })
 
   suite('dry run', function() {
     beforeEach(function () {
-      testController = new StubTestController(log)
-      manager = new TestSuiteManager(log, testController, config)
-      testRunner = new TestRunner(log, manager, workspaceFolder)
-      testLoader = new TestLoader(log, resolveTestsProfile, manager);
+      testController.items.replace([])
     })
 
     test('Load tests on file resolve request', async function () {
@@ -211,24 +231,15 @@ suite('Extension Test for Minitest', function() {
   })
 
   suite('status events', function() {
-    let cancellationTokenSource = new vscode.CancellationTokenSource();
-
     before(async function() {
-      testController = new StubTestController(log)
-      manager = new TestSuiteManager(log, testController, config)
-      testRunner = new TestRunner(log, manager, workspaceFolder)
-      testLoader = new TestLoader(log, resolveTestsProfile, manager);
       await testLoader['loadTests']()
     })
 
     suite(`running collections emits correct statuses`, async function() {
-      let mockTestRun: vscode.TestRun
-
       test('when running full suite', async function() {
         let mockRequest = setupMockRequest(manager)
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
-        mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
         verify(mockTestRun.enqueued(anything())).times(8)
         verify(mockTestRun.started(anything())).times(5)
@@ -242,7 +253,6 @@ suite('Extension Test for Minitest', function() {
         let mockRequest = setupMockRequest(manager, ["abs_test.rb", "square"])
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
-        mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
         verify(mockTestRun.enqueued(anything())).times(8)
         verify(mockTestRun.started(anything())).times(5)
@@ -256,7 +266,6 @@ suite('Extension Test for Minitest', function() {
         let mockRequest = setupMockRequest(manager, ["abs_test.rb", "square/square_test.rb"])
         let request = instance(mockRequest)
         await testRunner.runHandler(request, cancellationTokenSource.token)
-        mockTestRun = (testController as StubTestController).getMockTestRun(request)!
 
         // One less 'started' than the other tests as it doesn't include the 'square' folder
         verify(mockTestRun.enqueued(anything())).times(7)
@@ -304,7 +313,7 @@ suite('Extension Test for Minitest', function() {
           let mockRequest = setupMockRequest(manager, expectedTest.id)
           let request = instance(mockRequest)
           await testRunner.runHandler(request, cancellationTokenSource.token)
-          let mockTestRun = (testController as StubTestController).getMockTestRun(request)!
+
           switch(status) {
             case "passed":
               testItemMatches(testStateCaptors(mockTestRun).passedArg(0).testItem, expectedTest)

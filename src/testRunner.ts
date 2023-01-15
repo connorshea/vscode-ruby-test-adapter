@@ -213,6 +213,8 @@ export class TestRunner implements vscode.Disposable {
    */
   private enqueTestAndChildren(test: vscode.TestItem, testRun: vscode.TestRun) {
     // Tests will be marked as started as the runner gets to them
+    let log = this.log.getChildLogger({label: `${this.enqueTestAndChildren.name}`})
+    log.debug('Enqueueing test item: %s', test.id)
     testRun.enqueued(test);
     if (test.children && test.children.size > 0) {
       test.children.forEach(child => { this.enqueTestAndChildren(child, testRun) })

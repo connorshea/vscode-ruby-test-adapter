@@ -1,5 +1,5 @@
 import { before, beforeEach, afterEach } from 'mocha';
-import { instance, mock, when } from 'ts-mockito'
+import { instance, mock, when } from '@typestrong/ts-mockito'
 import * as childProcess from 'child_process';
 import * as vscode from 'vscode'
 import * as path from 'path'
@@ -42,7 +42,7 @@ suite('FrameworkProcess', function () {
       })
 
       beforeEach(function () {
-        testController = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
+        testController = vscode.tests.createTestController('ruby-test-explorer-tests', 'Ruby Test Explorer');
         manager = new TestSuiteManager(log, testController, instance(config))
         frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, cancellationTokenSource.token, manager)
       })
@@ -232,7 +232,7 @@ suite('FrameworkProcess', function () {
       })
 
       beforeEach(function () {
-        testController = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
+        testController = vscode.tests.createTestController('ruby-test-explorer-tests', 'Ruby Test Explorer');
         manager = new TestSuiteManager(log, testController, instance(config))
         frameworkProcess = new FrameworkProcess(log, "testCommand", spawnOptions, cancellationTokenSource.token, manager)
       })

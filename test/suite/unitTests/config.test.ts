@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { spy, when } from 'ts-mockito'
+import { spy, when } from '@typestrong/ts-mockito'
 import * as vscode from 'vscode'
 import * as path from 'path'
 

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { before, beforeEach, afterEach } from 'mocha';
-import { instance, mock, when } from 'ts-mockito'
+import { instance, mock, when } from '@typestrong/ts-mockito'
 import * as vscode from 'vscode'
 import path from 'path'
 
@@ -23,7 +23,7 @@ suite('TestSuiteManager', function () {
   });
 
   beforeEach(function () {
-    controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
+    controller = vscode.tests.createTestController('ruby-test-explorer-tests', 'Ruby Test Explorer');
     manager = new TestSuiteManager(log, controller, instance(mockConfig))
   });
 
