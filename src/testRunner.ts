@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as childProcess from 'child_process';
 import { IChildLogger } from '@vscode-logging/logger';
 import { __asyncDelegator } from 'tslib';
-import { TestStatusListener } from './testRunContext';
+import { TestStatusListener } from './testStatusListener';
 import { TestSuiteManager } from './testSuiteManager';
 import { FrameworkProcess } from './frameworkProcess';
 
