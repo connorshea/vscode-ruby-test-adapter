@@ -2,7 +2,7 @@ import * as path from 'path'
 import { runTests, downloadAndUnzipVSCode } from '@vscode/test-electron';
 
 const extensionDevelopmentPath = path.resolve(__dirname, '../../');
-const allowedSuiteArguments = ["rspec", "minitest", "unitTests"]
+const allowedSuiteArguments = ["all", "rspec", "minitest", "unitTests"]
 const maxDownloadRetries = 5;
 
 async function main(framework: string) {
@@ -16,7 +16,13 @@ async function main(framework: string) {
     }
   }
   if (vscodeExecutablePath) {
-    await runTestSuite(vscodeExecutablePath, framework)
+    if (framework == 'all') {
+      await runTestSuite(vscodeExecutablePath, 'unitTests')
+      await runTestSuite(vscodeExecutablePath, 'rspec')
+      await runTestSuite(vscodeExecutablePath, 'minitest')
+    } else {
+      await runTestSuite(vscodeExecutablePath, framework)
+    }
   } else {
     console.error("crap")
   }
