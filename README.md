@@ -49,6 +49,7 @@ Property                               | Description
 ---------------------------------------|---------------------------------------------------------------
 `rubyTestExplorer.logpanel`            | Whether to write diagnotic logs to an output panel.
 `rubyTestExplorer.logfile`             | Write diagnostic logs to the given file.
+`rubyTestExplorer.logLevel`            | The level of information to log. One of `off` (no logs), `error`, `warn`, `info` (default), `debug`, or `trace` (all logs). Note: `debug` and `trace` are very noisy and are not reccomended for daily use.
 `rubyTestExplorer.testFramework`       | `none`, `auto`, `rspec`, or `minitest`. `auto` by default, which automatically detects the test framework based on the gems listed by Bundler. Can disable the extension functionality with `none` or set the test framework explicitly, if auto-detect isn't working properly.
 `rubyTestExplorer.filePattern`         | Define the pattern to match test files by, for example `["*_test.rb", "test_*.rb", "*_spec.rb"]`.
 `rubyTestExplorer.debuggerHost`        | Define the host to connect the debugger to, for example `127.0.0.1`.
@@ -92,7 +93,7 @@ There are two groups of tests included in the repository.
 
 - Tests for Ruby scripts to collect test information and run tests. Run with `bundle exec rake` in `ruby` directory.
 - Tests for VS Code extension which invokes the Ruby scripts. Run from VS Code's debug panel with the "Run tests for" configurations.
-  - There are separate debug configurations for each supported test framework.
+  - There are separate debug configurations for each supported test framework, as well as unit tests for the extension itself.
   - Note that you'll need to run `npm run build && npm run package` before you'll be able to successfully run the extension tests. You'll also need to re-run these every time you make changes to the extension code or your tests.
 
 You can see `.github/workflows/test.yml` for CI configurations.
