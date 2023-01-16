@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IVSCodeExtLogger } from "@vscode-logging/logger";
+import { IChildLogger, IVSCodeExtLogger } from "@vscode-logging/logger";
 import { Config } from './config';
 import { TestLoader } from './testLoader';
 import { RspecConfig } from './rspec/rspecConfig';
@@ -13,6 +13,7 @@ import { TestRunner } from './testRunner';
  * Also takes care of disposing them when required
  */
 export class TestFactory implements vscode.Disposable {
+  private readonly log: IChildLogger;
   private isDisposed = false;
   private loader: TestLoader | null = null;
   private runner: TestRunner | null = null;
@@ -21,18 +22,20 @@ export class TestFactory implements vscode.Disposable {
   private manager: TestSuiteManager
 
   constructor(
-    private readonly log: IVSCodeExtLogger,
+    private readonly rootLog: IVSCodeExtLogger,
     private readonly controller: vscode.TestController,
     private config: Config,
     private readonly profiles: { runProfile: vscode.TestRunProfile, resolveTestsProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile },
     private readonly workspace?: vscode.WorkspaceFolder,
   ) {
+    this.log = rootLog.getChildLogger({ label: `${TestFactory.name}` })
     this.disposables.push(this.configWatcher());
-    this.framework = Config.getTestFramework(this.log);
+    this.framework = Config.getTestFramework(this.rootLog);
     this.manager = new TestSuiteManager(this.log, this.controller, this.config)
   }
 
   dispose(): void {
+    this.log.debug("Dispose called")
     this.isDisposed = true
     for (const disposable of this.disposables) {
       try {
@@ -58,7 +61,7 @@ export class TestFactory implements vscode.Disposable {
     this.checkIfDisposed()
     if (!this.runner) {
       this.runner = new TestRunner(
-        this.log,
+        this.rootLog,
         this.manager,
         this.workspace,
       )
@@ -79,7 +82,7 @@ export class TestFactory implements vscode.Disposable {
     this.checkIfDisposed()
     if (!this.loader) {
       this.loader = new TestLoader(
-        this.log,
+        this.rootLog,
         this.profiles.resolveTestsProfile,
         this.manager
       )
@@ -110,7 +113,7 @@ export class TestFactory implements vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(configChange => {
       this.log.info('Configuration changed');
       if (configChange.affectsConfiguration("rubyTestExplorer.testFramework")) {
-        let newFramework = Config.getTestFramework(this.log);
+        let newFramework = Config.getTestFramework(this.rootLog);
         if (newFramework !== this.framework) {
           // Config has changed to a different framework - recreate test loader and runner
           this.config = newFramework == "rspec"

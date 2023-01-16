@@ -29,6 +29,7 @@ export class TestLoader implements vscode.Disposable {
   }
 
   dispose(): void {
+    this.log.debug("Dispose called")
     for (const disposable of this.disposables) {
       try {
         disposable.dispose();

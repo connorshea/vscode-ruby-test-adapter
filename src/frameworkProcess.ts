@@ -48,8 +48,17 @@ export class FrameworkProcess implements vscode.Disposable {
   }
 
   dispose() {
+    this.log.debug("Dispose called")
     this.isDisposed = true
-    this.childProcess?.kill()
+    if (this.childProcess) {
+      if (this.childProcess.kill()) {
+        this.log.debug("Child process killed")
+      } else {
+        this.log.debug("Attempt to kill child process failed")
+      }
+    } else {
+      this.log.debug("Child process not running - not killing")
+    }
     for (const disposable of this.disposables) {
       try {
         disposable.dispose()

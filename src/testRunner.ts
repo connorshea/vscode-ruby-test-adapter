@@ -27,6 +27,7 @@ export class TestRunner implements vscode.Disposable {
   }
 
   public dispose() {
+    this.log.debug("Dispose called")
     for (const disposable of this.disposables) {
       try {
         disposable.dispose();
@@ -153,7 +154,9 @@ export class TestRunner implements vscode.Disposable {
       testRun.end();
     }
     if (token.isCancellationRequested) {
-      log.info('Test run aborted due to cancellation')
+      log.info('Test run aborted due to cancellation - token passed into runHandler')
+    } else if (testRun.token.isCancellationRequested) {
+      log.info('Test run aborted due to cancellation - token from controller via TestRun')
     }
   }
 

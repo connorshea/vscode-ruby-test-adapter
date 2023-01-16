@@ -44,9 +44,9 @@ export class LoaderQueue implements vscode.Disposable {
    * from the queue and that it must terminate, then waits for the worker function to finish
    */
   dispose() {
-    // TODO: Terminate child process
     this.log.info('disposed')
     this.isDisposed = true
+    this.queue.clear()
     if (this.terminateQueueWorker) {
       // Stop the worker function from waiting for more items
       this.log.debug('notifying worker for disposal')
