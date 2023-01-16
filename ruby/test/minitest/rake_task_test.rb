@@ -147,14 +147,14 @@ class RakeTaskTest < Minitest::Test
 
     assert_any(examples, pass_count: 1) do |example|
       assert_equal "square error", example[:description]
-      assert_equal "failed", example[:status]
+      assert_equal "errored", example[:status]
       assert_nil example[:pending_message]
       refute_nil example[:exception]
       assert_equal "Minitest::UnexpectedError", example.dig(:exception, :class)
       assert_match(/RuntimeError:/, example.dig(:exception, :message))
       assert_instance_of Array, example.dig(:exception, :backtrace)
       assert_instance_of Array, example.dig(:exception, :full_backtrace)
-      assert_equal 13, example.dig(:exception, :position)
+      assert_equal 12, example.dig(:exception, :position)
     end
 
     assert_any(examples, pass_count: 1) do |example|
@@ -173,12 +173,12 @@ class RakeTaskTest < Minitest::Test
       assert_equal "Expected: 3\n  Actual: 4", example.dig(:exception, :message)
       assert_instance_of Array, example.dig(:exception, :backtrace)
       assert_instance_of Array, example.dig(:exception, :full_backtrace)
-      assert_equal 9, example.dig(:exception, :position)
+      assert_equal 8, example.dig(:exception, :position)
     end
 
     assert_any(examples, pass_count: 1) do |example|
       assert_equal "square skip", example[:description]
-      assert_equal "failed", example[:status]
+      assert_equal "skipped", example[:status]
       assert_equal "This is skip", example[:pending_message]
       assert_nil example[:exception]
     end
@@ -218,7 +218,7 @@ class RakeTaskTest < Minitest::Test
 
     assert_any(examples, pass_count: 1) do |example|
       assert_equal "square skip", example[:description]
-      assert_equal "failed", example[:status]
+      assert_equal "skipped", example[:status]
     end
   end
 end
