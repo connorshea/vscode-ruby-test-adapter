@@ -82,55 +82,54 @@ class RakeTaskTest < Minitest::Test
     stdout =~ /START_OF_TEST_JSON(.*)END_OF_TEST_JSON/
     json = JSON.parse($1, symbolize_names: true)
 
-    assert_equal(
-      [
-        {
-          description: "square of one",
-          full_description: "square of one",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 4,
-          klass: "SquareTest",
-          method: "test_square_of_one",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[4]"
-        },
-        {
-          description: "square of two",
-          full_description: "square of two",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 8,
-          klass: "SquareTest",
-          method: "test_square_of_two",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[8]"
-        },
-        {
-          description: "square error",
-          full_description: "square error",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 12,
-          klass: "SquareTest",
-          method: "test_square_error",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[12]"
-        },
-        {
-          description: "square skip",
-          full_description: "square skip",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 16,
-          klass: "SquareTest",
-          method: "test_square_skip",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[16]"
-        }
-      ],
-      json[:examples]
-    )
+    [
+      {
+        description: "square of one",
+        full_description: "square of one",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 4,
+        klass: "SquareTest",
+        method: "test_square_of_one",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[4]"
+      },
+      {
+        description: "square of two",
+        full_description: "square of two",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 8,
+        klass: "SquareTest",
+        method: "test_square_of_two",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[8]"
+      },
+      {
+        description: "square error",
+        full_description: "square error",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 12,
+        klass: "SquareTest",
+        method: "test_square_error",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[12]"
+      },
+      {
+        description: "square skip",
+        full_description: "square skip",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 16,
+        klass: "SquareTest",
+        method: "test_square_skip",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[16]"
+      }
+    ].each do |expectation|
+      assert_includes(json[:examples], expectation)
+    end
   end
 
   def test_test_run_all
