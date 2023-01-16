@@ -3,7 +3,6 @@ require "rake/testtask"
 require 'rspec/core/rake_task'
 
 RSpec::Core::RakeTask.new(:rspectest) do |t|
-  t.rspec_opts = ['--require /home/tabby/git/vscode-ruby-test-adapter/ruby/custom_formatter.rb', '--format CustomFormatter']
   t.pattern = ['rspecs/**/*_spec.rb', 'rspecs/**/*_test.rb']
 end
 
