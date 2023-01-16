@@ -17,30 +17,30 @@ export class TestStatusListener {
 
       switch(event.status) {
         case Status.skipped:
-          log.debug('Received test skipped event: %s', event.testItem.id)
+          log.info('Test skipped: %s', event.testItem.id)
           testRun.skipped(event.testItem)
           break;
         case Status.passed:
           if (this.isTestLoad(profile)) {
-            log.debug('Ignored test passed event from test load: %s (duration: %d)', event.testItem.id, event.duration)
+            log.info('Test loaded: %s (duration: %d)', event.testItem.id, event.duration)
           } else {
-            log.debug('Received test passed event: %s (duration: %d)', event.testItem.id, event.duration)
+            log.info('Test passed: %s (duration: %d)', event.testItem.id, event.duration)
             testRun.passed(event.testItem, event.duration)
           }
           break;
         case Status.errored:
-          log.debug('Received test errored event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
+          log.info('Test errored: %s (duration: %d)', event.testItem.id, event.duration, event.message)
           testRun.errored(event.testItem, event.message!, event.duration)
           break;
         case Status.failed:
-          log.debug('Received test failed event: %s (duration: %d)', event.testItem.id, event.duration, event.message)
+          log.info('Test failed: %s (duration: %d)', event.testItem.id, event.duration, event.message)
           testRun.failed(event.testItem, event.message!, event.duration)
           break;
         case Status.running:
           if (this.isTestLoad(profile)) {
             log.debug('Ignored test started event from test load: %s (duration: %d)', event.testItem.id, event.duration)
           } else {
-            log.debug('Received test started event: %s', event.testItem.id)
+            log.info('Test started: %s', event.testItem.id)
             testRun.started(event.testItem)
           }
           break;

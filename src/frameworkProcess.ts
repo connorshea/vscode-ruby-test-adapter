@@ -116,12 +116,12 @@ export class FrameworkProcess implements vscode.Disposable {
     }
     try {
       if (data.includes('START_OF_TEST_JSON')) {
-        log.trace("Received test run results", data);
+        log.trace("Received test run results: %s", data);
         this.parseAndHandleTestOutput(data);
       } else {
         const match = this.statusPattern.exec(data)
         if (match && match.groups) {
-          log.trace("Received test status event", data);
+          log.trace("Received test status event: %s", data);
           const id = match.groups['id']
           const status = match.groups['status']
           const exception = match.groups['exceptionClass']
@@ -145,11 +145,11 @@ export class FrameworkProcess implements vscode.Disposable {
             testMessage
           ))
         } else {
-          log.trace("Ignoring unrecognised output", data)
+          log.info("stdout: %s", data)
         }
       }
     } catch (err) {
-      log.error('Error parsing output', err)
+      log.error('Error parsing output', { error: err })
     }
   }
 
