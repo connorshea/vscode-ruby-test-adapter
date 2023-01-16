@@ -67,7 +67,7 @@ export class FrameworkProcess implements vscode.Disposable {
     }
 
     try {
-      this.log.debug('Starting child process')
+      this.log.debug('Starting child process', { env: this.spawnArgs })
       this.childProcess = childProcess.spawn(
         this.testCommand,
         this.spawnArgs
@@ -76,9 +76,11 @@ export class FrameworkProcess implements vscode.Disposable {
       this.childProcess.stderr!.pipe(split2()).on('data', (data) => {
         let log = this.log.getChildLogger({label: 'stderr'})
         data = data.toString();
-        log.trace(data);
         if (data.startsWith('Fast Debugger') && onDebugStarted) {
+          log.info('Notifying debug session that test process is ready to debug');
           onDebugStarted()
+        } else {
+          log.warn('%s', data);
         }
       })
 
@@ -94,7 +96,7 @@ export class FrameworkProcess implements vscode.Disposable {
           this.log.trace('Child process exited', code, signal)
         });
         this.childProcess!.once('close', (code: number, signal: string) => {
-          this.log.debug('Child process exited, and all streams closed', code, signal)
+          this.log.debug('Child process exited, and all streams closed', { exitCode: code, signal: signal })
           resolve({code, signal});
         });
         this.childProcess!.once('error', (err: Error) => {
