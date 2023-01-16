@@ -93,14 +93,19 @@ export class FrameworkProcess implements vscode.Disposable {
 
       return await new Promise<{code:number, signal:string}>((resolve, reject) => {
         this.childProcess!.once('exit', (code: number, signal: string) => {
-          this.log.trace('Child process exited', code, signal)
+          this.log.trace('Child process exited', { exitCode: code, signal: signal })
         });
         this.childProcess!.once('close', (code: number, signal: string) => {
-          this.log.debug('Child process exited, and all streams closed', { exitCode: code, signal: signal })
-          resolve({code, signal});
+          if (code == 0) {
+            this.log.debug('Child process exited successfully, and all streams closed', { exitCode: code, signal: signal })
+            resolve({code, signal});
+          } else {
+            this.log.error('Child process exited abnormally, and all streams closed', { exitCode: code, signal: signal })
+            reject(new Error(`Child process exited abnormally. Status code: ${code}${signal ? `, signal: ${signal}` : ''}`));
+          }
         });
         this.childProcess!.once('error', (err: Error) => {
-          this.log.debug('Error event from child process', err.message)
+          this.log.error('Error event from child process: %s', err.message)
           reject(err);
         });
       })
