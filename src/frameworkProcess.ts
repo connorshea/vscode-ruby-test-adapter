@@ -140,25 +140,13 @@ export class FrameworkProcess implements vscode.Disposable {
           log.trace("Received test status event: %s", data);
           const id = match.groups['id']
           const status = match.groups['status']
-          const exception = match.groups['exceptionClass']
-          const message = match.groups['exceptionMessage']
           let testItem = getTest(id)
-          let testMessage: vscode.TestMessage | undefined = undefined
-          if (message) {
-            testMessage = new vscode.TestMessage(exception ? `${exception}: ${message}` : message)
-            // TODO?: get actual exception location, not test location
-            if (testItem.uri && testItem.range) {
-              // it should always have a uri, but just to be safe...
-              testMessage.location = new vscode.Location(testItem.uri, testItem.range)
-            } else {
-              log.error('Test missing location details', { testId: testItem.id, uri: testItem.uri })
-            }
-          }
+
           this.testStatusEmitter.fire(new TestStatus(
             testItem,
             Status[status.toLocaleLowerCase() as keyof typeof Status],
-            undefined, // TODO?: get duration info here if possible
-            testMessage
+            // undefined, // TODO?: get duration info here if possible
+            // errorMessage, // TODO: get exception info here once we can send full exception data
           ))
         } else {
           log.info("stdout: %s", data)

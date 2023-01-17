@@ -30,11 +30,15 @@ export class TestStatusListener {
           break;
         case Status.errored:
           log.info('Test errored: %s (duration: %d)', event.testItem.id, event.duration, event.message)
-          testRun.errored(event.testItem, event.message!, event.duration)
+          if (event.message) {
+            testRun.errored(event.testItem, event.message, event.duration)
+          }
           break;
         case Status.failed:
           log.info('Test failed: %s (duration: %d)', event.testItem.id, event.duration, event.message)
-          testRun.failed(event.testItem, event.message!, event.duration)
+          if (event.message) {
+            testRun.failed(event.testItem, event.message, event.duration)
+          }
           break;
         case Status.running:
           if (this.isTestLoad(profile)) {
