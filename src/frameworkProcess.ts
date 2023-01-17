@@ -29,6 +29,8 @@ export class FrameworkProcess implements vscode.Disposable {
   protected readonly log: IChildLogger;
   private readonly disposables: vscode.Disposable[] = []
   private isDisposed = false;
+  private testRunStarted = false;
+  private preTestErrorLines: string[] = []
   public readonly testStatusEmitter: vscode.EventEmitter<TestStatus> = new vscode.EventEmitter<TestStatus>()
   private readonly statusPattern =
     new RegExp(/(?<status>RUNNING|PASSED|FAILED|ERRORED|SKIPPED)(:?\((:?(?<exceptionClass>(:?\w*(:?::)?)*)\:)?\s*(?<exceptionMessage>.*)\))?\: (?<id>.*)/)
@@ -45,6 +47,19 @@ export class FrameworkProcess implements vscode.Disposable {
       this.log.debug('Cancellation requested')
       this.dispose()
     }))
+
+    /*
+     * Create a listener so that we know when any tests have actually started running. Until this happens, any output
+     * is likely to be an error message and needs collecting up to be logged in one message.
+     */
+    let testRunStartedListener = this.testStatusEmitter.event((e) => {
+      if (e.status == Status.running) {
+	this.log.info('Test run started - stopped capturing error output', { event: e })
+        this.testRunStarted = true
+        testRunStartedListener.dispose()
+      }
+    })
+    this.disposables.push(testRunStartedListener)
   }
 
   dispose() {
@@ -89,7 +104,11 @@ export class FrameworkProcess implements vscode.Disposable {
           log.info('Notifying debug session that test process is ready to debug');
           onDebugStarted()
         } else {
-          log.warn('%s', data);
+	  if (this.testRunStarted) {
+            log.warn('%s', data);
+          } else {
+            this.preTestErrorLines.push(data)
+          }
         }
       })
 
@@ -119,6 +138,9 @@ export class FrameworkProcess implements vscode.Disposable {
         });
       })
     } finally {
+      if (this.preTestErrorLines.length > 0) {
+        this.log.error('Test process failed to run', { message: this.preTestErrorLines })
+      }
       this.dispose()
     }
   }
@@ -149,7 +171,11 @@ export class FrameworkProcess implements vscode.Disposable {
             // errorMessage, // TODO: get exception info here once we can send full exception data
           ))
         } else {
-          log.info("stdout: %s", data)
+          if (this.testRunStarted) {
+            log.info("stdout: %s", data)
+          } else {
+            this.preTestErrorLines.push(data)
+          }
         }
       }
     } catch (err) {
