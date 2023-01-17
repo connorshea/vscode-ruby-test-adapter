@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IChildLogger, IVSCodeExtLogger } from "@vscode-logging/logger";
+import { IChildLogger, IVSCodeExtLogger, LogLevel } from "@vscode-logging/logger";
 import { Config } from './config';
 import { TestLoader } from './testLoader';
 import { RspecConfig } from './rspec/rspecConfig';
@@ -128,6 +128,11 @@ export class TestFactory implements vscode.Disposable {
             this.runner = null
           }
         }
+      }
+      if (configChange.affectsConfiguration("rubyTestExplorer.logLevel")) {
+        this.rootLog.changeLevel(
+          vscode.workspace.getConfiguration('rubyTestExplorer', null).get('logLevel') as LogLevel
+        )
       }
     })
   }
