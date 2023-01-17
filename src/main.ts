@@ -105,11 +105,8 @@ export async function activate(context: vscode.ExtensionContext) {
       log.debug('resolveHandler called', test)
       if (!test) {
         await factory.getLoader().discoverAllFilesInWorkspace();
-      } else if (test.id.endsWith(".rb") || test.id.endsWith(']')) {
-        // Only parse files
-        if (!test.canResolveChildren) {
-          log.warn("resolveHandler called for test that can't resolve children: %s", test.id)
-        }
+      } else if (test.canResolveChildren && test.id.endsWith(".rb")) {
+        // Only load files - folders are handled by FileWatchers, and contexts will be loaded when their file is loaded/modified
         await factory.getLoader().loadTestItem(test);
       }
     };
