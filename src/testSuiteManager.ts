@@ -123,13 +123,15 @@ export class TestSuiteManager {
     testId = this.normaliseTestId(testId)
 
     // Split path segments
-    let idSegments = testId.split(path.sep)
-    log.debug('id segments', idSegments)
-    if (idSegments[0] === "") {
-      idSegments.splice(0, 1)
+    let originalSegments = testId.split(path.sep)
+    log.debug('originalSegments', originalSegments)
+    if (originalSegments[0] === "") {
+      originalSegments.splice(0, 1)
     }
+
+    let idSegments = [...originalSegments]
     for (let i = 1; i < idSegments.length - 1; i++) {
-      let precedingSegments = idSegments.slice(0, i + 1)
+      let precedingSegments = originalSegments.slice(0, i + 1)
       idSegments[i] = path.join(...precedingSegments)
     }
 
