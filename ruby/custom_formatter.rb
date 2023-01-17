@@ -128,7 +128,7 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
   end
 
   def exception_position(backtrace, metadata)
-    location = backtrace.find { |frame| frame.path.end_with?(metadata[:file_path]) }
+    location = backtrace&.find { |frame| frame.path.end_with?(metadata[:file_path]) }
     return metadata[:line_number] unless location
 
     location.lineno
