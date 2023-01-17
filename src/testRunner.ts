@@ -121,13 +121,16 @@ export class TestRunner implements vscode.Disposable {
             log.trace('Adding test to command: %s', node.id)
             // Mark selected tests as started
             this.enqueTestAndChildren(node, testRun)
-            command = `${command} ${node.uri?.fsPath}`
-            if (!node.canResolveChildren) {
-              // single test
-              if (!node.range) {
-                throw new Error(`Test item is missing line number: ${node.id}`)
+            if (node.id.includes('[')) {
+              if (this.manager.config.frameworkName() == 'RSpec') {
+                let locationStartIndex = node.id.lastIndexOf('[') + 1
+                let locationEndIndex = node.id.lastIndexOf(']')
+                command = `${command} ${node.uri?.fsPath}[${node.id.slice(locationStartIndex, locationEndIndex)}]`
+              } else {
+                command = `${command} ${node.uri?.fsPath}:${node.range!.start.line + 1}`
               }
-              command = `${command}:${node.range!.start.line + 1}`
+            } else {
+              command = `${command} ${node.uri?.fsPath}`
             }
             log.trace("Current command: %s", command)
           }

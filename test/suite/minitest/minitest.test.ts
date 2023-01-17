@@ -244,8 +244,8 @@ suite('Extension Test for Minitest', function() {
         verify(mockTestRun.enqueued(anything())).times(8)
         verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
-        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
-        verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
         verify(mockTestRun.skipped(anything())).times(2)
       })
 
@@ -257,8 +257,8 @@ suite('Extension Test for Minitest', function() {
         verify(mockTestRun.enqueued(anything())).times(8)
         verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
-        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
-        verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
         verify(mockTestRun.skipped(anything())).times(2)
       })
 
@@ -271,8 +271,8 @@ suite('Extension Test for Minitest', function() {
         verify(mockTestRun.enqueued(anything())).times(7)
         verify(mockTestRun.started(anything())).times(5)
         verify(mockTestRun.passed(anything(), anything())).times(4)
-        verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
-        verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
+        verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
+        verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
         verify(mockTestRun.skipped(anything())).times(2)
       })
     })
@@ -324,19 +324,17 @@ suite('Extension Test for Minitest', function() {
               verify(mockTestRun.skipped(anything())).times(0)
               break;
             case "failed":
-              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, {...failureExpectation!, line: failureExpectation!.line! - 1})
-              verifyFailure(1, testStateCaptors(mockTestRun).failedArgs, expectedTest, failureExpectation!)
+              verifyFailure(0, testStateCaptors(mockTestRun).failedArgs, expectedTest, failureExpectation!)
               verify(mockTestRun.passed(anything(), anything())).times(0)
-              verify(mockTestRun.failed(anything(), anything(), anything())).times(2)
+              verify(mockTestRun.failed(anything(), anything(), anything())).times(1)
               verify(mockTestRun.errored(anything(), anything(), anything())).times(0)
               verify(mockTestRun.skipped(anything())).times(0)
               break;
             case "errored":
-              verifyFailure(0, testStateCaptors(mockTestRun).erroredArgs, expectedTest, {...failureExpectation!, line: failureExpectation!.line! - 1})
-              verifyFailure(1, testStateCaptors(mockTestRun).erroredArgs, expectedTest, failureExpectation!)
+              verifyFailure(0, testStateCaptors(mockTestRun).erroredArgs, expectedTest, failureExpectation!)
               verify(mockTestRun.passed(anything(), anything())).times(0)
               verify(mockTestRun.failed(anything(), anything(), anything())).times(0)
-              verify(mockTestRun.errored(anything(), anything(), anything())).times(2)
+              verify(mockTestRun.errored(anything(), anything(), anything())).times(1)
               verify(mockTestRun.skipped(anything())).times(0)
               break;
             case "skipped":
