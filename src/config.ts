@@ -85,7 +85,7 @@ export abstract class Config {
    *
    * @param testItems Array of TestItems to resolve children of, or undefined to resolve all tests
    */
-  public abstract getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string
+  public abstract getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): { command: string, args: string[] }
 
   /**
    * Get the env vars to run the subprocess with.

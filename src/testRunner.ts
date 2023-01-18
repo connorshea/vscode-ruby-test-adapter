@@ -100,23 +100,32 @@ export class TestRunner implements vscode.Disposable {
       let testsToRun = request.exclude ? request.include?.filter(x => !request.exclude!.includes(x)) : request.include
       log.trace("Running tests", testsToRun?.map(x => x.id));
 
-      let command: string
       if (request.profile.label === 'ResolveTests') {
         // Load tests
-        command = this.manager.config.getResolveTestsCommand(testsToRun)
-        await this.runTestFramework(command, testRun, request.profile)
+        await this.runTestFramework(
+          this.manager.config.getResolveTestsCommand(testsToRun),
+          testRun,
+          request.profile
+        )
       } else {
         // Run tests
+        let command: { command: string, args: string[] }
         if (!testsToRun) {
           log.debug("Running all tests")
           this.manager.controller.items.forEach((item) => {
             // Mark selected tests as started
             this.enqueTestAndChildren(item, testRun)
           })
-          command = this.manager.config.getFullTestSuiteCommand(debuggerConfig)
+          command = {
+            command: this.manager.config.getFullTestSuiteCommand(debuggerConfig),
+            args: []
+          }
         } else {
           log.debug("Running selected tests")
-          command = this.manager.config.getFullTestSuiteCommand(debuggerConfig)
+          command = {
+            command: this.manager.config.getFullTestSuiteCommand(debuggerConfig),
+            args: []
+          }
           for (const node of testsToRun) {
             log.trace('Adding test to command: %s', node.id)
             // Mark selected tests as started
@@ -125,14 +134,13 @@ export class TestRunner implements vscode.Disposable {
               if (this.manager.config.frameworkName() == 'RSpec') {
                 let locationStartIndex = node.id.lastIndexOf('[') + 1
                 let locationEndIndex = node.id.lastIndexOf(']')
-                command = `${command} ${node.uri?.fsPath}[${node.id.slice(locationStartIndex, locationEndIndex)}]`
+                command.args.push(`${node.uri!.fsPath}[${node.id.slice(locationStartIndex, locationEndIndex)}]`)
               } else {
-                command = `${command} ${node.uri?.fsPath}:${node.range!.start.line + 1}`
+                command.args.push(`${node.uri!.fsPath}:${node.range!.start.line + 1}`)
               }
             } else {
-              command = `${command} ${node.uri?.fsPath}`
+              command.args.push(node.uri!.fsPath)
             }
-            log.trace("Current command: %s", command)
           }
         }
         if (debuggerConfig) {
@@ -235,7 +243,7 @@ export class TestRunner implements vscode.Disposable {
    * @param context Test run context for the cancellation token
    * @returns Raw output from process
    */
-  private async runTestFramework (testCommand: string, testRun: vscode.TestRun, profile: vscode.TestRunProfile): Promise<void> {
+  private async runTestFramework (testCommand: { command: string, args: string[] }, testRun: vscode.TestRun, profile: vscode.TestRunProfile): Promise<void> {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
@@ -249,7 +257,7 @@ export class TestRunner implements vscode.Disposable {
       this.log.warn('Test run already in progress for profile kind: %s', testProfileKind)
       return
     }
-    let testProcess = new FrameworkProcess(this.log, testCommand, spawnArgs, testRun.token, this.manager)
+    let testProcess = new FrameworkProcess(this.log, testCommand.command, spawnArgs, testRun.token, this.manager)
     this.disposables.push(testProcess)
     this.testProcessMap.set(testProfileKind, testProcess);
 
@@ -261,7 +269,7 @@ export class TestRunner implements vscode.Disposable {
     )
     this.disposables.push(statusListener)
     try {
-      await testProcess.startProcess(this.debugCommandStartedResolver)
+      await testProcess.startProcess(testCommand.args, this.debugCommandStartedResolver)
     } finally {
       this.disposeInstance(statusListener)
       this.disposeInstance(testProcess)

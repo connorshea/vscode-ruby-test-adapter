@@ -70,8 +70,8 @@ export class MinitestConfig extends Config {
     return this.testCommandWithDebugger(debugConfiguration)
   };
 
-  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string {
-    return `${this.getTestCommand()} vscode:minitest:list`
+  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): { command: string, args: string[] } {
+    return { command: `${this.getTestCommand()} vscode:minitest:list`, args: [] }
   }
 
   /**

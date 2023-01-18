@@ -84,14 +84,15 @@ export class RspecConfig extends Config {
     return this.testCommandWithFormatterAndDebugger(debugConfiguration)
   };
 
-  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string {
+  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): { command: string, args: string[] } {
     let cmd = `${this.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
 
+    let args: string[] = []
     testItems?.forEach((item) => {
       let testPath = path.join(this.getAbsoluteTestDirectory(), item.id)
-      cmd = `${cmd} "${testPath}"`
+      args.push(testPath)
     })
-    return cmd
+    return { command: cmd, args: args }
   }
 
   /**

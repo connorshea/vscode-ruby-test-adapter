@@ -54,8 +54,9 @@ export class FrameworkProcess implements vscode.Disposable {
      */
     let testRunStartedListener = this.testStatusEmitter.event((e) => {
       if (e.status == Status.running) {
-	this.log.info('Test run started - stopped capturing error output', { event: e })
+	      this.log.info('Test run started - stopped capturing error output', { event: e })
         this.testRunStarted = true
+        this.preTestErrorLines = []
         testRunStartedListener.dispose()
       }
     })
@@ -84,6 +85,7 @@ export class FrameworkProcess implements vscode.Disposable {
   }
 
   public async startProcess(
+    args: string[],
     onDebugStarted?: (value: void | PromiseLike<void>) => void,
   ) {
     if (this.isDisposed) {
@@ -92,10 +94,7 @@ export class FrameworkProcess implements vscode.Disposable {
 
     try {
       this.log.debug('Starting child process', { env: this.spawnArgs })
-      this.childProcess = childProcess.spawn(
-        this.testCommand,
-        this.spawnArgs
-      )
+      this.childProcess = childProcess.spawn(this.testCommand, args, this.spawnArgs)
 
       this.childProcess.stderr!.pipe(split2()).on('data', (data) => {
         let log = this.log.getChildLogger({label: 'stderr'})
@@ -104,7 +103,7 @@ export class FrameworkProcess implements vscode.Disposable {
           log.info('Notifying debug session that test process is ready to debug');
           onDebugStarted()
         } else {
-	  if (this.testRunStarted) {
+	        if (this.testRunStarted) {
             log.warn('%s', data);
           } else {
             this.preTestErrorLines.push(data)
