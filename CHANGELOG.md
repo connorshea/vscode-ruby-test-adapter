@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Rewrite extension to use the native [VSCode testing API](https://code.visualstudio.com/api/extension-guides/testing) instead of the older one provided by the [Test Explorer UI](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-test-explorer) extension.
   - Allows for partial test tree updates, lazy loading of tests, much more responsive UI, filtering of tests, as well as greater efficiency by interacting directly with VSCode instead of going through another extension, and much more.
 
+## [0.9.2] - 2023-01-17
+### Fixed
+- Fix loading tests when symlinks are involved. Thanks [@naveg](https://github.com/naveg)! ([#115](https://github.com/connorshea/vscode-ruby-test-adapter/pull/115))
+
 ## [0.9.1] - 2022-08-04
 ### Fixed
 - Fix extension failures related to the way Minitest sets up its seed (or in this case, doesn't). Thanks [@blowmage](https://github.com/blowmage), [@pnomolos](https://github.com/pnomolos), and [@SergeyBurtsev](https://github.com/SergeyBurtsev)! ([#100](https://github.com/connorshea/vscode-ruby-test-adapter/pull/100))
