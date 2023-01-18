@@ -59,7 +59,7 @@ suite('Config', function() {
           .thenReturn(configSection as vscode.WorkspaceConfiguration)
       let config = new RspecConfig(path.resolve('ruby'))
       expect(config.getTestCommandWithFilePattern()).to
-        .eq("bundle exec rspec --pattern 'spec/**/*_test.rb,spec/**/test_*.rb'")
+        .eq("bundle exec rspec --pattern 'spec/**{,/*/**}/*_test.rb,spec/**{,/*/**}/test_*.rb'")
     })
 
     suite("#getRelativeTestDirectory()", function() {
