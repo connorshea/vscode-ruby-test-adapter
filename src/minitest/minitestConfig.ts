@@ -57,21 +57,26 @@ export class MinitestConfig extends Config {
       || path.join('.', 'test');
   }
 
-  public getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
-    let line = testItem.range!.start.line + 1
-    return `${this.testCommandWithDebugger(debugConfiguration)} '${testItem.uri?.fsPath}:${line}'`
-  };
+  public getTestArguments(testItems?: readonly vscode.TestItem[]): string[] {
+    if (!testItems) return []
 
-  public getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
-    return `${this.testCommandWithDebugger(debugConfiguration)} '${testItem.uri?.fsPath}'`
-  };
+    let args: string[] = []
+    for (const testItem of testItems) {
+      if (testItem.id.includes('[')) {
+        args.push(`${testItem.uri!.fsPath}:${testItem.range!.start.line + 1}`)
+      } else {
+        args.push(testItem.uri!.fsPath)
+      }
+    }
+    return args
+  }
 
-  public getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string {
+  public getRunTestsCommand(debugConfiguration?: vscode.DebugConfiguration): string {
     return this.testCommandWithDebugger(debugConfiguration)
   };
 
-  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): { command: string, args: string[] } {
-    return { command: `${this.getTestCommand()} vscode:minitest:list`, args: [] }
+  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string {
+    return `${this.getTestCommand()} vscode:minitest:list`
   }
 
   /**

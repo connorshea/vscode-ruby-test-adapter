@@ -72,27 +72,28 @@ export class RspecConfig extends Config {
     return cmd
   }
 
-  public getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
-    return `${this.testCommandWithFormatterAndDebugger(debugConfiguration)} '${this.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
-  };
+  public getTestArguments(testItems?: readonly vscode.TestItem[]): string[] {
+    if (!testItems) return []
 
-  public getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string {
-    return `${this.testCommandWithFormatterAndDebugger(debugConfiguration)} '${this.getAbsoluteTestDirectory()}${path.sep}${testItem.id}'`
-  };
+    let args: string[] = []
+    for (const testItem of testItems) {
+      if (testItem.id.includes('[')) {
+        let locationStartIndex = testItem.id.lastIndexOf('[') + 1
+        let locationEndIndex = testItem.id.lastIndexOf(']')
+        args.push(`${testItem.uri!.fsPath}[${testItem.id.slice(locationStartIndex, locationEndIndex)}]`)
+      } else {
+        args.push(testItem.uri!.fsPath)
+      }
+    }
+    return args
+  }
 
-  public getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string {
+  public getRunTestsCommand(debugConfiguration?: vscode.DebugConfiguration): string {
     return this.testCommandWithFormatterAndDebugger(debugConfiguration)
   };
 
-  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): { command: string, args: string[] } {
-    let cmd = `${this.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
-
-    let args: string[] = []
-    testItems?.forEach((item) => {
-      let testPath = path.join(this.getAbsoluteTestDirectory(), item.id)
-      args.push(testPath)
-    })
-    return { command: cmd, args: args }
+  public getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): string {
+    return `${this.testCommandWithFormatterAndDebugger()} --order defined --dry-run`;
   }
 
   /**

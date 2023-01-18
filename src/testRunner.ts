@@ -103,45 +103,29 @@ export class TestRunner implements vscode.Disposable {
       if (request.profile.label === 'ResolveTests') {
         // Load tests
         await this.runTestFramework(
-          this.manager.config.getResolveTestsCommand(testsToRun),
+          {
+            command: this.manager.config.getResolveTestsCommand(),
+            args: this.manager.config.getTestArguments(testsToRun),
+          },
           testRun,
           request.profile
         )
       } else {
         // Run tests
-        let command: { command: string, args: string[] }
         if (!testsToRun) {
           log.debug("Running all tests")
           this.manager.controller.items.forEach((item) => {
             // Mark selected tests as started
             this.enqueTestAndChildren(item, testRun)
           })
-          command = {
-            command: this.manager.config.getFullTestSuiteCommand(debuggerConfig),
-            args: []
-          }
         } else {
           log.debug("Running selected tests")
-          command = {
-            command: this.manager.config.getFullTestSuiteCommand(debuggerConfig),
-            args: []
-          }
-          for (const node of testsToRun) {
-            log.trace('Adding test to command: %s', node.id)
-            // Mark selected tests as started
-            this.enqueTestAndChildren(node, testRun)
-            if (node.id.includes('[')) {
-              if (this.manager.config.frameworkName() == 'RSpec') {
-                let locationStartIndex = node.id.lastIndexOf('[') + 1
-                let locationEndIndex = node.id.lastIndexOf(']')
-                command.args.push(`${node.uri!.fsPath}[${node.id.slice(locationStartIndex, locationEndIndex)}]`)
-              } else {
-                command.args.push(`${node.uri!.fsPath}:${node.range!.start.line + 1}`)
-              }
-            } else {
-              command.args.push(node.uri!.fsPath)
-            }
-          }
+          // Mark selected tests as started
+          testsToRun.forEach(item => this.enqueTestAndChildren(item, testRun))
+        }
+        let command = {
+          command: this.manager.config.getRunTestsCommand(debuggerConfig),
+          args: this.manager.config.getTestArguments(testsToRun)
         }
         if (debuggerConfig) {
           log.debug('Debugging tests', request.include?.map(x => x.id));

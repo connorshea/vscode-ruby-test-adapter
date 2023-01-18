@@ -58,34 +58,26 @@ export abstract class Config {
   }
 
   /**
-   * Gets the command to run a single spec/test
+   * Gets the arguments to pass to the command from the test items to be run/loaded
    *
-   * @param testItem The testItem representing the test to be run
+   * @param testItem[] Array of test items to be run
    * @param debugConfiguration debug configuration
    */
-  public abstract getSingleTestCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string
+  public abstract getTestArguments(testItems?: readonly vscode.TestItem[]): string[]
 
   /**
-   * Gets the command to run tests in a given file.
-   *
-   * @param testItem The testItem representing the file to be run
-   * @param debugConfiguration debug configuration
-   */
-  public abstract getTestFileCommand(testItem: vscode.TestItem, debugConfiguration?: vscode.DebugConfiguration): string
-
-  /**
-   * Gets the command to run the full test suite for the current workspace.
+   * Gets the command to run the test framework.
    *
    * @param debugConfiguration debug configuration
    */
-  public abstract getFullTestSuiteCommand(debugConfiguration?: vscode.DebugConfiguration): string
+  public abstract getRunTestsCommand(debugConfiguration?: vscode.DebugConfiguration): string
 
   /**
-   * Gets the command to resolve some or all of the tests in the suite
+   * Gets the command to load some or all of the tests in the suite
    *
    * @param testItems Array of TestItems to resolve children of, or undefined to resolve all tests
    */
-  public abstract getResolveTestsCommand(testItems?: readonly vscode.TestItem[]): { command: string, args: string[] }
+  public abstract getResolveTestsCommand(): string
 
   /**
    * Get the env vars to run the subprocess with.
