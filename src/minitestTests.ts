@@ -104,12 +104,42 @@ export class MinitestTests extends Tests {
    *
    * @return The env
    */
+
   protected getProcessEnv(): any {
+    let envPath: string = process.env.PATH;
+    let newPath: string = envPath;
+
+    let newGemPath: string = process.env.GEM_PATH;
+    let newGemHome: string = process.env.GEM_HOME
+
+    let vscodeRubyPath: string = vscode.workspace.getConfiguration('ruby', null).get('interpreter.commandPath').replace(/ruby$/,'');
+    let rvmPattern = new RegExp('/.rvm/rubies/(ruby-[^/]*)/');  // check if rvm is used, extract ruby verision
+    if( vscodeRubyPath.match(rvmPattern) && envPath.match(rvmPattern) ) {
+        let vscodeRubyVersion: string = vscodeRubyPath.match(rvmPattern)[1];
+        let envRubyVersion: string = envPath.match(rvmPattern)[1];
+        this.log.info(`checking ruby versions in vs code config '${vscodeRubyVersion}' vs env ${envRubyVersion}`);
+        if( vscodeRubyVersion != envRubyVersion ) {
+            this.log.info(`replace all refrences to  ${envRubyVersion} with '${vscodeRubyVersion} in env:`);
+            // replaceAll still not working in node.js, we have 3 occurences
+            newPath = envPath.replace(envRubyVersion, vscodeRubyVersion)
+                                .replace(envRubyVersion, vscodeRubyVersion)
+                                .replace(envRubyVersion, vscodeRubyVersion);
+            this.log.info(`constructed new PATH ${newPath}`);
+            newGemPath = newGemPath.replace(envRubyVersion, vscodeRubyVersion);
+            this.log.info(`constructed new GEM_PATH ${newGemPath}`);
+            newGemHome = newGemHome.replace(envRubyVersion, vscodeRubyVersion);
+            this.log.info(`constructed new GEM_HOME ${newGemHome}`);
+        }
+    }
+
     return Object.assign({}, process.env, {
-      "RAILS_ENV": "test",
-      "EXT_DIR": this.getRubyScriptsLocation(),
-      "TESTS_DIR": this.getTestDirectory(),
-      "TESTS_PATTERN": this.getFilePattern().join(',')
+        "RAILS_ENV": "test",
+        "EXT_DIR": this.getRubyScriptsLocation(),
+        "TESTS_DIR": this.getTestDirectory(),
+        "TESTS_PATTERN": this.getFilePattern().join(','),
+        "PATH": newPath,
+        "GEM_PATH": newGemPath,
+        "GEM_HOME": newGemHome
     });
   }
 
