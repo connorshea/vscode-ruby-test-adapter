@@ -105,7 +105,7 @@ export class RspecTests extends Tests {
   protected getTestCommandWithFilePattern(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
     const dir = this.getTestDirectory();
-    let pattern = this.getFilePattern().map(p => `${dir}/**/${p}`).join(',')
+    let pattern = this.getFilePattern().map(p => `${dir}/**{,/*/**}/${p}`).join(',')
     command = command || `bundle exec rspec`
     return `${command} --pattern '${pattern}'`;
   }
