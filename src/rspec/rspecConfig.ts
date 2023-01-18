@@ -44,7 +44,7 @@ export class RspecConfig extends Config {
   public getTestCommandWithFilePattern(): string {
     let command: string = this.getTestCommand()
     const dir = this.getRelativeTestDirectory().replace(/\/$/, "");
-    let pattern = this.getFilePattern().map(p => `${dir}/**/${p}`).join(',')
+    let pattern = this.getFilePattern().map(p => `${dir}/**{,/*/**}/${p}`).join(',')
     return `${command} --pattern '${pattern}'`;
   }
 
