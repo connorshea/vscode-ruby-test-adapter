@@ -189,7 +189,8 @@ export class RspecTests extends Tests {
     this.log.info(`Running test file: ${testFile}`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
-      shell: true
+      shell: true,
+      env: this.getProcessEnv()
     };
 
     // Run tests for a given file at once with a single command.
@@ -214,7 +215,8 @@ export class RspecTests extends Tests {
     this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
-      shell: true
+      shell: true,
+      env: this.getProcessEnv()
     };
 
     let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);
