@@ -1,0 +1,60 @@
+{
+  "version": "5.14.4",
+  "examples": [
+    {
+      "description": "abs positive",
+      "full_description": "abs positive",
+      "file_path": "./test/abs_test.rb",
+      "full_path": "/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/abs_test.rb",
+      "line_number": 4,
+      "klass": "AbsTest",
+      "method": "test_abs_positive",
+      "runnable": "AbsTest",
+      "id": "./test/abs_test.rb[4]"
+    },
+    {
+      "description": "abs 0",
+      "full_description": "abs 0",
+      "file_path": "./test/abs_test.rb",
+      "full_path": "/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/abs_test.rb",
+      "line_number": 8,
+      "klass": "AbsTest",
+      "method": "test_abs_0",
+      "runnable": "AbsTest",
+      "id": "./test/abs_test.rb[8]"
+    },
+    {
+      "description": "abs negative",
+      "full_description": "abs negative",
+      "file_path": "./test/abs_test.rb",
+      "full_path": "/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/abs_test.rb",
+      "line_number": 12,
+      "klass": "AbsTest",
+      "method": "test_abs_negative",
+      "runnable": "AbsTest",
+      "id": "./test/abs_test.rb[12]"
+    },
+    {
+      "description": "square 2",
+      "full_description": "square 2",
+      "file_path": "./test/square/square_test.rb",
+      "full_path": "/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/square/square_test.rb",
+      "line_number": 4,
+      "klass": "SquareTest",
+      "method": "test_square_2",
+      "runnable": "SquareTest",
+      "id": "./test/square/square_test.rb[4]"
+    },
+    {
+      "description": "square 3",
+      "full_description": "square 3",
+      "file_path": "./test/square/square_test.rb",
+      "full_path": "/home/tabby/git/vscode-ruby-test-adapter/test/fixtures/minitest/test/square/square_test.rb",
+      "line_number": 8,
+      "klass": "SquareTest",
+      "method": "test_square_3",
+      "runnable": "SquareTest",
+      "id": "./test/square/square_test.rb[8]"
+    }
+  ]
+}

@@ -11,5 +11,6 @@
   "ruby.format": false,
   "ruby.lint": {
       "rubocop": false
-  }
+  },
+  "task.allowAutomaticTasks": "on"
 }

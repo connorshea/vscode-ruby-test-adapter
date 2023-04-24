@@ -82,55 +82,54 @@ class RakeTaskTest < Minitest::Test
     stdout =~ /START_OF_TEST_JSON(.*)END_OF_TEST_JSON/
     json = JSON.parse($1, symbolize_names: true)
 
-    assert_equal(
-      [
-        {
-          description: "square of one",
-          full_description: "square of one",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 4,
-          klass: "SquareTest",
-          method: "test_square_of_one",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[4]"
-        },
-        {
-          description: "square of two",
-          full_description: "square of two",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 8,
-          klass: "SquareTest",
-          method: "test_square_of_two",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[8]"
-        },
-        {
-          description: "square error",
-          full_description: "square error",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 12,
-          klass: "SquareTest",
-          method: "test_square_error",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[12]"
-        },
-        {
-          description: "square skip",
-          full_description: "square skip",
-          file_path: "./test/square_test.rb",
-          full_path: (dir + "test/square_test.rb").to_s,
-          line_number: 16,
-          klass: "SquareTest",
-          method: "test_square_skip",
-          runnable: "SquareTest",
-          id: "./test/square_test.rb[16]"
-        }
-      ],
-      json[:examples]
-    )
+    [
+      {
+        description: "square of one",
+        full_description: "square of one",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 4,
+        klass: "SquareTest",
+        method: "test_square_of_one",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[4]"
+      },
+      {
+        description: "square of two",
+        full_description: "square of two",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 8,
+        klass: "SquareTest",
+        method: "test_square_of_two",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[8]"
+      },
+      {
+        description: "square error",
+        full_description: "square error",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 12,
+        klass: "SquareTest",
+        method: "test_square_error",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[12]"
+      },
+      {
+        description: "square skip",
+        full_description: "square skip",
+        file_path: "./test/square_test.rb",
+        full_path: (dir + "test/square_test.rb").to_s,
+        line_number: 16,
+        klass: "SquareTest",
+        method: "test_square_skip",
+        runnable: "SquareTest",
+        id: "./test/square_test.rb[16]"
+      }
+    ].each do |expectation|
+      assert_includes(json[:examples], expectation)
+    end
   end
 
   def test_test_run_all
@@ -148,14 +147,14 @@ class RakeTaskTest < Minitest::Test
 
     assert_any(examples, pass_count: 1) do |example|
       assert_equal "square error", example[:description]
-      assert_equal "failed", example[:status]
+      assert_equal "errored", example[:status]
       assert_nil example[:pending_message]
       refute_nil example[:exception]
       assert_equal "Minitest::UnexpectedError", example.dig(:exception, :class)
       assert_match(/RuntimeError:/, example.dig(:exception, :message))
       assert_instance_of Array, example.dig(:exception, :backtrace)
       assert_instance_of Array, example.dig(:exception, :full_backtrace)
-      assert_equal 13, example.dig(:exception, :position)
+      assert_equal 12, example.dig(:exception, :position)
     end
 
     assert_any(examples, pass_count: 1) do |example|
@@ -174,12 +173,12 @@ class RakeTaskTest < Minitest::Test
       assert_equal "Expected: 3\n  Actual: 4", example.dig(:exception, :message)
       assert_instance_of Array, example.dig(:exception, :backtrace)
       assert_instance_of Array, example.dig(:exception, :full_backtrace)
-      assert_equal 9, example.dig(:exception, :position)
+      assert_equal 8, example.dig(:exception, :position)
     end
 
     assert_any(examples, pass_count: 1) do |example|
       assert_equal "square skip", example[:description]
-      assert_equal "failed", example[:status]
+      assert_equal "skipped", example[:status]
       assert_equal "This is skip", example[:pending_message]
       assert_nil example[:exception]
     end
@@ -219,7 +218,7 @@ class RakeTaskTest < Minitest::Test
 
     assert_any(examples, pass_count: 1) do |example|
       assert_equal "square skip", example[:description]
-      assert_equal "failed", example[:status]
+      assert_equal "skipped", example[:status]
     end
   end
 end

@@ -7,3 +7,4 @@ npm install
 bundle install --gemfile=ruby/Gemfile
 bundle install --gemfile=test/fixtures/rspec/Gemfile
 bundle install --gemfile=test/fixtures/minitest/Gemfile
+bundle install --gemfile=test/fixtures/rspec/Gemfile
