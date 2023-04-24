@@ -66,21 +66,13 @@ export async function activate(context: vscode.ExtensionContext) {
     const controller = vscode.tests.createTestController('ruby-test-explorer', 'Ruby Test Explorer');
 
     // TODO: (?) Add a "Profile" profile for profiling tests
-    const profiles: { runProfile: vscode.TestRunProfile, resolveTestsProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile } = {
+    const profiles: { runProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile } = {
       // Default run profile for running tests
       runProfile: controller.createRunProfile(
         'Run',
         vscode.TestRunProfileKind.Run,
         (request, token) => factory.getRunner().runHandler(request, token),
         true // Default run profile
-      ),
-
-      // Run profile for dry runs/getting test details
-      resolveTestsProfile: controller.createRunProfile(
-        'ResolveTests',
-        vscode.TestRunProfileKind.Run,
-        (request, token) => factory.getRunner().runHandler(request, token),
-        false
       ),
 
       // Run profile for debugging tests
@@ -92,13 +84,12 @@ export async function activate(context: vscode.ExtensionContext) {
       ),
     }
 
-    const factory = new TestFactory(log, controller, testConfig, profiles, workspace);
+    const factory = new TestFactory(log, controller, testConfig, workspace);
 
     // Ensure disposables are registered with VSC to be disposed of when the extension is deactivated
     context.subscriptions.push(controller);
     context.subscriptions.push(profiles.runProfile);
     context.subscriptions.push(profiles.debugProfile);
-    context.subscriptions.push(profiles.resolveTestsProfile);
     context.subscriptions.push(factory);
 
     controller.resolveHandler = async test => {

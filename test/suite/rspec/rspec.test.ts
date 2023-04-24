@@ -27,7 +27,6 @@ suite('Extension Test for RSpec', function() {
   let testRunner: TestRunner;
   let testLoader: TestLoader;
   let manager: TestSuiteManager;
-  let resolveTestsProfile: vscode.TestRunProfile;
   let mockTestRun: vscode.TestRun;
   let cancellationTokenSource: vscode.CancellationTokenSource;
 
@@ -90,10 +89,6 @@ suite('Extension Test for RSpec', function() {
     vscode.workspace.getConfiguration('rubyTestExplorer').update('rspecDirectory', 'spec')
     vscode.workspace.getConfiguration('rubyTestExplorer').update('filePattern', ['*_spec.rb'])
     config = new RspecConfig(path.resolve("ruby"), workspaceFolder)
-    let mockProfile = mock<vscode.TestRunProfile>()
-    when(mockProfile.runHandler).thenReturn((request, token) => testRunner.runHandler(request, token))
-    when(mockProfile.label).thenReturn('ResolveTests')
-    resolveTestsProfile = instance(mockProfile)
 
     testController = vscode.tests.createTestController('ruby-test-explorer-tests', 'Ruby Test Explorer')
     mockTestRun = mock<vscode.TestRun>()
@@ -106,7 +101,7 @@ suite('Extension Test for RSpec', function() {
 
     manager = new TestSuiteManager(log, testController, config)
     testRunner = new TestRunner(log, manager, workspaceFolder)
-    testLoader = new TestLoader(log, resolveTestsProfile, manager);
+    testLoader = new TestLoader(log, manager, testRunner);
   })
 
   beforeEach(function() {

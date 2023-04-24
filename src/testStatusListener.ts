@@ -8,11 +8,11 @@ import { Status, TestStatus } from './testStatus'
 export class TestStatusListener {
   public static listen(
     rootLog: IChildLogger,
-    profile: vscode.TestRunProfile,
     testRun: vscode.TestRun,
-    testStatusEmitter: vscode.EventEmitter<TestStatus>
+    testStatusEmitter: vscode.EventEmitter<TestStatus>,
+    profile?: vscode.TestRunProfile,
   ): vscode.Disposable {
-    let log = rootLog.getChildLogger({ label: `${TestStatusListener.name}(${profile.label})`})
+    let log = rootLog.getChildLogger({ label: `${TestStatusListener.name}(${profile?.label || "LoadTests"})`})
     return testStatusEmitter.event((event: TestStatus) => {
 
       switch(event.status) {
@@ -21,7 +21,7 @@ export class TestStatusListener {
           testRun.skipped(event.testItem)
           break;
         case Status.passed:
-          if (this.isTestLoad(profile)) {
+          if (!profile) {
             log.info('Test loaded: %s (duration: %d)', event.testItem.id, event.duration)
           } else {
             log.info('Test passed: %s (duration: %d)', event.testItem.id, event.duration)
@@ -41,7 +41,7 @@ export class TestStatusListener {
           }
           break;
         case Status.running:
-          if (this.isTestLoad(profile)) {
+          if (!profile) {
             log.debug('Ignored test started event from test load: %s (duration: %d)', event.testItem.id, event.duration)
           } else {
             log.info('Test started: %s', event.testItem.id)
@@ -52,12 +52,5 @@ export class TestStatusListener {
           log.warn('Unexpected status: %s', event.status)
       }
     })
-  }
-
-  /**
-   * Checks if the current test run is for loading tests rather than running them
-   */
-  private static isTestLoad(profile: vscode.TestRunProfile): boolean {
-    return profile.label == 'ResolveTests'
   }
 }

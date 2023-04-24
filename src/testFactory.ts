@@ -25,7 +25,6 @@ export class TestFactory implements vscode.Disposable {
     private readonly rootLog: IVSCodeExtLogger,
     private readonly controller: vscode.TestController,
     private config: Config,
-    private readonly profiles: { runProfile: vscode.TestRunProfile, resolveTestsProfile: vscode.TestRunProfile, debugProfile: vscode.TestRunProfile },
     private readonly workspace?: vscode.WorkspaceFolder,
   ) {
     this.log = rootLog.getChildLogger({ label: `${TestFactory.name}` })
@@ -83,8 +82,8 @@ export class TestFactory implements vscode.Disposable {
     if (!this.loader) {
       this.loader = new TestLoader(
         this.rootLog,
-        this.profiles.resolveTestsProfile,
-        this.manager
+        this.manager,
+        this.getRunner()
       )
       this.disposables.push(this.loader)
     }

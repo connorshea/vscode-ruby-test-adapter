@@ -10,7 +10,7 @@ export class TestRunner implements vscode.Disposable {
   protected debugCommandStartedResolver?: () => void;
   protected disposables: { dispose(): void }[] = [];
   protected readonly log: IChildLogger;
-  private readonly testProcessMap: Map<vscode.TestRunProfileKind, FrameworkProcess>
+  private readonly testProcessMap: Map<vscode.TestRunProfileKind | null, FrameworkProcess>
 
   /**
    * @param rootLog The Test Adapter logger, for logging.
@@ -83,11 +83,6 @@ export class TestRunner implements vscode.Disposable {
   ) {
     let log = this.log.getChildLogger({ label: 'runHandler' })
 
-    if (!request.profile) {
-      log.error('Test run request is missing a profile', {request: request})
-      return
-    }
-
     // Loop through all included tests, or all known tests, and add them to our queue
     log.debug('Number of tests in request', request.include?.length || 0);
 
@@ -100,15 +95,14 @@ export class TestRunner implements vscode.Disposable {
       let testsToRun = request.exclude ? request.include?.filter(x => !request.exclude!.includes(x)) : request.include
       log.trace("Running tests", testsToRun?.map(x => x.id));
 
-      if (request.profile.label === 'ResolveTests') {
+      if (!request.profile) {
         // Load tests
         await this.runTestFramework(
           {
             command: this.manager.config.getResolveTestsCommand(),
             args: this.manager.config.getTestArguments(testsToRun),
           },
-          testRun,
-          request.profile
+          testRun
         )
       } else {
         // Run tests
@@ -227,7 +221,7 @@ export class TestRunner implements vscode.Disposable {
    * @param context Test run context for the cancellation token
    * @returns Raw output from process
    */
-  private async runTestFramework (testCommand: { command: string, args: string[] }, testRun: vscode.TestRun, profile: vscode.TestRunProfile): Promise<void> {
+  private async runTestFramework (testCommand: { command: string, args: string[] }, testRun: vscode.TestRun, profile?: vscode.TestRunProfile): Promise<void> {
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace?.uri.fsPath,
       shell: true,
@@ -235,7 +229,7 @@ export class TestRunner implements vscode.Disposable {
     };
 
     this.log.info('Running command: %s', testCommand);
-    let testProfileKind = profile.kind
+    let testProfileKind = profile?.kind || null
 
     if (this.testProcessMap.get(testProfileKind)) {
       this.log.warn('Test run already in progress for profile kind: %s', testProfileKind)
@@ -247,9 +241,9 @@ export class TestRunner implements vscode.Disposable {
 
     const statusListener = TestStatusListener.listen(
       this.rootLog,
-      profile,
       testRun,
-      testProcess.testStatusEmitter
+      testProcess.testStatusEmitter,
+      profile
     )
     this.disposables.push(statusListener)
     try {
@@ -265,8 +259,8 @@ export class TestRunner implements vscode.Disposable {
    * Terminates the current test run process for the given profile kind if there is one
    * @param profile The profile to kill the test run for
    */
-  private killTestRun(profile: vscode.TestRunProfile) {
-    let profileKind = profile.kind
+  private killTestRun(profile?: vscode.TestRunProfile) {
+    let profileKind = profile?.kind || null
     let process = this.testProcessMap.get(profileKind)
     if (process) {
       this.disposeInstance(process)

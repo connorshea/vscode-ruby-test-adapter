@@ -111,7 +111,7 @@ export class LoaderQueue implements vscode.Disposable {
         this.notifyQueueWorker = undefined
         this.terminateQueueWorker = undefined
       } else {
-        // Drain queue to get batch of test items to load
+        // Drain queue to get batch of test items to process
         let queueItems = Array.from(this.queue)
         this.queue.clear()
 

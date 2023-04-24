@@ -3,6 +3,7 @@ import path from 'path'
 import { IChildLogger } from '@vscode-logging/logger';
 import { TestSuiteManager } from './testSuiteManager';
 import { LoaderQueue } from './loaderQueue';
+import { TestRunner } from './testRunner';
 
 /**
  * Responsible for finding and watching test files, and loading tests from within those
@@ -15,17 +16,19 @@ export class TestLoader implements vscode.Disposable {
   private readonly log: IChildLogger;
   private readonly cancellationTokenSource = new vscode.CancellationTokenSource()
   private readonly resolveQueue: LoaderQueue
+  private readonly runHandler: (request: vscode.TestRunRequest, token: vscode.CancellationToken) => Thenable<void>
 
   constructor(
     readonly rootLog: IChildLogger,
-    private readonly resolveTestProfile: vscode.TestRunProfile,
     private readonly manager: TestSuiteManager,
+    private readonly testRunner: TestRunner
   ) {
     this.log = rootLog.getChildLogger({ label: 'TestLoader' });
     this.resolveQueue = new LoaderQueue(rootLog, async (testItems?: vscode.TestItem[]) => await this.loadTests(testItems))
     this.disposables.push(this.cancellationTokenSource)
     this.disposables.push(this.resolveQueue)
     this.disposables.push(this.configWatcher());
+    this.runHandler = (request, token) => this.testRunner.runHandler(request, token)
   }
 
   dispose(): void {
@@ -123,8 +126,8 @@ export class TestLoader implements vscode.Disposable {
     log.info('Loading tests...', { testIds: testItems?.map(x => x.id) || 'all tests' });
     try {
       if (testItems) { for (const item of testItems) { item.busy = true }}
-      let request = new vscode.TestRunRequest(testItems, undefined, this.resolveTestProfile)
-      await this.resolveTestProfile.runHandler(request, this.cancellationTokenSource.token)
+      let request = new vscode.TestRunRequest(testItems)
+      await this.runHandler(request, this.cancellationTokenSource.token)
     } catch (e: any) {
       log.error('Failed to load tests', e)
       return Promise.reject(e)
