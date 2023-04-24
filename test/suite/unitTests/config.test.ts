@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { spy, when } from '@typestrong/ts-mockito'
+import { after, before } from 'mocha';
 import * as vscode from 'vscode'
 import * as path from 'path'
 
@@ -53,13 +54,13 @@ suite('Config', function() {
       }
     }
 
-    test("#getTestCommandWithFilePattern", function() {
+    test("#getFilePatternArg", function() {
       let spiedWorkspace = spy(vscode.workspace)
       when(spiedWorkspace.getConfiguration('rubyTestExplorer', null))
           .thenReturn(configSection as vscode.WorkspaceConfiguration)
       let config = new RspecConfig(path.resolve('ruby'))
-      expect(config.getTestCommandWithFilePattern()).to
-        .eq("bundle exec rspec --pattern 'spec/**{,/*/**}/*_test.rb,spec/**{,/*/**}/test_*.rb'")
+      expect(config.getFilePatternArg()).to
+        .eq("--pattern 'spec/**{,/*/**}/*_test.rb,spec/**{,/*/**}/test_*.rb'")
     })
 
     suite("#getRelativeTestDirectory()", function() {
@@ -73,6 +74,35 @@ suite('Config', function() {
       test('returns path to workspace with relative path appended', function () {
         let config = new RspecConfig(path.resolve('ruby'))
         expect(config.getAbsoluteTestDirectory()).to.eq(path.resolve('spec'))
+      })
+    })
+
+    suite('#getTestArguments', function() {
+      let testController: vscode.TestController
+
+      before(function() {
+        testController = vscode.tests.createTestController('ruby-test-explorer-tests', 'Ruby Test Explorer')
+      })
+
+      after(function() {
+        testController.dispose()
+      })
+
+      test('with no args (run full suite)', function() {
+        let config = new RspecConfig(path.resolve('ruby'))
+        expect(config.getTestArguments()).to
+          .eql(["--pattern 'spec/**{,/*/**}/*_test.rb,spec/**{,/*/**}/test_*.rb'"])
+      })
+
+      test('with file arg', function() {
+        let config = new RspecConfig(path.resolve('ruby'))
+        let testId = "test_spec.rb"
+        let testItem = testController.createTestItem(
+          testId,
+          "label",
+          vscode.Uri.file(path.resolve(config.getAbsoluteTestDirectory(), testId))
+        )
+        expect(config.getTestArguments([testItem])).to.eql([path.resolve('spec/test_spec.rb')])
       })
     })
   })

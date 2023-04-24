@@ -228,7 +228,7 @@ export class TestRunner implements vscode.Disposable {
       env: this.manager.config.getProcessEnv()
     };
 
-    this.log.info('Running command: %s', testCommand);
+    this.log.info('Running command: %s, args: [%s]', testCommand.command, testCommand.args.join(','));
     let testProfileKind = profile?.kind || null
 
     if (this.testProcessMap.get(testProfileKind)) {

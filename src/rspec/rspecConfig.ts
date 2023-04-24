@@ -41,11 +41,10 @@ export class RspecConfig extends Config {
    *
    * @return The RSpec command
    */
-  public getTestCommandWithFilePattern(): string {
-    let command: string = this.getTestCommand()
+  public getFilePatternArg(): string {
     const dir = this.getRelativeTestDirectory().replace(/\/$/, "");
     let pattern = this.getFilePattern().map(p => `${dir}/**{,/*/**}/${p}`).join(',')
-    return `${command} --pattern '${pattern}'`;
+    return `--pattern '${pattern}'`;
   }
 
   /**
@@ -73,7 +72,7 @@ export class RspecConfig extends Config {
   }
 
   public getTestArguments(testItems?: readonly vscode.TestItem[]): string[] {
-    if (!testItems) return []
+    if (!testItems) return [this.getFilePatternArg()]
 
     let args: string[] = []
     for (const testItem of testItems) {

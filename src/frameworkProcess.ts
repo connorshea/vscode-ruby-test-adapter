@@ -185,7 +185,7 @@ export class FrameworkProcess implements vscode.Disposable {
   private parseAndHandleTestOutput(testOutput: string): void {
     let log = this.log.getChildLogger({label: this.parseAndHandleTestOutput.name})
     testOutput = this.getJsonFromOutput(testOutput);
-    log.trace('Parsing the below JSON:', testOutput);
+    log.trace('Parsing the below JSON: %s', testOutput);
     let testMetadata = JSON.parse(testOutput);
     let tests: Array<ParsedTest> = testMetadata.examples;
 
@@ -198,10 +198,10 @@ export class FrameworkProcess implements vscode.Disposable {
         let testItem = this.testManager.getOrCreateTestItem(test.id, (item) => { if (item.id == test.id) itemAlreadyExists = false })
 
         testItem.canResolveChildren = !test.id.endsWith(']')
-        log.trace('canResolveChildren', test.id, testItem.canResolveChildren)
+        log.trace('canResolveChildren (%s): %s', test.id, testItem.canResolveChildren)
 
         testItem.label = this.parseDescription(test)
-        log.trace('label', test.id, testItem.description)
+        log.trace('label (%s): %s', test.id, testItem.description)
 
         testItem.range = this.parseRange(test)
 
