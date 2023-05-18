@@ -79,6 +79,9 @@ export class RspecTests extends Tests {
    */
   protected getTestCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
+    if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
+      command = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('parallelRspecCommand') as string)
+    }
     return command || `bundle exec rspec`
   }
 
@@ -137,6 +140,9 @@ export class RspecTests extends Tests {
    */
   protected testCommandWithFormatterAndDebugger(debuggerConfig?: vscode.DebugConfiguration): string {
     let args = `--require ${this.getCustomFormatterLocation()} --format CustomFormatter`
+    if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
+      args = `--test-options "${args}"`
+    }
     let cmd = `${this.getTestCommand()} ${args}`
     if (debuggerConfig) {
       cmd = this.getDebugCommand(debuggerConfig, args);
