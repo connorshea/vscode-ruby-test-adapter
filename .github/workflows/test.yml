@@ -36,6 +36,9 @@ jobs:
     - name: Run rspec tests
       run: |
         xvfb-run -a node ./out/test/runRspecTests.js
+    - name: Run parallel tests
+      run: |
+        xvfb-run -a node ./out/test/runParallel_TestTests.js
     - name: Run Ruby test
       run: |
         cd ruby && bundle exec rake
