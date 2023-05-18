@@ -24,7 +24,7 @@ suite('Extension Test for RSpec', () => {
       {
         type: 'suite',
         id: 'root',
-        label: 'rspec RSpec',
+        label: 'parallel_rspec RSpec',
         children: [
           {
             file: path.resolve(dirPath, "spec/abs_spec.rb"),
