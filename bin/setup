@@ -6,4 +6,5 @@ set -vx
 npm install
 bundle install --gemfile=ruby/Gemfile
 bundle install --gemfile=test/fixtures/rspec/Gemfile
+bundle install --gemfile=test/fixtures/parallel_rspec/Gemfile
 bundle install --gemfile=test/fixtures/minitest/Gemfile
