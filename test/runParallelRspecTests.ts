@@ -18,7 +18,7 @@ async function main() {
     await runTests(
       {
         extensionDevelopmentPath,
-        extensionTestsPath: path.resolve(__dirname, './suite/frameworks/rspec/index'),
+        extensionTestsPath: path.resolve(__dirname, './suite/frameworks/parallel_rspec/index'),
         launchArgs: [path.resolve(extensionDevelopmentPath, 'test/fixtures/parallel_rspec')]
       }
     );
