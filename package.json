@@ -110,6 +110,18 @@
           "type": "string",
           "scope": "resource"
         },
+        "rubyTestExplorer.useParallelRspec": {
+          "markdownDescription": "Use parallel rspec to run tests.",
+          "default": false,
+          "type": "boolean",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.parallelRspecCommand": {
+          "markdownDescription": "Define the command to run parallel rspec tests with, for example `bundle exec parallel_rspec`.",
+          "default": "bundle exec parallel_rspec",
+          "type": "string",
+          "scope": "resource"
+        },
         "rubyTestExplorer.rspecDirectory": {
           "markdownDescription": "The location of your RSpec directory relative to the root of the workspace.",
           "default": "./spec/",
