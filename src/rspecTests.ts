@@ -79,9 +79,6 @@ export class RspecTests extends Tests {
    */
   protected getTestCommand(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
-    if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
-      command = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('parallelRspecCommand') as string)
-    }
     return command || `bundle exec rspec`
   }
 
@@ -227,6 +224,10 @@ export class RspecTests extends Tests {
     };
 
     let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);
+    if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
+      let normalRspecCommand = this.getTestCommand()
+      testCommand = testCommand.replace(normalRspecCommand, (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('parallelRspecCommand') as string))
+    }
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(

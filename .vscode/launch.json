@@ -10,8 +10,9 @@
         "--extensionDevelopmentPath=${workspaceFolder}"
       ],
       "outFiles": [
-        "${workspaceFolder}/out/src"
-      ]
+        "${workspaceFolder}/out/**/*.js"
+      ],
+      "preLaunchTask": "npm: watch"
     },
     {
       "name": "Run tests for Minitest",
@@ -34,6 +35,18 @@
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out/test/suite/frameworks/rspec/index",
         "${workspaceFolder}/test/fixtures/rspec"
+      ],
+      "outFiles": ["${workspaceFolder}/out/test/**/**/*.js"]
+    },
+    {
+      "name": "Run tests for Parallel RSpec",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out/test/suite/frameworks/rspec/index",
+        "${workspaceFolder}/test/fixtures/parallel_rspec"
       ],
       "outFiles": ["${workspaceFolder}/out/test/**/**/*.js"]
     }
