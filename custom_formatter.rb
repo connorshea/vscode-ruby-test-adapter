@@ -40,6 +40,8 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
   end
 
   def stop(notification)
+    backtrace_filter = RSpec::Core::BacktraceFormatter.new
+    backtrace_filter.filter_gem("vendor")
     @output_hash[:examples] = notification.examples.map do |example|
       format_example(example).tap do |hash|
         e = example.exception
@@ -47,7 +49,7 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
           hash[:exception] = {
             class: e.class.name,
             message: e.message,
-            backtrace: RSpec::Core::BacktraceFormatter.new.format_backtrace(e.backtrace)
+            backtrace: backtrace_filter.format_backtrace(e.backtrace)
           }
         end
       end

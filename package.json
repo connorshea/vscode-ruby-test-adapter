@@ -5,7 +5,7 @@
   "icon": "img/ruby-test-explorer.png",
   "author": "Connor Shea <connor.james.shea@gmail.com> + lawrence gripper",
   "publisher": "gripdev",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "license": "MIT",
   "homepage": "https://github.com/lawrencegripper/vscode-ruby-test-adapter",
   "repository": {
