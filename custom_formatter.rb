@@ -47,7 +47,7 @@ class CustomFormatter < RSpec::Core::Formatters::BaseFormatter
           hash[:exception] = {
             class: e.class.name,
             message: e.message,
-            backtrace: e.backtrace
+            backtrace: RSpec::Core::BacktraceFormatter.new.format_backtrace(e.backtrace)
           }
         end
       end
