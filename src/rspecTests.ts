@@ -144,6 +144,26 @@ export class RspecTests extends Tests {
     return cmd
   }
 
+    /**
+   * Get test command with formatter and debugger arguments
+   *
+   * @param debuggerConfig A VS Code debugger configuration.
+   * @return The test command
+   */
+    protected parallelTestCommandWithFormatter(debuggerConfig?: vscode.DebugConfiguration): string {
+      let args = `--test-options "--require ${this.getCustomFormatterLocation()} --format CustomFormatter"`
+      return `${this.getParallelTestCommand()} ${args}`
+    }
+    /**
+     * Get the user-configured parallel RSpec command, if there is one.
+     *
+     * @return The RSpec command
+     */
+    protected getParallelTestCommand(): string {
+      let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('parallelRspecCommand') as string);
+      return command || `bundle exec parallel_rspec`
+    }
+
   /**
    * Get the env vars to run the subprocess with.
    *
@@ -221,6 +241,9 @@ export class RspecTests extends Tests {
     };
 
     let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);
+    if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
+      testCommand = this.parallelTestCommandWithFormatter();
+    }
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(

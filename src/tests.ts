@@ -355,11 +355,15 @@ export abstract class Tests {
    */
   handleChildProcess = async (process: childProcess.ChildProcess) => new Promise<string>((resolve, reject) => {
     this.currentChildProcess = process;
+    let joinedJsonData = { examples: [] };
 
     this.currentChildProcess.on('exit', () => {
       this.log.info('Child process has exited. Sending test run finish event.');
       this.currentChildProcess = undefined;
       this.testStatesEmitter.fire(<TestRunFinishedEvent>{ type: 'finished' });
+      if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
+        resolve('START_OF_TEST_JSON' + JSON.stringify(joinedJsonData) + 'END_OF_TEST_JSON');
+      }
       resolve('{}');
     });
 
@@ -370,6 +374,7 @@ export abstract class Tests {
         this.debugCommandStartedResolver()
       }
     });
+
 
     this.currentChildProcess.stdout!.pipe(split2()).on('data', (data) => {
       data = data.toString();
@@ -388,6 +393,11 @@ export abstract class Tests {
         this.testStatesEmitter.fire(<TestEvent>{ type: 'test', test: data, state: 'skipped' });
       }
       if (data.includes('START_OF_TEST_JSON')) {
+        if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('useParallelRspec') as boolean) {
+          let parsedJson = JSON.parse(Tests.getJsonFromOutput(data));
+          joinedJsonData.examples = joinedJsonData.examples.concat(parsedJson.examples);
+          return;
+        }
         resolve(data);
       }
     });
