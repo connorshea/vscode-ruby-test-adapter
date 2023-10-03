@@ -54,7 +54,7 @@
     "mocha": "^9.2.2",
     "rimraf": "^3.0.0",
     "typescript": "^4.7.4",
-    "vsce": "^2.15.0",
+    "@vscode/vsce": "^2.21.1",
     "vscode-test": "^1.6.1"
   },
   "engines": {
