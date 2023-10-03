@@ -1,19 +1,19 @@
 {
-  "name": "vscode-ruby-test-adapter",
-  "displayName": "Ruby Test Explorer",
+  "name": "vscode-ruby-test-adapter-parallel-rspec",
+  "displayName": "Ruby Test Explorer with parallel_rspec support",
   "description": "Run your Ruby tests in the Sidebar of Visual Studio Code",
   "icon": "img/ruby-test-explorer.png",
-  "author": "Connor Shea <connor.james.shea@gmail.com>",
-  "publisher": "connorshea",
-  "version": "0.9.2",
+  "author": "Connor Shea <connor.james.shea@gmail.com> + lawrence gripper",
+  "publisher": "gripdev",
+  "version": "0.9.4",
   "license": "MIT",
-  "homepage": "https://github.com/connorshea/vscode-ruby-test-adapter",
+  "homepage": "https://github.com/lawrencegripper/vscode-ruby-test-adapter",
   "repository": {
     "type": "git",
-    "url": "https://github.com/connorshea/vscode-ruby-test-adapter.git"
+    "url": "https://github.com/lawrencegripper/vscode-ruby-test-adapter.git"
   },
   "bugs": {
-    "url": "https://github.com/connorshea/vscode-ruby-test-adapter/issues"
+    "url": "https://github.com/lawrencegripper/vscode-ruby-test-adapter/issues"
   },
   "categories": [
     "Other"
