@@ -77,7 +77,6 @@ export class RspecTests extends Tests {
     });
   });
 
-
   /**
    * Get the user-configured RSpec command, if there is one.
    *
