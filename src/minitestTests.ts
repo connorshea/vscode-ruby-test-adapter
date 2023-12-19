@@ -30,7 +30,9 @@ export class MinitestTests extends Tests {
    * @return The raw output from the Minitest JSON formatter.
    */
   initTests = async () => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getTestCommand()} vscode:minitest:list`;
+    let cmd = this.withDefaultShell(
+      `${this.getTestCommand()} vscode:minitest:list`
+    );
 
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
@@ -144,7 +146,9 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.testCommandWithDebugger(debuggerConfig)} '${relativeLocation}:${line}'`;
+    let testCommand = this.withDefaultShell(
+      `${this.testCommandWithDebugger(debuggerConfig)} '${relativeLocation}:${line}'`
+    );
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -172,7 +176,9 @@ export class MinitestTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.testCommandWithDebugger(debuggerConfig)} '${relativeFile}'`;
+    let testCommand = this.withDefaultShell(
+      `${this.testCommandWithDebugger(debuggerConfig)} '${relativeFile}'`
+    );
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -197,7 +203,9 @@ export class MinitestTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = this.testCommandWithDebugger(debuggerConfig);
+    let testCommand = this.withDefaultShell(
+      this.testCommandWithDebugger(debuggerConfig)
+    );
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
