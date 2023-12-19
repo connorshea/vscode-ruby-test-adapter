@@ -530,7 +530,6 @@ export abstract class Tests {
     return this.shell ? `${this.shell} -ic "${command}"` : command;
   }
 
-
   /**
    * Runs a single test.
    *
