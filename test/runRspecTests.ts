@@ -1,7 +1,7 @@
-import * as path from 'path';
-import * as cp from 'child_process';
+import path from 'path';
+import cp from 'child_process';
 
-import { runTests, downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath } from 'vscode-test';
+import { runTests, downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath } from '@vscode/test-electron';
 
 async function main() {
   try {
