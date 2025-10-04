@@ -2,6 +2,8 @@ GEM
   remote: https://rubygems.org/
   specs:
     minitest (5.14.4)
+    mutex_m (0.3.0)
+    ostruct (0.6.3)
     rake (13.0.3)
 
 PLATFORMS
@@ -9,7 +11,9 @@ PLATFORMS
 
 DEPENDENCIES
   minitest
+  mutex_m
+  ostruct
   rake
 
 BUNDLED WITH
-   2.1.4
+   2.7.2
