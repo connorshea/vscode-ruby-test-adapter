@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
+import vscode from 'vscode';
 import { TestSuiteInfo, TestEvent } from 'vscode-test-adapter-api';
-import * as childProcess from 'child_process';
+import childProcess from 'child_process';
 import { Tests } from './tests';
 
 export class RspecTests extends Tests {
