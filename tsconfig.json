@@ -14,4 +14,7 @@
     "removeComments": true,
     "skipLibCheck": true
   },
+  "typeAcquisition": {
+    "enable": true
+  },
 }

@@ -9,7 +9,7 @@ export function run(): Promise<void> {
   });
 
   return new Promise((c, e) => {
-    glob('**.test.js', { cwd: __dirname }, (err, files) => {
+    glob('**.test.js', { cwd: __dirname }, (err: Error | null, files: string[]) => {
       if (err) {
         return e(err);
       }
