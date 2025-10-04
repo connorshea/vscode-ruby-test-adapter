@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Changed
+- Update minimum supported VS Code version to 1.99.0. ([#135](https://github.com/connorshea/vscode-ruby-test-adapter/pull/135))
+
 ### Internal
 - Update extension dependencies and packages, fix CI failing due to old config. ([#135](https://github.com/connorshea/vscode-ruby-test-adapter/pull/135))
 
