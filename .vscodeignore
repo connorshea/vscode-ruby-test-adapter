@@ -7,3 +7,6 @@ tsconfig.json
 .gitignore
 *.vsix
 out/test/**
+.github/**
+.vscode-test/
+bin/**
