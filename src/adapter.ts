@@ -1,11 +1,11 @@
-import * as vscode from 'vscode';
+import vscode from 'vscode';
 import { TestAdapter, TestLoadStartedEvent, TestLoadFinishedEvent, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
 import { Log } from 'vscode-test-adapter-util';
-import * as childProcess from 'child_process';
+import childProcess from 'child_process';
 import { Tests } from './tests';
 import { RspecTests } from './rspecTests';
 import { MinitestTests } from './minitestTests';
-import * as path from 'path';
+import path from 'path';
 
 export class RubyAdapter implements TestAdapter {
   private disposables: { dispose(): void }[] = [];
@@ -151,7 +151,7 @@ export class RubyAdapter implements TestAdapter {
   protected detectTestFramework(): string {
     this.log.info(`Getting a list of Bundler dependencies with 'bundle list'.`);
 
-    const execArgs: childProcess.ExecOptions = {
+    const execArgs: childProcess.ExecSyncOptions = {
       cwd: this.workspace.uri.fsPath,
       maxBuffer: 8192 * 8192
     };

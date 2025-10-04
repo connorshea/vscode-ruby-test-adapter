@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import vscode from 'vscode';
 import { TestHub, testExplorerExtensionId } from 'vscode-test-adapter-api';
 import { Log, TestAdapterRegistrar } from 'vscode-test-adapter-util';
 import { RubyAdapter } from './adapter';
@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
     log.info(`Test Explorer ${testExplorerExtension ? '' : 'not '}found`);
   }
 
-  let testFramework: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testFramework') as string) || 'none';
+  let testFramework: string = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('testFramework') || 'none';
 
   if (testExplorerExtension && testFramework !== "none") {
     const testHub = testExplorerExtension.exports;

@@ -11,7 +11,7 @@ The extension supports the RSpec and Minitest test frameworks.
 
 ### RSpec
 
-The extension needs Ruby and the `rspec-core` gem installed (and any other dependencies required by your test suite). It's been tested with Ruby 2.6 and Rspec 3.8, but it should work with most recent versions of Ruby and all versions of Rspec 3.x above 3.6.0 (versions before 3.6.0 do not currently work because they don't expose an `id` property for tests in the JSON formatter).
+The extension needs Ruby and the `rspec-core` gem installed (and any other dependencies required by your test suite). It's been tested with Ruby 3.4 and Rspec 3.8, but it should work with most recent versions of Ruby and all versions of Rspec 3.x above 3.6.0 (versions before 3.6.0 do not currently work because they don't expose an `id` property for tests in the JSON formatter).
 
 By default, you need to have `rspec` installed via Bundler with a `Gemfile` and `bundle install`, otherwise `bundle exec rspec` won't work. If you want to run your Rspec tests with a command other than `bundle exec rspec`, you can configure the command with the `rubyTestExplorer.rspecCommand` setting.
 
@@ -75,7 +75,7 @@ If all else fails or you suspect something is broken with the extension, please 
 
 ## Contributing
 
-You'll need VS Code, Node (any version >= 12 should probably work), and Ruby installed.
+You'll need VS Code, Node (any version >= 20 should probably work), and Ruby (3.x) installed.
 
 - Clone the repository: `git clone https://github.com/connorshea/vscode-ruby-test-adapter`
 - Run `bin/setup` to install dependencies.

@@ -1,19 +1,19 @@
-import * as path from 'path';
-import * as cp from 'child_process';
+import path from 'path';
+import cp from 'child_process';
 
-import { runTests, downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath } from 'vscode-test';
+import { runTests, downloadAndUnzipVSCode, resolveCliArgsFromVSCodeExecutablePath } from '@vscode/test-electron';
+import { testExplorerExtensionId } from 'vscode-test-adapter-api';
 
 async function main() {
   try {
     const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 
-    const vscodeExecutablePath = await downloadAndUnzipVSCode('stable')
-
-    const cliPath = resolveCliPathFromVSCodeExecutablePath(vscodeExecutablePath)
-    cp.spawnSync(cliPath, ['--install-extension', 'hbenl.vscode-test-explorer'], {
+    const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
+    const [cli, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
+    cp.spawnSync(cli, [...args, '--install-extension', testExplorerExtensionId], {
       encoding: 'utf-8',
       stdio: 'inherit'
-    })
+    });
 
     await runTests(
       {
