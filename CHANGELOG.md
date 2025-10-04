@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+### Internal
+- Update extension dependencies and packages, fix CI failing due to old config. ([#135](https://github.com/connorshea/vscode-ruby-test-adapter/pull/135))
 
 ## [0.9.2] - 2023-01-17
 ### Fixed
