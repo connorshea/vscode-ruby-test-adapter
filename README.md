@@ -70,6 +70,7 @@ If the extension doesn't work for you, here are a few things you can try:
 - If you're using RSpec, make sure you're using a recent version of the `rspec-core` gem. If you're on a version prior to 3.6.0, the extension may not work.
 - If you're using RSpec, make sure that the RSpec command and `spec` directory are configured correctly. By default, tests are run with `bundle exec rspec` and the tests are assumed to be in the `./spec/` directory. You can configure these with `rubyTestExplorer.rspecCommand` and `rubyTestExplorer.rspecDirectory` respectively.
 - If the test suite info isn't loading, your `testFramework` config may be set to `none` or the auto-detect may be failing to determine the test framework. Try setting the `testFramework` config to `rspec` or `minitest` depending on what you want to use.
+- If you are using rvm you may need to manually specify the gemset `rvm use 2.5.0@gemset_name do ./bin/rspec` for example
 
 If all else fails or you suspect something is broken with the extension, please feel free to open an issue! :)
 
