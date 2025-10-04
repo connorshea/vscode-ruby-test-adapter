@@ -1,7 +1,7 @@
-import vscode from 'vscode';
+import * as vscode from 'vscode';
 import { TestSuiteInfo, TestInfo, TestRunStartedEvent, TestRunFinishedEvent, TestSuiteEvent, TestEvent } from 'vscode-test-adapter-api';
-import childProcess from 'child_process';
-import split2 from 'split2';
+import * as childProcess from 'child_process';
+import * as split2 from 'split2';
 import { Log } from 'vscode-test-adapter-util';
 
 export abstract class Tests {
