@@ -1,5 +1,10 @@
 # Ruby Test Explorer
-**[Install it from the VS Code Marketplace.](https://marketplace.visualstudio.com/items?itemName=connorshea.vscode-ruby-test-adapter)**
+
+## ⚠️ Deprecation Notice ⚠️
+
+With version 0.10.0 in October 2025, I have updated this extension with various dependency updates to ensure it's secure, but the extension is now deprecated and will no longer be maintained. Please consider switching to the [Ruby LSP extension](https://marketplace.visualstudio.com/items?itemName=Shopify.ruby-lsp) instead, which provides better test support, is actively maintained, and uses the official Test Integration APIs for VS Code.
+
+[Install it from the VS Code Marketplace.](https://marketplace.visualstudio.com/items?itemName=connorshea.vscode-ruby-test-adapter)
 
 This is a Ruby Test Explorer extension for the [VS Code Test Explorer](https://marketplace.visualstudio.com/items?itemName=hbenl.vscode-test-explorer) extension.
 

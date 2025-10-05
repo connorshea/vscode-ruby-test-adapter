@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+
+### [0.10.0] - 2025-10-04
+
+** ⚠️ Deprecation Notice ⚠️ **
+
+With this release, I have updated this extension with various dependency updates to ensure it's secure, but the extension is now deprecated and will no longer be maintained. Please consider switching to the [Ruby LSP extension](https://marketplace.visualstudio.com/items?itemName=Shopify.ruby-lsp) instead, which provides better test support, is actively maintained, and uses the official Test Integration APIs for VS Code.
+
 ### Changed
 - Update minimum supported VS Code version to 1.99.0. ([#135](https://github.com/connorshea/vscode-ruby-test-adapter/pull/135))
 
@@ -192,7 +199,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 Initial release.
 
-[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/connorshea/vscode-ruby-test-adapter/compare/v0.8.0...v0.8.1
