@@ -2,7 +2,7 @@
 
 ## ⚠️ Deprecation Notice ⚠️
 
-With version 0.10.0 in October 2025, I have updated this extension with various dependency updates to ensure it's secure, but the extension is now deprecated and will no longer be maintained. Please consider switching to the [Ruby LSP extension](https://marketplace.visualstudio.com/items?itemName=Shopify.ruby-lsp) instead, which provides better test support, is actively maintained, and uses the official Test Integration APIs for VS Code.
+With version 0.10.0 in October 2025, I have updated this extension with various dependency updates to ensure it's secure, but the extension is now deprecated and will no longer be maintained. Please consider switching to the [Ruby LSP extension](https://marketplace.visualstudio.com/items?itemName=Shopify.ruby-lsp) instead, which provides better test support, is actively maintained, and uses the official Test Integration APIs for VS Code. If you use RSpec, you'll also want to use [the Ruby LSP plugin for RSpec](https://github.com/st0012/ruby-lsp-rspec).
 
 [Install it from the VS Code Marketplace.](https://marketplace.visualstudio.com/items?itemName=connorshea.vscode-ruby-test-adapter)
 
