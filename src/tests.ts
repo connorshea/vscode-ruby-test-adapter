@@ -13,6 +13,8 @@ export abstract class Tests {
   protected workspace: vscode.WorkspaceFolder;
   abstract testFrameworkName: string;
   protected debugCommandStartedResolver: Function | undefined;
+  // The path to the user's preferred command-line shell (like /bin/bash, /bin/zsh, etc.)
+  private readonly shell = process.env.SHELL?.replace(/(\s+)/g, "\\$1");
 
   /**
    * @param context Extension context provided by vscode.
@@ -517,6 +519,15 @@ export abstract class Tests {
    */
   protected getRubyScriptsLocation(): string {
     return this.context.asAbsolutePath('./ruby');
+  }
+
+  /**
+   * Wrap a command in the user's default shell (if there is one).
+   *
+   * @return The wrapped command (or the original command if there is no default shell)
+   */
+  protected withDefaultShell = (command: string) => {
+    return this.shell ? `${this.shell} -ic "${command}"` : command;
   }
 
   /**

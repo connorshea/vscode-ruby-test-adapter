@@ -30,8 +30,13 @@ export class RspecTests extends Tests {
    * @return The raw output from the RSpec JSON formatter.
    */
   initTests = async () => new Promise<string>((resolve, reject) => {
-    let cmd = `${this.getTestCommandWithFilePattern()} --require ${this.getCustomFormatterLocation()}`
-              + ` --format CustomFormatter --order defined --dry-run`;
+    let cmd = this.withDefaultShell(
+      `${this.getTestCommandWithFilePattern()} \
+      --require ${this.getCustomFormatterLocation()} \
+      --format CustomFormatter \
+      --order defined \
+      --dry-run`
+    );
 
     this.log.info(`Running dry-run of RSpec test suite with the following command: ${cmd}`);
 
@@ -170,7 +175,9 @@ export class RspecTests extends Tests {
       env: this.getProcessEnv()
     };
 
-    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testLocation}'`;
+    let testCommand = this.withDefaultShell(
+      `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testLocation}'`
+    );
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -196,7 +203,9 @@ export class RspecTests extends Tests {
     };
 
     // Run tests for a given file at once with a single command.
-    let testCommand = `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testFile}'`;
+    let testCommand = this.withDefaultShell(
+      `${this.testCommandWithFormatterAndDebugger(debuggerConfig)} '${testFile}'`
+    );
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
@@ -220,7 +229,9 @@ export class RspecTests extends Tests {
       shell: true
     };
 
-    let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);
+    let testCommand = this.withDefaultShell(
+      this.testCommandWithFormatterAndDebugger(debuggerConfig)
+    );
     this.log.info(`Running command: ${testCommand}`);
 
     let testProcess = childProcess.spawn(
