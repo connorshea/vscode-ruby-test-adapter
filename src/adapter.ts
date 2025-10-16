@@ -72,21 +72,17 @@ export class RubyAdapter implements TestAdapter {
   async debug(testsToRun: string[]): Promise<void> {
     this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspace.uri.fsPath}`);
 
-    const config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
-
-    const debuggerConfig = {
-      name: "Debug Ruby Tests",
-      type: "Ruby",
-      request: "attach",
-      remoteHost: config.get('debuggerHost') || "127.0.0.1",
-      remotePort: config.get('debuggerPort') || "1234",
-      remoteWorkspaceRoot: "${workspaceRoot}"
+    let debuggerConfig: vscode.DebugConfiguration;
+    try {
+      debuggerConfig = this.getDebuggerConfig();
+    } catch (err) {
+      this.log.error('Failed to get debugger configuration', err);
+      return;
     }
-
     const testRunPromise = this.run(testsToRun, debuggerConfig);
 
     this.log.info('Starting the debug session');
-    let debugSession: any;
+    let debugSession: vscode.DebugSession;
     try {
       await this.testsInstance!.debugCommandStarted()
       debugSession = await this.startDebugging(debuggerConfig);
@@ -102,6 +98,11 @@ export class RubyAdapter implements TestAdapter {
       this.cancel(); // terminate the test run
       subscription.dispose();
     });
+
+    if (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugger') === 'rdbg') {
+      // debug gem is configured to stop at load, so we resume the execution on attach.
+      debugSession.customRequest('continue');
+    }
 
     await testRunPromise;
   }
@@ -218,6 +219,44 @@ export class RubyAdapter implements TestAdapter {
 
   protected onDidTerminateDebugSession(cb: (session: vscode.DebugSession) => any): vscode.Disposable {
     return vscode.debug.onDidTerminateDebugSession(cb);
+  }
+
+  private getDebuggerConfig(): vscode.DebugConfiguration {
+    const config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
+
+    switch (config.get('debugger')) {
+      case 'rdebug-ide': {
+        return {
+          name: "Debug Ruby Tests",
+          type: "Ruby",
+          request: "attach",
+          remoteHost: config.get('debuggerHost') || "127.0.0.1",
+          remotePort: config.get('debuggerPort') || "1234",
+          remoteWorkspaceRoot: "${workspaceRoot}"
+        }
+      }
+      case 'rdbg': {
+        const debuggerHost = config.get('debuggerHost') || "127.0.0.1";
+        const debuggerPort = config.get('debuggerPort') || "1234";
+
+        // Debugger configuration to attach by using KoichiSasada.vscode-rdbg.
+        // See: https://marketplace.visualstudio.com/items?itemName=KoichiSasada.vscode-rdbg
+        return {
+          name: "Debug Ruby Tests",
+          type: "rdbg",
+          request: "attach",
+          localfs: true,
+          debugPort: `${debuggerHost}:${debuggerPort}`,
+
+          // These parameters are used to lanuch the debug server.
+          debuggerHost,
+          debuggerPort,
+        }
+      }
+
+      default:
+        throw new Error("Invalid debugger");
+    }
   }
 
   /**

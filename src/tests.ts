@@ -366,7 +366,7 @@ export abstract class Tests {
     this.currentChildProcess.stderr!.pipe(split2()).on('data', (data) => {
       data = data.toString();
       this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
-      if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
+      if ((data.startsWith('Fast Debugger') || data.includes("DEBUGGER: wait for debugger connection...")) && this.debugCommandStartedResolver) {
         this.debugCommandStartedResolver()
       }
     });
@@ -517,6 +517,46 @@ export abstract class Tests {
    */
   protected getRubyScriptsLocation(): string {
     return this.context.asAbsolutePath('./ruby');
+  }
+
+  /**
+   * Get the user-configured rdebug-ide command, if there is one.
+   *
+   * @param debuggerConfig A VS Code debugger configuration.
+   * @return The debugger command
+   */
+  protected buildDebugCommand(debuggerConfig: vscode.DebugConfiguration, initFile: string, args?: string): string {
+    switch (debuggerConfig.type) {
+      case "Ruby": { // ruby-debug-ide gem
+        const debugCommand: string =
+          (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
+          'rdebug-ide';
+
+        let command = `${debugCommand} --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort} -- ${initFile}`
+        if (args) {
+          command += ` ${args}`
+        }
+
+        return command;
+      }
+      case "rdbg": { // debug gem
+        const debugCommand: string =
+          (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rdbgCommand') as string) ||
+          'rdbg';
+        const host = debuggerConfig.debuggerHost as string;
+        const port = debuggerConfig.debuggerPort as string;
+
+        let command = `${debugCommand} --open --stop-at-load --host ${host} --port ${port} -- ${initFile}`
+        if (args) {
+          command += ` ${args}`
+        }
+
+        return command;
+      }
+      default:
+        throw "Unknown debugger"
+    }
+
   }
 
   /**
