@@ -60,7 +60,7 @@ Property                               | Description
 `rubyTestExplorer.debuggerPort`        | Define the port to connect the debugger to, for example `1234`.
 `rubyTestExplorer.debugCommand`        | Define how to run rdebug-ide, for example `rdebug-ide` or `bundle exec rdebug-ide`.
 `rubyTestExplorer.rspecCommand`        | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
-`rubyTestExplorer.rspecDirectory`      | Define the relative directory of the specs in a given workspace, for example `./spec/`.
+`rubyTestExplorer.rspecDirectory`      | Define the relative directory of the specs in a given workspace, for example `./spec/`, or an array of directories like `["./spec/", "./engines/admin/spec/"]`.
 `rubyTestExplorer.minitestCommand`     | Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`. Must be a Rake command.
 `rubyTestExplorer.minitestDirectory`   | Define the relative location of your `test` directory, for example `./test/`.
 

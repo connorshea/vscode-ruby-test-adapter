@@ -111,9 +111,15 @@
           "scope": "resource"
         },
         "rubyTestExplorer.rspecDirectory": {
-          "markdownDescription": "The location of your RSpec directory relative to the root of the workspace.",
+          "markdownDescription": "The location of your RSpec directory relative to the root of the workspace. Can be a single path or an array of paths.",
           "default": "./spec/",
-          "type": "string",
+          "type": [
+            "string",
+            "array"
+          ],
+          "items": {
+            "type": "string"
+          },
           "scope": "resource"
         },
         "rubyTestExplorer.minitestCommand": {

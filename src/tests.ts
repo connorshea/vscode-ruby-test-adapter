@@ -108,11 +108,29 @@ export abstract class Tests {
   }
 
   /**
-   * Get the user-configured test directory, if there is one.
+   * Get the user-configured primary test directory.
    *
    * @return The test directory
    */
   abstract getTestDirectory(): string;
+
+  /**
+   * Get all configured test directories.
+   *
+   * Defaults to a single configured directory, but subclasses can override
+   * this to support multiple roots.
+   */
+  protected getTestDirectories(): string[] {
+    return [this.getTestDirectory()];
+  }
+
+  protected getMatchingTestDirectory(filePath: string): string {
+    return this.getTestDirectories().find((directory) => filePath.startsWith(directory)) || this.getTestDirectory();
+  }
+
+  protected stripTestDirectory(filePath: string): string {
+    return filePath.replace(this.getMatchingTestDirectory(filePath), '');
+  }
 
   /**
    * Pull JSON out of the test framework output.
@@ -206,10 +224,12 @@ export abstract class Tests {
 
     let currentFileLabel = '';
 
+    const matchingDirectory = this.getMatchingTestDirectory(currentFile);
+
     if (directory) {
-      currentFileLabel = currentFile.replace(`${this.getTestDirectory()}${directory}/`, '');
+      currentFileLabel = currentFile.replace(`${matchingDirectory}${directory}/`, '');
     } else {
-      currentFileLabel = currentFile.replace(`${this.getTestDirectory()}`, '');
+      currentFileLabel = currentFile.replace(`${matchingDirectory}`, '');
     }
 
     let pascalCurrentFileLabel = this.snakeToPascalCase(currentFileLabel.replace('_spec.rb', ''));
@@ -294,7 +314,7 @@ export abstract class Tests {
 
     // Remove the spec/ directory from all the file path.
     uniqueFiles.forEach((file) => {
-      splitFilesArray.push(file.replace(`${this.getTestDirectory()}`, "").split('/'));
+      splitFilesArray.push(this.stripTestDirectory(file).split('/'));
     });
 
     // This gets the main types of tests, e.g. features, helpers, models, requests, etc.
@@ -312,7 +332,7 @@ export abstract class Tests {
       let filesInDirectory: Array<TestSuiteInfo> = [];
 
       let uniqueFilesInDirectory: Array<string> = uniqueFiles.filter((file) => {
-        return file.startsWith(`${this.getTestDirectory()}${directory}/`);
+        return this.getTestDirectories().some((testDirectory) => file.startsWith(`${testDirectory}${directory}/`));
       });
 
       // Get the sets of tests for each file in the current directory.
@@ -336,7 +356,7 @@ export abstract class Tests {
 
     // Get files that are direct descendants of the spec/ directory.
     let topDirectoryFiles = uniqueFiles.filter((filePath) => {
-      return filePath.replace(`${this.getTestDirectory()}`, "").split('/').length === 1;
+      return this.stripTestDirectory(filePath).split('/').length === 1;
     });
 
     topDirectoryFiles.forEach((currentFile) => {

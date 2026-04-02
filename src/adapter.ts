@@ -223,24 +223,21 @@ export class RubyAdapter implements TestAdapter {
   /**
    * Get the test directory based on the configuration value if there's a configured test framework.
    */
-  private getTestDirectory(): string | undefined {
+  private getTestDirectories(): string[] {
     let testFramework = this.getTestFramework();
-    let testDirectory = '';
+
     if (testFramework === 'rspec') {
-      testDirectory =
-        (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string)
-        || path.join('.', 'spec');
+      let configured = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string | string[] | undefined;
+      let directories = Array.isArray(configured) ? configured : [configured || path.join('.', 'spec')];
+      return directories.map((directory) => path.join(this.workspace.uri.fsPath, directory));
     } else if (testFramework === 'minitest') {
-      testDirectory =
+      let testDirectory =
         (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('minitestDirectory') as string)
         || path.join('.', 'test');
+      return [path.join(this.workspace.uri.fsPath, testDirectory)];
     }
 
-    if (testDirectory === '') {
-      return undefined;
-    }
-
-    return path.join(this.workspace.uri.fsPath, testDirectory);
+    return [];
   }
 
   /**
@@ -256,10 +253,10 @@ export class RubyAdapter implements TestAdapter {
       const filename = document.uri.fsPath;
       this.log.info(`${filename} was saved - checking if this effects ${this.workspace.uri.fsPath}`);
       if (filename.startsWith(this.workspace.uri.fsPath)) {
-        let testDirectory = this.getTestDirectory();
+        let testDirectories = this.getTestDirectories();
 
         // In the case that there's no configured test directory, we shouldn't try to reload the tests.
-        if (testDirectory !== undefined && filename.startsWith(testDirectory)) {
+        if (testDirectories.some((testDirectory) => filename.startsWith(testDirectory))) {
           this.log.info('A test file has been edited, reloading tests.');
           this.load();
         }
