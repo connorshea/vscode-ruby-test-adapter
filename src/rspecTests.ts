@@ -104,8 +104,9 @@ export class RspecTests extends Tests {
    */
   protected getTestCommandWithFilePattern(): string {
     let command: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecCommand') as string);
-    const dir = this.getTestDirectory();
-    let pattern = this.getFilePattern().map(p => `${dir}/**{,/*/**}/${p}`).join(',')
+    let pattern = this.getTestDirectories()
+      .flatMap((dir) => this.getFilePattern().map((p) => `${dir}**{,/*/**}/${p}`))
+      .join(',');
     command = command || `bundle exec rspec`
     return `${command} --pattern '${pattern}'`;
   }
@@ -116,8 +117,28 @@ export class RspecTests extends Tests {
    * @return The spec directory
    */
   getTestDirectory(): string {
-    let directory: string = (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string);
-    return directory || './spec/';
+    return this.getTestDirectories()[0];
+  }
+
+  protected getTestDirectories(): string[] {
+    let directories = vscode.workspace.getConfiguration('rubyTestExplorer', null).get('rspecDirectory') as string | string[] | undefined;
+
+    if (Array.isArray(directories) && directories.length > 0) {
+      return directories.map((directory) => this.normalizeDirectory(directory));
+    }
+
+    return [this.normalizeDirectory((directories as string | undefined) || './spec/')];
+  }
+
+  private normalizeDirectory(directory: string): string {
+    let normalized = directory.replace(/\\/g, '/');
+    if (!normalized.startsWith('./')) {
+      normalized = `./${normalized}`;
+    }
+    if (!normalized.endsWith('/')) {
+      normalized = `${normalized}/`;
+    }
+    return normalized;
   }
 
   /**
