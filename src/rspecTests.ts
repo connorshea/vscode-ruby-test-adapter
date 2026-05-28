@@ -38,7 +38,8 @@ export class RspecTests extends Tests {
     // Allow a buffer of 64MB.
     const execArgs: childProcess.ExecOptions = {
       cwd: this.workspace.uri.fsPath,
-      maxBuffer: 8192 * 8192
+      maxBuffer: 8192 * 8192,
+      env: this.getProcessEnv()
     };
 
     childProcess.exec(cmd, execArgs, (err, stdout) => {
@@ -88,9 +89,23 @@ export class RspecTests extends Tests {
    * @return The rdebug-ide command
    */
   protected getDebugCommand(debuggerConfig: vscode.DebugConfiguration, args: string): string {
-    let command: string =
-      (vscode.workspace.getConfiguration('rubyTestExplorer', null).get('debugCommand') as string) ||
-      'rdebug-ide';
+    const config = vscode.workspace.getConfiguration('rubyTestExplorer', null);
+    let command: string = (config.get('debugCommand') as string) || 'rdebug-ide';
+    let template: string = (config.get('rspecDebugCommand') as string) || '';
+
+    if (template.trim()) {
+      return template.replace(/\$\{(\w+)\}/g, (_match, name) => {
+        const replacements: { [key: string]: string } = {
+          debugCommand: command,
+          host: String(debuggerConfig.remoteHost),
+          port: String(debuggerConfig.remotePort),
+          debugPort: `${debuggerConfig.remoteHost}:${debuggerConfig.remotePort}`,
+          rubyScriptsDir: process.platform == 'win32' ? '%EXT_DIR%' : '$EXT_DIR',
+          formatterArgs: args,
+        };
+        return replacements[name] ?? _match;
+      });
+    }
 
     return (
       `${command} --host ${debuggerConfig.remoteHost} --port ${debuggerConfig.remotePort}` +
@@ -192,7 +207,8 @@ export class RspecTests extends Tests {
     this.log.info(`Running test file: ${testFile}`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
-      shell: true
+      shell: true,
+      env: this.getProcessEnv()
     };
 
     // Run tests for a given file at once with a single command.
@@ -217,7 +233,8 @@ export class RspecTests extends Tests {
     this.log.info(`Running full test suite.`);
     const spawnArgs: childProcess.SpawnOptions = {
       cwd: this.workspace.uri.fsPath,
-      shell: true
+      shell: true,
+      env: this.getProcessEnv()
     };
 
     let testCommand = this.testCommandWithFormatterAndDebugger(debuggerConfig);

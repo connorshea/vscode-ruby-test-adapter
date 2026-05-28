@@ -366,7 +366,7 @@ export abstract class Tests {
     this.currentChildProcess.stderr!.pipe(split2()).on('data', (data) => {
       data = data.toString();
       this.log.debug(`[CHILD PROCESS OUTPUT] ${data}`);
-      if (data.startsWith('Fast Debugger') && this.debugCommandStartedResolver) {
+      if (this.isDebugCommandReady(data) && this.debugCommandStartedResolver) {
         this.debugCommandStartedResolver()
       }
     });
@@ -508,6 +508,13 @@ export abstract class Tests {
       this.debugCommandStartedResolver = resolve;
       setTimeout(() => { reject("debugCommandStarted timed out") }, 10000)
     })
+  }
+
+  protected isDebugCommandReady(data: string): boolean {
+    return data.startsWith('Fast Debugger')
+      || data.startsWith('DEBUGGER: Debugger can attach')
+      || data.startsWith('DEBUGGER: wait for debugger connection')
+      || data.startsWith('DEBUGGER: Connected');
   }
 
   /**
