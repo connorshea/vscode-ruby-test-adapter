@@ -20,6 +20,17 @@ The extension needs Ruby and the `rspec-core` gem installed (and any other depen
 
 By default, you need to have `rspec` installed via Bundler with a `Gemfile` and `bundle install`, otherwise `bundle exec rspec` won't work. If you want to run your Rspec tests with a command other than `bundle exec rspec`, you can configure the command with the `rubyTestExplorer.rspecCommand` setting.
 
+If you use Spring, set `rubyTestExplorer.rspecCommand` to `spring rspec` for normal test runs. Debug runs can use `rubyTestExplorer.rspecDebugCommand` and `rubyTestExplorer.debuggerConfig` when the default `rdebug-ide` wrapper is not flexible enough, for example:
+
+```json
+"rubyTestExplorer.rspecDebugCommand": "bundle exec rdbg --open --host ${host} --port ${port} -c -- spring rspec ${formatterArgs}",
+"rubyTestExplorer.debuggerConfig": {
+  "type": "rdbg",
+  "request": "attach",
+  "debugPort": "${host}:${port}"
+}
+```
+
 ### Minitest
 
 The extension needs Ruby and the `minitest` gem installed (and any other dependencies required by your test suite). It's been tested with Ruby 2.5 and 2.6, and Minitest 5.x. It should work with most recent versions of Ruby and Minitest.
@@ -39,6 +50,8 @@ Currently supported:
 - Live test status updates as the test suite runs.
 - File locations for each test.
 - Configurable RSpec command.
+- Configurable RSpec debug command.
+- Configurable debug attach settings.
 - Configurable RSpec `spec/` directory.
 - Configurable Minitest command.
 - Configurable Minitest `test/` directory.
@@ -59,7 +72,9 @@ Property                               | Description
 `rubyTestExplorer.debuggerHost`        | Define the host to connect the debugger to, for example `127.0.0.1`.
 `rubyTestExplorer.debuggerPort`        | Define the port to connect the debugger to, for example `1234`.
 `rubyTestExplorer.debugCommand`        | Define how to run rdebug-ide, for example `rdebug-ide` or `bundle exec rdebug-ide`.
+`rubyTestExplorer.debuggerConfig`      | Optionally override the VS Code debug configuration used to attach to the test process. String values support `${host}` and `${port}` placeholders. Useful for alternative debuggers such as `rdbg`.
 `rubyTestExplorer.rspecCommand`        | Define the command to run RSpec tests with, for example `bundle exec rspec`, `spring rspec`, or `rspec`.
+`rubyTestExplorer.rspecDebugCommand`   | Optionally define the full command used to debug RSpec tests. Supports `${debugCommand}`, `${host}`, `${port}`, `${debugPort}`, `${rubyScriptsDir}`, and `${formatterArgs}` placeholders. Useful for Spring or rdbg setups.
 `rubyTestExplorer.rspecDirectory`      | Define the relative directory of the specs in a given workspace, for example `./spec/`.
 `rubyTestExplorer.minitestCommand`     | Define how to run Minitest with Rake, for example `./bin/rake`, `bundle exec rake` or `rake`. Must be a Rake command.
 `rubyTestExplorer.minitestDirectory`   | Define the relative location of your `test` directory, for example `./test/`.

@@ -73,15 +73,23 @@ export class RubyAdapter implements TestAdapter {
     this.log.info(`Debugging test(s) ${JSON.stringify(testsToRun)} of ${this.workspace.uri.fsPath}`);
 
     const config = vscode.workspace.getConfiguration('rubyTestExplorer', null)
+    const debuggerHost = config.get('debuggerHost') || "127.0.0.1";
+    const debuggerPort = config.get('debuggerPort') || "1234";
 
-    const debuggerConfig = {
+    const defaultDebuggerConfig = {
       name: "Debug Ruby Tests",
       type: "Ruby",
       request: "attach",
-      remoteHost: config.get('debuggerHost') || "127.0.0.1",
-      remotePort: config.get('debuggerPort') || "1234",
+      remoteHost: debuggerHost,
+      remotePort: debuggerPort,
       remoteWorkspaceRoot: "${workspaceRoot}"
     }
+    const debuggerConfigOverride = (config.get('debuggerConfig') as any) || {};
+    const debuggerConfig = this.interpolateDebugConfig(
+      Object.assign({}, defaultDebuggerConfig, debuggerConfigOverride),
+      String(debuggerHost),
+      String(debuggerPort)
+    );
 
     const testRunPromise = this.run(testsToRun, debuggerConfig);
 
@@ -185,6 +193,25 @@ export class RubyAdapter implements TestAdapter {
       this.log.error(error);
       return 'none';
     }
+  }
+
+  protected interpolateDebugConfig(config: any, host: string, port: string): any {
+    if (typeof config === 'string') {
+      return config
+        .replace(/\$\{host\}/g, host)
+        .replace(/\$\{port\}/g, port);
+    }
+    if (Array.isArray(config)) {
+      return config.map((item) => this.interpolateDebugConfig(item, host, port));
+    }
+    if (config && typeof config === 'object') {
+      const interpolated: any = {};
+      for (const key of Object.keys(config)) {
+        interpolated[key] = this.interpolateDebugConfig(config[key], host, port);
+      }
+      return interpolated;
+    }
+    return config;
   }
 
   protected async startDebugging(debuggerConfig: vscode.DebugConfiguration): Promise<vscode.DebugSession> {

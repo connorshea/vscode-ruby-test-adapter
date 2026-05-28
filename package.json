@@ -158,6 +158,18 @@
           "default": "rdebug-ide",
           "type": "string",
           "scope": "resource"
+        },
+        "rubyTestExplorer.debuggerConfig": {
+          "markdownDescription": "Optionally override the VS Code debug configuration used to attach to the test process. String values support `${host}` and `${port}` placeholders. Useful for alternative debuggers such as `rdbg`.",
+          "default": {},
+          "type": "object",
+          "scope": "resource"
+        },
+        "rubyTestExplorer.rspecDebugCommand": {
+          "markdownDescription": "Optionally define the full command used to debug RSpec tests. Supports `${debugCommand}`, `${host}`, `${port}`, `${debugPort}`, `${rubyScriptsDir}`, and `${formatterArgs}` placeholders. Useful for Spring or rdbg setups, for example `bundle exec rdbg --open --host ${host} --port ${port} -c -- spring rspec ${formatterArgs}`.",
+          "default": "",
+          "type": "string",
+          "scope": "resource"
         }
       }
     }
